@@ -1,92 +1,106 @@
-// Arranque, conexión, carga del GEDCOM y navegación entre pantallas.
+// Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
 import { Gedcom } from './gedcom.js';
 import { Arbol, nombreCompleto } from './modelo.js';
 import { buscar, prepararVariantes } from './buscar.js';
-import { Dropbox, Local, LS, RUTAS, urlRedireccion, cacheLeer, cacheGuardar } from './almacen.js';
+import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js';
 import { resultados, familia, detalle, citas } from './vistas.js';
 import { md, esc } from './md.js';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
 const esLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
-let almacen, arbol, variantes = [], info = {};
+const PRUEBA = '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged';   // solo para el servidor de pruebas
+let fuente = null, carpeta = null, carpetaPendiente = null, arbol, variantes = [], info = {};
 const estadoBusqueda = JSON.parse(sessionStorage.getItem('arbol.busqueda') || '{}');
 
 function pantalla(html) { main.innerHTML = html; window.scrollTo(0, 0); }
 function error(e) {
   console.error(e);
   pantalla(`<div class="caja"><h2>Algo ha fallado</h2><p class="aviso">${esc(e.message || e)}</p>
-    <p><button onclick="location.reload()">Volver a intentarlo</button> <a href="#/ajustes">Ajustes</a></p></div>`);
+    <p><button onclick="location.reload()">Volver a intentarlo</button> <button id="otro">Abrir otro archivo</button></p></div>`);
+  $('#otro').onclick = async () => { await Fuente.olvidar(); LS.set('modo', null); location.hash = '#/'; location.reload(); };
 }
 
 // ---------- Arranque ----------
 
 async function arrancar() {
-  // ?appkey=xxxx en la dirección: se guarda en este navegador y se quita de la dirección.
-  const q = new URLSearchParams(location.search);
-  if (q.get('appkey')) { LS.set('appkey', q.get('appkey').trim()); LS.set('modo', 'dropbox'); history.replaceState(null, '', urlRedireccion() + location.hash); }
-  almacen = esLocal && LS.get('modo') === 'local' ? new Local() : new Dropbox();
   try {
-    if (almacen.tipo === 'dropbox') await almacen.terminarConexion();
-  } catch (e) { return error(e); }
-  if (!almacen.conectado) return bienvenida();
-  await cargar();
+    if (esLocal && LS.get('modo') === 'servidor') {
+      carpeta = new Servidor();
+      return abrir(await carpeta.bajar(PRUEBA));
+    }
+    const ult = await Fuente.ultima();
+    if (ult?.asa && await permiso(ult.asa, false)) fuente = await Fuente.desdeAsa(ult.asa);
+    else if (ult?.copia) fuente = new Fuente(ult.copia);
+    else return inicio(ult);
+    await recuperarCarpeta();
+    abrir(fuente.datos);
+  } catch (e) { error(e); }
 }
 
-function bienvenida() {
+async function recuperarCarpeta() {
+  const c = hayDisco ? await Carpeta.guardada() : null;
+  if (!c) return;
+  if (await permiso(c, false)) carpeta = new Carpeta(c); else carpetaPendiente = c;
+}
+
+function inicio(ult) {
   $('#cabecera').hidden = true;
   pantalla(`<div class="caja">
-    <h2>Conectar con tu Dropbox</h2>
-    <p>Esta página lee tu árbol (<code>${esc(LS.get('ruta') || RUTAS.gedcom)}</code>) directamente de tu Dropbox.
-       No hay servidor: tus datos van de Dropbox a este navegador y a ningún otro sitio.</p>
-    <label>Clave de la aplicación de Dropbox («App key»)<input id="appkey" autocomplete="off" spellcheck="false" value="${esc(LS.get('appkey') || '')}"></label>
-    <p class="peq">Se pone una sola vez en cada aparato. Está en dropbox.com/developers → tu app → «App key». No es una contraseña.</p>
-    <p class="peq">Dirección de vuelta que debe estar dada de alta en la app de Dropbox:<br><code>${esc(urlRedireccion())}</code></p>
-    <button id="conectar" class="principal">Conectar con Dropbox</button>
-    ${esLocal ? `<hr><p>En este ordenador también puedes usar los archivos tal cual, con <code>servidor_local.py</code>:</p><button id="local">Usar los archivos de este ordenador</button>` : ''}
+    <h2>Abrir un árbol</h2>
+    <p>Elige un archivo GEDCOM (<code>.ged</code>) de este aparato. No se sube a ningún sitio: se lee aquí, en el navegador.</p>
+    ${ult?.asa ? `<p><button id="reabrir" class="principal">Volver a abrir «${esc(ult.asa.name)}»</button></p>` : ''}
+    <p>${hayDisco ? `<button id="elegir"${ult?.asa ? '' : ' class="principal"'}>Elegir archivo GEDCOM…</button>`
+                  : `<label class="boton principal">Elegir archivo GEDCOM…<input id="archivo" type="file" hidden></label>`}</p>
+    <p class="peq">${hayDisco ? 'En este navegador el archivo se lee siempre del disco, así que ves siempre la última versión.'
+      : 'En este aparato se guarda una copia del archivo en el navegador. Cuando lo cambies en el ordenador, vuelve a copiarlo al aparato y ábrelo otra vez.'}</p>
+    ${esLocal ? `<hr><p class="peq">Pruebas: <button id="servidor">Usar el servidor local</button></p>` : ''}
   </div>`);
-  $('#conectar').onclick = async () => {
-    const k = $('#appkey').value.trim();
-    if (!k) return alert('Pon la clave de la aplicación (App key).');
-    LS.set('appkey', k); LS.set('modo', 'dropbox');
-    try { almacen = new Dropbox(); await almacen.conectar(); } catch (e) { error(e); }
-  };
-  if (esLocal) $('#local').onclick = () => { LS.set('modo', 'local'); location.reload(); };
+  if (ult?.asa) $('#reabrir').onclick = () => intentar(async () => { if (!await permiso(ult.asa, true)) throw new Error('Sin permiso para leer el archivo.'); fuente = await Fuente.desdeAsa(ult.asa); });
+  if (hayDisco) $('#elegir').onclick = () => intentar(async () => { fuente = await Fuente.elegir(); });
+  else $('#archivo').onchange = ev => ev.target.files[0] && intentar(async () => { fuente = await Fuente.desdeFile(ev.target.files[0]); });
+  if (esLocal) $('#servidor').onclick = () => { LS.set('modo', 'servidor'); location.reload(); };
 }
 
-async function cargar() {
-  const ruta = LS.get('ruta') || RUTAS.gedcom;
-  pantalla(`<div class="caja"><p class="cargando">Abriendo el árbol…</p><p class="peq" id="paso"></p></div>`);
-  const paso = t => { const e = $('#paso'); if (e) e.textContent = t; };
-  try {
-    const guardado = await cacheLeer(almacen.tipo + ':' + ruta);
-    let datos = null, sinConexion = false;
+async function intentar(f) {
+  try { await f(); } catch (e) { if (e.name === 'AbortError') return; return error(e); }
+  try { await recuperarCarpeta(); abrir(fuente.datos); } catch (e) { error(e); }
+}
+
+function abrir(datos) {
+  pantalla(`<div class="caja"><p class="cargando">Leyendo personas y familias…</p></div>`);
+  setTimeout(async () => {
     try {
-      paso('Mirando si el GEDCOM ha cambiado…');
-      const m = await almacen.metadatos(ruta);
-      if (guardado && guardado.rev === m.rev) { datos = guardado; paso('Sin cambios: se usa la copia de este aparato.'); }
-      else {
-        paso('Bajando el GEDCOM (unos 8 MB)…');
-        datos = await almacen.bajar(ruta);
-        datos.cuando = Date.now();
-        cacheGuardar(almacen.tipo + ':' + ruta, datos);
-      }
-    } catch (e) {
-      if (!guardado || /volver a conectar|caducado/.test(e.message)) throw e;
-      datos = guardado; sinConexion = true;
-    }
-    paso('Leyendo personas y familias…');
-    await new Promise(r => setTimeout(r, 20));
-    const ged = Gedcom.desdeBytes(datos.bytes);
-    arbol = new Arbol(ged);
-    arbol.ahnentafel('@I1@'); arbol.ahnentafel('@I2528@');
-    try { variantes = prepararVariantes(await (await fetch('variantes.json')).json()); } catch { variantes = []; }
-    info = { ruta, rev: datos.rev, fecha: datos.fecha, tam: datos.bytes.length, cuando: datos.cuando, sinConexion, cod: ged.cod };
-    $('#cabecera').hidden = false;
-    $('#estado').textContent = sinConexion ? 'Sin conexión: copia guardada' : '';
-    window.arbol = arbol;
-    ir();
-  } catch (e) { error(e); }
+      const ged = Gedcom.desdeBytes(datos.bytes);
+      arbol = new Arbol(ged);
+      if (!arbol.personas.size) throw new Error(`«${datos.nombre}» no parece un GEDCOM: no tiene personas.`);
+      info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
+      arbol.ponerRaices(raicesGuardadas());
+      try { variantes = prepararVariantes(await (await fetch('variantes.json')).json()); } catch { variantes = []; }
+      cabecera();
+      window.arbol = arbol;
+      ir();
+    } catch (e) { error(e); }
+  }, 20);
+}
+
+// ---------- Personas de referencia (se guardan por archivo, en este navegador) ----------
+
+const claveRaices = () => 'raices:' + (info.nombre || '');
+function raicesGuardadas() { try { return JSON.parse(LS.get(claveRaices()) || '[]'); } catch { return []; } }
+function guardarRaices(ids) { LS.set(claveRaices(), JSON.stringify(ids)); arbol.ponerRaices(ids); cabecera(); }
+function esRaiz(id) { return raicesGuardadas().includes(id) || (!raicesGuardadas().length && arbol.raices[0]?.id === id); }
+function alternarRaiz(id) {
+  let ids = raicesGuardadas();
+  if (!ids.length) ids = arbol.raices.map(r => r.id);
+  ids = ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id];
+  guardarRaices(ids);
+}
+
+function cabecera() {
+  $('#cabecera').hidden = false;
+  $('#raices').innerHTML = arbol.raices.map(r => `<a class="boton-cab" href="#/p/${esc(r.id.slice(1, -1))}" title="${esc(r.nombre)}">${esc(r.letra)}</a>`).join('');
+  $('#estado').textContent = info.copia ? 'Copia del ' + new Date(info.fecha).toLocaleDateString('es') : '';
 }
 
 // ---------- Navegación ----------
@@ -104,19 +118,20 @@ function ir() {
 function verBuscar() {
   document.title = 'Árbol · Buscar';
   const e = estadoBusqueda;
+  if (e.linea && !arbol.raices.some(r => r.id === e.linea)) e.linea = null;
   pantalla(`<div class="buscador">
     <div class="filtros">
       <label>Lugar<input id="f-lugar" value="${esc(e.lugar || '')}" placeholder="Ferrol, Corrubedo…"></label>
       <label>Desde<input id="f-desde" inputmode="numeric" value="${esc(e.desde ?? '')}" placeholder="1600"></label>
       <label>Hasta<input id="f-hasta" inputmode="numeric" value="${esc(e.hasta ?? '')}" placeholder="1800"></label>
       <label>Línea<select id="f-linea"><option value="">Todo el árbol</option>
-        <option value="@I1@"${e.linea === '@I1@' ? ' selected' : ''}>Antepasados de Edmundo</option>
-        <option value="@I2528@"${e.linea === '@I2528@' ? ' selected' : ''}>Antepasados de Diana</option></select></label>
+        ${arbol.raices.map(r => `<option value="${esc(r.id)}"${e.linea === r.id ? ' selected' : ''}>Antepasados de ${esc(r.nombre)}</option>`).join('')}</select></label>
     </div>
     <div id="res"></div>
     ${!e.q && !e.lugar && !e.linea ? `<div class="inicio"><p>Escribe arriba cualquier trozo de nombre o apellido. No importan las tildes ni la ortografía (b/v, y/i, h…).</p>
-      <p><a class="tarjeta-enlace" href="#/p/I1">Edmundo Fraga López</a> <a class="tarjeta-enlace" href="#/p/I2528">Diana Rodríguez Fernández</a></p>
-      <p class="peq">${arbol.personas.size.toLocaleString('es')} personas · ${arbol.familias.size.toLocaleString('es')} familias</p></div>` : ''}
+      <p>${arbol.raices.map(r => `<a class="tarjeta-enlace" href="#/p/${esc(r.id.slice(1, -1))}">${esc(r.nombre)}</a>`).join(' ')}</p>
+      <p class="peq">«${esc(info.nombre)}» · ${arbol.personas.size.toLocaleString('es')} personas · ${arbol.familias.size.toLocaleString('es')} familias
+        ${info.copia ? `<br>Copia guardada en este aparato, del archivo del ${esc(new Date(info.fecha).toLocaleString('es'))}` : ''}</p></div>` : ''}
   </div>`);
   for (const id of ['f-lugar', 'f-desde', 'f-hasta', 'f-linea']) $('#' + id).addEventListener('input', lanzar);
   lanzar();
@@ -144,9 +159,13 @@ function verPersona(id, pestana) {
   document.title = nombreCompleto(p);
   const antes = main.dataset.persona === id;
   const y = window.scrollY;
-  main.innerHTML = `<div class="persona">${familia(arbol, id)}<section class="detalle">${detalle(arbol, id, pestana)}</section></div>`;
+  const raiz = esRaiz(id);
+  main.innerHTML = `<div class="persona">${familia(arbol, id)}
+    <p class="acciones"><button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Persona de referencia' : '☆ Marcar como persona de referencia'}</button></p>
+    <section class="detalle">${detalle(arbol, id, pestana)}</section></div>`;
   main.dataset.persona = id;
   if (antes) window.scrollTo(0, y); else window.scrollTo(0, 0);
+  $('#raiz').onclick = () => { alternarRaiz(id); verPersona(id, pestana); };
   const { docs, sueltas } = citas(arbol, id);
   main.querySelectorAll('[data-fotos]').forEach(b => b.onclick = () => {
     const k = b.dataset.fotos;
@@ -156,18 +175,36 @@ function verPersona(id, pestana) {
   main.querySelectorAll('[data-md]').forEach(b => b.onclick = () => verTexto(b.dataset.md, b.textContent));
 }
 
-// ---------- Fotos y transcripciones (se piden a Dropbox solo al mirarlas) ----------
+// ---------- Fotos y transcripciones (se leen de la carpeta elegida, solo al mirarlas) ----------
 
 const IMG = /^(jpe?g|png|gif|tiff?|bmp|webp|heic)$/;
 
-async function galeria(caja, lista, fuente) {
+// Si no hay carpeta de fotos, se explica y se ofrece elegirla. Devuelve true si se puede seguir.
+function hayCarpeta(caja) {
+  if (carpeta) return true;
+  caja.innerHTML = hayDisco
+    ? `<p class="peq">Para ver fotos y transcripciones, elige la carpeta donde están (por ejemplo, la de Dropbox).
+       ${carpetaPendiente ? `<button data-c="re">Volver a usar «${esc(carpetaPendiente.name)}»</button>` : ''} <button data-c="elegir">Elegir carpeta…</button></p>`
+    : '<p class="peq">En este aparato no se pueden ver fotos ni transcripciones: solo el árbol. Se ven en el ordenador, con Chrome o Edge.</p>';
+  caja.querySelectorAll('[data-c]').forEach(b => b.onclick = async () => {
+    try {
+      if (b.dataset.c === 're') { if (!await permiso(carpetaPendiente, true)) return; carpeta = new Carpeta(carpetaPendiente); }
+      else carpeta = await Carpeta.elegir();
+      carpetaPendiente = null;
+      caja.innerHTML = '<p class="peq">Carpeta lista. Vuelve a pulsar el botón de fotos.</p>';
+    } catch (e) { if (e.name !== 'AbortError') caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
+  });
+  return false;
+}
+
+async function galeria(caja, lista, fuenteDoc) {
   if (caja.dataset.lista === String(lista.length) && caja.innerHTML) { caja.innerHTML = ''; caja.dataset.lista = ''; return; }
+  if (!hayCarpeta(caja)) return;
   caja.dataset.lista = String(lista.length);
   const MAX = 60;
   caja.innerHTML = lista.slice(0, MAX).map((m, i) => `<button class="mini" data-i="${i}" title="${esc(m.titulo)}">${IMG.test(m.form) ? '<span class="cargando"></span>' : `<span class="ext">${esc(m.form || '?')}</span>`}<small>${esc(m.titulo)}</small></button>`).join('')
     + (lista.length > MAX ? `<p class="peq">Se muestran ${MAX} de ${lista.length}. Abre una y pasa con las flechas.</p>` : '');
-  caja.querySelectorAll('.mini').forEach(b => b.onclick = () => visor(lista, +b.dataset.i, fuente));
-  // Miniaturas de pocas en pocas, para no saturar la conexión del móvil.
+  caja.querySelectorAll('.mini').forEach(b => b.onclick = () => visor(lista, +b.dataset.i, fuenteDoc));
   const botones = [...caja.querySelectorAll('.mini')];
   let siguiente = 0;
   const trabajar = async () => {
@@ -175,25 +212,21 @@ async function galeria(caja, lista, fuente) {
       const b = botones[siguiente], m = lista[siguiente++];
       if (!IMG.test(m.form)) continue;
       if (!m.ruta) { b.querySelector('span').outerHTML = '<span class="ext">sin ruta</span>'; continue; }
-      try { const u = await almacen.miniatura(m.ruta); b.querySelector('span').outerHTML = `<img src="${esc(u)}" alt="">`; }
+      try { const u = await carpeta.miniatura(m.ruta); b.querySelector('span').outerHTML = `<img src="${esc(u)}" alt="" loading="lazy">`; }
       catch (e) { b.querySelector('span').outerHTML = `<span class="ext" title="${esc(e.message)}">${e.noExiste ? 'no está' : 'error'}</span>`; }
     }
   };
   trabajar(); trabajar(); trabajar();
 }
 
-function candidatosTranscripcion(m, fuente) {
-  const c = [];
-  if (m.ruta) {
-    const sin = m.ruta.replace(/\.[^./]+$/, '.md');
-    if (/^\/Genealogia\//i.test(sin)) c.push('/Genealogia_2/03_transcripciones/' + sin.slice('/Genealogia/'.length));
-    else if (/^\/Genealogia_2\//i.test(sin)) c.push('/Genealogia_2/03_transcripciones/' + sin.slice('/Genealogia_2/'.length));
-  }
-  if (fuente?.transcripcion && /\.md$/.test(fuente.transcripcion) && !fuente.transcripcion.includes('*')) c.push('/Genealogia_2/' + fuente.transcripcion);
-  return [...new Set(c)];
+async function transcripcion(m, fuenteDoc) {
+  if (m.ruta) { try { const t = await carpeta.transcripcion(m.ruta); if (t) return t; } catch (e) { if (!e.noExiste) throw e; } }
+  const d = fuenteDoc?.transcripcion;
+  if (d && /\.md$/.test(d) && !d.includes('*')) { try { return await carpeta.texto(d); } catch (e) { if (!e.noExiste) throw e; } }
+  return null;
 }
 
-async function visor(lista, i, fuente) {
+function visor(lista, i, fuenteDoc) {
   const capa = $('#visor');
   capa.hidden = false; document.body.classList.add('con-visor');
   let zoom = 1;
@@ -203,7 +236,7 @@ async function visor(lista, i, fuente) {
         <span class="tit">${i + 1}/${lista.length} · ${esc(m.titulo)}</span>
         <button data-a="menos" aria-label="Alejar">−</button><button data-a="mas" aria-label="Acercar">+</button>
         <button data-a="ant" aria-label="Anterior"${i ? '' : ' disabled'}>‹</button><button data-a="sig" aria-label="Siguiente"${i < lista.length - 1 ? '' : ' disabled'}>›</button></div>
-      <div class="lienzo"><p class="cargando">Pidiendo la imagen a Dropbox…</p></div>
+      <div class="lienzo"><p class="cargando">Abriendo la imagen…</p></div>
       <div class="transc"><p class="peq">Buscando transcripción…</p></div>`;
     capa.querySelector('.barra').onclick = ev => {
       const a = ev.target.dataset.a;
@@ -213,20 +246,17 @@ async function visor(lista, i, fuente) {
       else if (a === 'mas' || a === 'menos') { zoom = Math.max(0.5, Math.min(6, zoom * (a === 'mas' ? 1.5 : 1 / 1.5))); const im = capa.querySelector('.lienzo img'); if (im) im.style.width = (zoom * 100) + '%'; }
     };
     const lienzo = capa.querySelector('.lienzo'), tr = capa.querySelector('.transc');
-    if (!m.ruta) lienzo.innerHTML = `<p class="aviso">No sé dónde está este archivo en Dropbox: ${esc(m.file)}</p>`;
-    else almacen.enlace(m.ruta).then(u => {
+    if (!m.ruta) lienzo.innerHTML = `<p class="aviso">La foto no tiene ruta en el GEDCOM.</p>`;
+    else carpeta.enlace(m.ruta).then(u => {
       if (lista[i] !== m) return;
       lienzo.innerHTML = IMG.test(m.form) ? `<img src="${esc(u)}" alt="${esc(m.titulo)}" style="width:${zoom * 100}%">`
         : `<p><a class="boton" href="${esc(u)}" target="_blank" rel="noopener">Abrir ${esc(m.form.toUpperCase())}</a></p>`;
     }).catch(e => { lienzo.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; });
-    for (const ruta of candidatosTranscripcion(m, fuente)) {
-      try {
-        const t = await almacen.texto(ruta);
-        if (lista[i] !== m) return;
-        tr.innerHTML = `<p class="peq">${esc(ruta)}</p><div class="md">${md(t)}</div>`; return;
-      } catch (e) { if (!e.noExiste) { tr.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; return; } }
-    }
-    if (lista[i] === m) tr.innerHTML = '<p class="peq">Sin transcripción de esta imagen.</p>';
+    try {
+      const t = await transcripcion(m, fuenteDoc);
+      if (lista[i] !== m) return;
+      tr.innerHTML = t ? `<p class="peq">${esc(t.rel)}</p><div class="md">${md(t.texto)}</div>` : '<p class="peq">Sin transcripción de esta imagen.</p>';
+    } catch (e) { if (lista[i] === m) tr.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
   };
   mostrar();
 }
@@ -243,33 +273,39 @@ async function verTexto(ruta, titulo) {
   capa.hidden = false; document.body.classList.add('con-visor');
   capa.innerHTML = `<div class="barra"><button data-a="cerrar">✕</button><span class="tit">${esc(titulo)}</span></div><div class="transc sola"><p class="cargando">Cargando…</p></div>`;
   capa.querySelector('[data-a=cerrar]').onclick = cerrarVisor;
-  try { capa.querySelector('.transc').innerHTML = `<p class="peq">${esc(ruta)}</p><div class="md">${md(await almacen.texto(ruta))}</div>`; }
-  catch (e) { capa.querySelector('.transc').innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
+  const caja = capa.querySelector('.transc');
+  if (!hayCarpeta(caja)) return;
+  try { const t = await carpeta.texto(ruta); caja.innerHTML = `<p class="peq">${esc(t.rel)}</p><div class="md">${md(t.texto)}</div>`; }
+  catch (e) { caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
 }
 
 // ---------- Ajustes ----------
 
 function ajustes() {
   document.title = 'Árbol · Ajustes';
-  const f = info.fecha ? new Date(info.fecha).toLocaleString('es') : '';
   pantalla(`<div class="caja">
     <h2>Ajustes</h2>
-    <p><b>Archivos:</b> ${almacen.tipo === 'local' ? 'los de este ordenador (servidor local)' : 'Dropbox'}</p>
-    <p><b>GEDCOM:</b> <code>${esc(info.ruta)}</code><br>${(info.tam / 1e6).toFixed(2)} MB · ${esc(info.cod)} · ${arbol.personas.size} personas${f ? ' · modificado en Dropbox el ' + esc(f) : ''}
-      ${info.sinConexion ? '<br><b>Sin conexión: estás viendo la copia guardada en este aparato.</b>' : ''}</p>
-    <label>Ruta del GEDCOM en Dropbox<input id="ruta" value="${esc(LS.get('ruta') || RUTAS.gedcom)}"></label>
-    <p><button id="g-ruta">Guardar ruta y recargar</button> <button id="recargar">Volver a leer el GEDCOM</button></p>
-    <p class="peq">Dirección de vuelta para la app de Dropbox: <code>${esc(urlRedireccion())}</code></p>
-    <hr>
-    ${almacen.tipo === 'dropbox' ? '<button id="salir">Desconectar este aparato de Dropbox</button>' : '<button id="salir">Dejar de usar los archivos locales</button>'}
-    <p class="peq">Fase 1: solo lectura. Esta versión no escribe nada en Dropbox.</p>
+    <h3>Árbol</h3>
+    <p><b>${esc(info.nombre)}</b><br>${(info.tam / 1e6).toFixed(2)} MB · ${esc(info.cod)} · ${arbol.personas.size.toLocaleString('es')} personas
+      ${info.fecha ? ' · modificado el ' + esc(new Date(info.fecha).toLocaleString('es')) : ''}
+      ${info.copia ? '<br>Es una copia guardada en este navegador. Para actualizarla, abre otra vez el archivo.' : ''}</p>
+    <p><button id="otro">Abrir otro GEDCOM…</button></p>
+    <h3>Personas de referencia</h3>
+    <p class="peq">Salen en la barra de arriba y en el filtro de línea, y numeran a sus antepasados (Ahnentafel). Se marcan con la estrella en la ficha de cada persona.</p>
+    <ul>${arbol.raices.map(r => `<li>${esc(r.letra)} · <a href="#/p/${esc(r.id.slice(1, -1))}">${esc(r.nombre)}</a> <button data-quitar="${esc(r.id)}">Quitar</button></li>`).join('')}</ul>
+    <h3>Carpeta de fotos y transcripciones</h3>
+    ${hayDisco ? `<p>${carpeta ? `<b>${esc(carpeta.nombre)}</b>` : carpetaPendiente ? `«${esc(carpetaPendiente.name)}» (pide permiso al usar las fotos)` : 'Ninguna'}</p>
+      <p><button id="carpeta">Elegir carpeta…</button> ${carpeta || carpetaPendiente ? '<button id="sincarpeta">No usar carpeta</button>' : ''}</p>
+      <p class="peq">Elige la carpeta que contiene las fotos, por ejemplo la de Dropbox. El programa las busca dentro aunque el GEDCOM tenga otra ruta delante (otra letra de disco, otro ordenador).</p>`
+    : '<p class="peq">En este aparato no se pueden ver fotos: solo en el ordenador, con Chrome o Edge.</p>'}
+    <hr><p class="peq">Fase 1: solo lectura. El programa no cambia ningún archivo.</p>
   </div>`);
-  $('#g-ruta').onclick = () => { LS.set('ruta', $('#ruta').value.trim() || null); location.hash = '#/'; location.reload(); };
-  $('#recargar').onclick = () => { location.hash = '#/'; location.reload(); };
-  $('#salir').onclick = async () => {
-    if (almacen.tipo === 'dropbox') { if (!confirm('¿Desconectar este aparato? Tendrás que volver a dar permiso.')) return; await almacen.desconectar(); }
-    LS.set('modo', null); location.hash = '#/'; location.reload();
-  };
+  $('#otro').onclick = async () => { await Fuente.olvidar(); LS.set('modo', null); location.hash = '#/'; location.reload(); };
+  main.querySelectorAll('[data-quitar]').forEach(b => b.onclick = () => { alternarRaiz(b.dataset.quitar); ajustes(); });
+  if (hayDisco) {
+    $('#carpeta').onclick = async () => { try { carpeta = await Carpeta.elegir(); carpetaPendiente = null; ajustes(); } catch (e) { if (e.name !== 'AbortError') error(e); } };
+    $('#sincarpeta')?.addEventListener('click', async () => { await Carpeta.olvidar(); carpeta = carpetaPendiente = null; ajustes(); });
+  }
 }
 
 // ---------- Cabecera ----------

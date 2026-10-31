@@ -57,7 +57,7 @@ export function buscar(arbol, texto, { lugar = '', desde = null, hasta = null, l
       punt += mejor;
     }
     if (!ok) continue;
-    if (arbol.ahnentafel('@I1@').has(p.id) || arbol.ahnentafel('@I2528@').has(p.id)) punt += 1;
+    if (arbol.raices.some(r => arbol.ahnentafel(r.id).has(p.id))) punt += 1;
     res.push({ p, punt });
   }
   res.sort((a, b) => b.punt - a.punt || (a.p.apellidos + ' ' + a.p.nombre).localeCompare(b.p.apellidos + ' ' + b.p.nombre, 'es'));

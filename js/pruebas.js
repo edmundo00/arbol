@@ -2,7 +2,8 @@
 import { Gedcom, decodificar, codificar } from './gedcom.js';
 import { Arbol } from './modelo.js';
 import { clave, buscar, prepararVariantes } from './buscar.js';
-import { RUTAS } from './almacen.js';
+const RUTAS = { gedcom: '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged' };
+import { Servidor } from './almacen.js';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -57,6 +58,20 @@ async function main() {
   ok(arbol.ahnentafel('@I2528@').size > 1, `Ahnentafel de Diana: ${arbol.ahnentafel('@I2528@').size} antepasados`);
   const ferrol = buscar(arbol, '', { lugar: 'ferrol', desde: 1800, hasta: 1850, variantes });
   ok(ferrol.total > 0, `Filtro lugar «ferrol» y años 1800–1850: ${ferrol.total}`);
+
+  arbol.ponerRaices([]);
+  ok(arbol.raices.length === 1 && arbol.raices[0].id === '@I1@', `Sin elegir, la persona de referencia es la primera del archivo: ${arbol.raices[0]?.nombre}`);
+  arbol.ponerRaices(['@I1@', '@I2528@']);
+  ok(arbol.raices.map(r => r.letra).join() === 'E,D', 'Referencias elegidas: E (Edmundo) y D (Diana)');
+
+  // Fotos y transcripciones buscadas dentro de una carpeta cualquiera (aquí, la de Dropbox servida por el servidor local)
+  const srv = new Servidor();
+  const foto = String.raw`D:\Dropbox\Genealogia\Documentos\Memorias_Edmundo_Fraga_Ferreiro_04.jpg`;
+  ok((await srv.buscar(foto)).rel.join('/') === 'Genealogia/Documentos/Memorias_Edmundo_Fraga_Ferreiro_04.jpg', 'Foto encontrada quitando «D:/Dropbox» de delante');
+  ok((await srv.buscar(String.raw`E:\Otro\Sitio\Genealogia\Documentos\Memorias_Edmundo_Fraga_Ferreiro_05.jpg`)).rel[0] === 'Genealogia', 'Foto encontrada aunque el GEDCOM traiga otra ruta delante');
+  const tr = await srv.transcripcion(foto);
+  ok(tr && /03_transcripciones\/Documentos\/Memorias_Edmundo_Fraga_Ferreiro_04\.md$/.test(tr.rel), `Transcripción de la foto: ${tr?.rel}`);
+  ok(/Fraga/.test((await srv.texto('03_transcripciones/Documentos/Fraga_Ferreiro_Edmundo_familia_numerosa.md')).texto), 'Archivo citado por ruta relativa encontrado en una subcarpeta');
 
   ok(true, `Tiempo total: ${Math.round(performance.now() - t0)} ms`);
   document.title = fallos ? `FALLAN ${fallos}` : 'TODO BIEN';

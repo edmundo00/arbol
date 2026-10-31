@@ -2,14 +2,11 @@
 import { hijo, hijos, valor, textoLargo } from './gedcom.js';
 import { fechaES, vida, nombreCompleto, anios } from './modelo.js';
 import { esc } from './md.js';
-import { rutaDropbox } from './almacen.js';
-
-const RAICES = [['@I1@', 'E', 'Edmundo'], ['@I2528@', 'D', 'Diana']];
 
 export function insignias(arbol, id) {
-  return RAICES.map(([r, letra, quien]) => {
+  return arbol.raices.map(({ id: r, letra, nombre: quien }) => {
     const n = arbol.ahnentafel(r).get(id);
-    return n ? `<span class="ahn" title="Antepasado n.º ${n.join(', ')} de ${quien}">${letra}&nbsp;${n.slice(0, 2).join('·')}${n.length > 2 ? '…' : ''}</span>` : '';
+    return n ? `<span class="ahn" title="Antepasado n.º ${n.join(', ')} de ${esc(quien)}">${esc(letra)}&nbsp;${n.slice(0, 2).join('·')}${n.length > 2 ? '…' : ''}</span>` : '';
   }).join('');
 }
 
@@ -79,7 +76,7 @@ export function media(arbol, nodo) {
   let n = nodo, id = null;
   if (/^@[^@]+@$/.test(nodo.valor)) { const r = arbol.registro(nodo.valor); if (!r) return null; n = r.arbol; id = nodo.valor; }
   const file = valor(n, '_FILE') || valor(n, 'FILE');
-  return { id, titulo: valor(n, 'TITL') || file.split(/[\\/]/).pop(), file, ruta: rutaDropbox(file), reg: valor(n, 'REFN'), form: (valor(n, 'FORM') || file.split('.').pop() || '').toLowerCase() };
+  return { id, titulo: valor(n, 'TITL') || file.split(/[\\/]/).pop(), file, ruta: file || null, reg: valor(n, 'REFN'), form: (valor(n, 'FORM') || file.split('.').pop() || '').toLowerCase() };
 }
 
 export function fuente(arbol, x) {
@@ -167,8 +164,8 @@ function documentos(docs, sueltas) {
       <div class="botones">
         ${d.fotos.length ? `<button data-fotos="${k}">📷 Fotos (${d.fotos.length}${d.todas.length > d.fotos.length ? ` de ${d.todas.length}` : ''})</button>` : ''}
         ${d.todas.length > d.fotos.length ? `<button data-fotos="${k}" data-todas="1">Todas (${d.todas.length})</button>` : ''}
-        ${f.transcripcion && /\.md$/.test(f.transcripcion) && !f.transcripcion.includes('*') ? `<button data-md="/Genealogia_2/${esc(f.transcripcion)}">📜 Transcripción</button>` : ''}
-        ${(f.ficha || '').split(/,\s*/).filter(x => /\.md$/.test(x)).map((x, i) => `<button data-md="/Genealogia_2/${esc(x)}">🗂 Ficha${i ? ' ' + (i + 1) : ''}</button>`).join('')}
+        ${f.transcripcion && /\.md$/.test(f.transcripcion) && !f.transcripcion.includes('*') ? `<button data-md="${esc(f.transcripcion)}">📜 Transcripción</button>` : ''}
+        ${(f.ficha || '').split(/,\s*/).filter(x => /\.md$/.test(x)).map((x, i) => `<button data-md="${esc(x)}">🗂 Ficha${i ? ' ' + (i + 1) : ''}</button>`).join('')}
       </div>
       <div class="galeria" id="gal${k}"></div>
       ${f.nota ? `<details class="ndoc"><summary>Nota de la fuente</summary>${esc(f.nota).replace(/\n/g, '<br>')}</details>` : ''}

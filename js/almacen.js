@@ -1,5 +1,9 @@
-// Acceso a los archivos: Dropbox (OAuth con PKCE, sin secreto) o, en este ordenador, el servidor local de pruebas.
-// No hay ninguna clave en el código: la «app key» la pone el usuario la primera vez y se guarda en este navegador.
+// Acceso a los archivos, siempre en el propio aparato (nada pasa por internet).
+// - El GEDCOM: cualquier archivo que elija el usuario. En Chrome o Edge de ordenador se recuerda el archivo y se vuelve
+//   a leer de disco cada vez; en el móvil y en otros navegadores se guarda una copia en el navegador.
+// - Las fotos y transcripciones: una carpeta cualquiera que elija el usuario (opcional). Las rutas que lleva el GEDCOM
+//   (por ejemplo «D:\Dropbox\Genealogia\Documentos\x.jpg») se buscan dentro de esa carpeta quitando lo que sobre delante.
+// - Servidor: servidor_local.py en http://localhost:8765, solo para las pruebas.
 
 const LS = {
   get(k) { try { return localStorage.getItem('arbol.' + k); } catch { return null; } },
@@ -7,153 +11,168 @@ const LS = {
 };
 export { LS };
 
-export const RUTAS = {
-  gedcom: '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged',
-  proyecto: '/Genealogia_2',
-  original: '/Genealogia',
-};
+export const hayDisco = typeof window !== 'undefined' && 'showOpenFilePicker' in window && 'showDirectoryPicker' in window;
 
-// «D:\Dropbox\Genealogia\Documentos\x.jpg» → «/Genealogia/Documentos/x.jpg»
-export function rutaDropbox(f) {
-  if (!f) return null;
-  const s = f.replace(/\\/g, '/');
-  const m = /\/dropbox(\/.*)$/i.exec(s);
-  if (m) return m[1];
-  if (/^[a-z]:\//i.test(s)) return null;
-  return s.startsWith('/') ? s : null;
+function noExiste(ruta) { const e = new Error(`No se encuentra: ${ruta}`); e.noExiste = true; return e; }
+
+// Trozos de una ruta del GEDCOM: «D:\a\b\c.jpg» → ['a', 'b', 'c.jpg'] (sin la unidad).
+export function trozos(ruta) { return (ruta || '').replace(/\\/g, '/').replace(/^[a-z]:/i, '').split('/').filter(x => x && x !== '.'); }
+
+// ---------- El GEDCOM ----------
+export class Fuente {
+  // datos: {bytes, nombre, fecha}; asa: el archivo en disco (solo Chrome/Edge de ordenador)
+  constructor(datos, asa = null) { this.datos = datos; this.asa = asa; }
+
+  static async elegir() {
+    const [asa] = await window.showOpenFilePicker({ id: 'arbol-gedcom', types: [{ description: 'GEDCOM', accept: { 'application/octet-stream': ['.ged', '.gedcom'] } }], excludeAcceptAllOption: false });
+    await bdGuardar('asa', asa); await bdGuardar('copia', null);
+    return Fuente.desdeAsa(asa);
+  }
+  static async desdeAsa(asa) {
+    const f = await asa.getFile();
+    return new Fuente({ bytes: new Uint8Array(await f.arrayBuffer()), nombre: f.name, fecha: f.lastModified }, asa);
+  }
+  // Para el móvil y los navegadores sin acceso al disco: <input type="file">. Se guarda una copia en el navegador.
+  static async desdeFile(file) {
+    const datos = { bytes: new Uint8Array(await file.arrayBuffer()), nombre: file.name, fecha: file.lastModified, cuando: Date.now() };
+    await bdGuardar('copia', datos); await bdGuardar('asa', null);
+    return new Fuente(datos);
+  }
+  // Lo que se abrió la última vez: {asa} o {copia}, o null.
+  static async ultima() {
+    const asa = await bdLeer('asa'); if (asa) return { asa };
+    const copia = await bdLeer('copia'); if (copia) return { copia };
+    return null;
+  }
+  static async olvidar() { await bdGuardar('asa', null); await bdGuardar('copia', null); }
+  get esCopia() { return !this.asa; }
 }
 
-// JSON para la cabecera Dropbox-API-Arg: lo que no es ASCII va como \uXXXX.
-function argCabecera(o) { return JSON.stringify(o).replace(/[\u007f-\uffff]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')); }
-
-function aleatorio(n) {
-  const a = new Uint8Array(n); crypto.getRandomValues(a);
-  return b64url(a);
-}
-function b64url(bytes) {
-  let s = ''; for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+export async function permiso(asa, pedir, modo = 'read') {
+  let p = await asa.queryPermission({ mode: modo });
+  if (p !== 'granted' && pedir) p = await asa.requestPermission({ mode: modo });
+  return p === 'granted';
 }
 
-export function urlRedireccion() { return location.origin + location.pathname; }
+// ---------- La carpeta de fotos y documentos ----------
+// Parte común: cómo se encuentra una foto, su transcripción o un archivo citado dentro de la carpeta elegida.
+class Raiz {
+  constructor() { this.recorte = null; this.cache = new Map(); this.urls = []; this._transc = null; }
 
-export class Dropbox {
-  constructor() { this.tipo = 'dropbox'; this.appKey = LS.get('appkey'); }
-  get conectado() { return !!LS.get('refresh'); }
-
-  async conectar() {
-    if (!this.appKey) throw new Error('Falta la clave de la aplicación (app key).');
-    const verif = aleatorio(48), estado = aleatorio(16);
-    const reto = b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verif))));
-    sessionStorage.setItem('arbol.pkce', JSON.stringify({ verif, estado }));
-    const q = new URLSearchParams({ client_id: this.appKey, response_type: 'code', code_challenge: reto, code_challenge_method: 'S256',
-      token_access_type: 'offline', redirect_uri: urlRedireccion(), state: estado });
-    location.href = 'https://www.dropbox.com/oauth2/authorize?' + q;
+  // Busca la ruta del GEDCOM quitando trozos por delante hasta que aparece en la carpeta.
+  // Lo que hubo que quitar se recuerda (todas las fotos suelen compartir el mismo principio).
+  // Devuelve {h, rel}: el archivo y su ruta dentro de la carpeta.
+  async buscar(ruta) {
+    if (this.cache.has(ruta)) { const c = this.cache.get(ruta); if (!c) throw noExiste(ruta); return c; }
+    const p = trozos(ruta);
+    let r = null;
+    if (this.recorte != null && this.recorte < p.length) r = await this.probar(p.slice(this.recorte));
+    for (let k = 0; !r && k < p.length; k++) { r = await this.probar(p.slice(k)); if (r) this.recorte = k; }
+    this.cache.set(ruta, r);
+    if (!r) throw noExiste(ruta);
+    return r;
   }
+  async probar(partes) { const h = await this.exacto(partes); return h ? { h, rel: partes } : null; }
 
-  // Vuelta de Dropbox con ?code=… : se cambia por los permisos y se limpia la dirección.
-  async terminarConexion() {
-    const q = new URLSearchParams(location.search);
-    if (!q.has('code') && !q.has('error')) return false;
-    history.replaceState(null, '', urlRedireccion() + location.hash);
-    if (q.has('error')) throw new Error('Dropbox no dio permiso: ' + (q.get('error_description') || q.get('error')));
-    const g = JSON.parse(sessionStorage.getItem('arbol.pkce') || '{}');
-    sessionStorage.removeItem('arbol.pkce');
-    if (!g.verif || g.estado !== q.get('state')) throw new Error('La respuesta de Dropbox no corresponde a esta conexión. Vuelve a conectar.');
-    const r = await fetch('https://api.dropboxapi.com/oauth2/token', { method: 'POST', body: new URLSearchParams({
-      code: q.get('code'), grant_type: 'authorization_code', code_verifier: g.verif, client_id: this.appKey, redirect_uri: urlRedireccion() }) });
-    if (!r.ok) throw new Error('No se pudo terminar la conexión con Dropbox: ' + await r.text());
-    this.guardarToken(await r.json());
-    return true;
-  }
-
-  guardarToken(j) {
-    if (j.refresh_token) LS.set('refresh', j.refresh_token);
-    this.token = j.access_token; this.caduca = Date.now() + (j.expires_in - 60) * 1000;
-  }
-
-  async acceso() {
-    if (this.token && Date.now() < this.caduca) return this.token;
-    const r = await fetch('https://api.dropboxapi.com/oauth2/token', { method: 'POST', body: new URLSearchParams({
-      grant_type: 'refresh_token', refresh_token: LS.get('refresh'), client_id: this.appKey }) });
-    if (!r.ok) { if (r.status === 400 || r.status === 401) LS.set('refresh', null); throw new Error('Hay que volver a conectar con Dropbox.'); }
-    this.guardarToken(await r.json());
-    return this.token;
-  }
-
-  async desconectar() {
-    try { await fetch('https://api.dropboxapi.com/2/auth/token/revoke', { method: 'POST', headers: { Authorization: 'Bearer ' + await this.acceso() } }); } catch {}
-    LS.set('refresh', null); this.token = null;
-  }
-
-  async rpc(ruta, cuerpo) {
-    const r = await fetch('https://api.dropboxapi.com/2/' + ruta, { method: 'POST',
-      headers: { Authorization: 'Bearer ' + await this.acceso(), 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) });
-    if (!r.ok) throw await errorDropbox(r, cuerpo.path);
-    return r.json();
-  }
-
-  async contenido(ruta, arg) {
-    const r = await fetch('https://content.dropboxapi.com/2/' + ruta, { method: 'POST',
-      headers: { Authorization: 'Bearer ' + await this.acceso(), 'Dropbox-API-Arg': argCabecera(arg) } });
-    if (!r.ok) throw await errorDropbox(r, arg.path || arg.resource?.path);
+  // Una ruta relativa a la carpeta o a alguna de sus subcarpetas (las que citan las notas: «03_transcripciones/x.md»).
+  async relativa(ruta) {
+    const p = trozos(ruta);
+    let r = await this.probar(p);
+    if (!r) for (const d of await this.subcarpetas([])) if ((r = await this.probar([d, ...p]))) break;
+    if (!r) throw noExiste(ruta);
     return r;
   }
 
-  async metadatos(path) { const m = await this.rpc('files/get_metadata', { path }); return { rev: m.rev, tam: m.size, fecha: m.server_modified }; }
-
-  async bajar(path) {
-    const r = await this.contenido('files/download', { path });
-    const m = JSON.parse(r.headers.get('Dropbox-API-Result'));
-    return { bytes: new Uint8Array(await r.arrayBuffer()), rev: m.rev, fecha: m.server_modified };
+  // Carpetas de transcripciones: las que se llaman «…transcripciones» en la carpeta o un nivel por debajo.
+  async carpetasTranscripcion() {
+    if (this._transc) return this._transc;
+    const t = [], es = n => /transcripcion/i.test(n);
+    for (const d of await this.subcarpetas([])) {
+      if (es(d)) t.push([d]);
+      else for (const e of await this.subcarpetas([d])) if (es(e)) t.push([d, e]);
+    }
+    return (this._transc = t);
   }
 
-  async texto(path) { const r = await this.contenido('files/download', { path }); return r.text(); }
-
-  async enlace(path) { return (await this.rpc('files/get_temporary_link', { path })).link; }
-
-  async miniatura(path) {
-    const r = await this.contenido('files/get_thumbnail_v2', { resource: { '.tag': 'path', path }, format: 'jpeg', size: 'w256h256', mode: 'bestfit' });
-    return URL.createObjectURL(await r.blob());
+  // Transcripción de una foto: el .md o .txt con el mismo nombre al lado, o en una carpeta de transcripciones que repita
+  // las carpetas de la foto (03_transcripciones/Documentos/x.md para Genealogia/Documentos/x.jpg).
+  async transcripcion(ruta) {
+    const { rel } = await this.buscar(ruta);
+    const sin = [...rel.slice(0, -1), rel[rel.length - 1].replace(/\.[^.]+$/, '')];
+    const cand = [[...sin.slice(0, -1), sin[sin.length - 1] + '.md'], [...sin.slice(0, -1), sin[sin.length - 1] + '.txt']];
+    for (const t of await this.carpetasTranscripcion())
+      for (let j = 0; j < sin.length; j++) cand.push([...t, ...sin.slice(j, -1), sin[sin.length - 1] + '.md']);
+    for (const c of cand) { const h = await this.exacto(c); if (h) return { texto: await (await this.archivo(h)).text(), rel: c.join('/') }; }
+    return null;
   }
 
-  async listar(path) {
-    const j = await this.rpc('files/list_folder', { path });
-    return j.entries.map(e => ({ nombre: e.name, ruta: e.path_display, carpeta: e['.tag'] === 'folder' }));
-  }
+  async texto(ruta) { const r = await this.relativa(ruta); return { texto: await (await this.archivo(r.h)).text(), rel: r.rel.join('/') }; }
+  async enlace(ruta) { return this.url((await this.buscar(ruta)).h); }
+  async miniatura(ruta) { return this.enlace(ruta); }
 }
 
-async function errorDropbox(r, ruta) {
-  let t = ''; try { t = await r.text(); } catch {}
-  const e = new Error(/not_found/.test(t) ? `No existe en Dropbox: ${ruta}` : r.status === 401 ? 'Dropbox ha caducado el permiso; vuelve a conectar.' : `Error de Dropbox (${r.status}): ${t.slice(0, 200)}`);
-  e.noExiste = /not_found/.test(t); e.status = r.status;
-  return e;
-}
-
-// Servidor local (servidor_local.py) en http://localhost:8765, que sirve /Genealogia y /Genealogia_2 tal como están en Dropbox.
-export class Local {
-  constructor() { this.tipo = 'local'; this.conectado = true; }
-  async pedir(path) {
-    const r = await fetch(encodeURI(path), { cache: 'no-store' });
-    if (!r.ok) { const e = new Error(r.status === 404 ? `No existe: ${path}` : `Error ${r.status} con ${path}`); e.noExiste = r.status === 404; throw e; }
-    return r;
+export class Carpeta extends Raiz {
+  constructor(asa) { super(); this.asa = asa; this.nombre = asa.name; }
+  static async elegir() {
+    const asa = await window.showDirectoryPicker({ id: 'arbol-fotos', mode: 'read' });
+    await bdGuardar('carpeta', asa);
+    return new Carpeta(asa);
   }
-  async metadatos(path) { const r = await fetch(encodeURI(path), { method: 'HEAD', cache: 'no-store' }); return { rev: r.headers.get('Last-Modified') + '|' + r.headers.get('Content-Length') }; }
-  async bajar(path) { const r = await this.pedir(path); return { bytes: new Uint8Array(await r.arrayBuffer()), rev: r.headers.get('Last-Modified') + '|' + r.headers.get('Content-Length') }; }
-  async texto(path) { return (await this.pedir(path)).text(); }
-  async enlace(path) { await this.pedir(path); return encodeURI(path); }
-  async miniatura(path) { return encodeURI(path); }
-  async listar() { return []; }
+  static async guardada() { return bdLeer('carpeta'); }
+  static async olvidar() { await bdGuardar('carpeta', null); }
+
+  async entrar(dir, nombre, archivo) {
+    try { return archivo ? await dir.getFileHandle(nombre) : await dir.getDirectoryHandle(nombre); }
+    catch {
+      // Las rutas del GEDCOM no siempre coinciden en mayúsculas con el disco.
+      try { for await (const [n, x] of dir.entries()) if (n.toLowerCase() === nombre.toLowerCase() && x.kind === (archivo ? 'file' : 'directory')) return x; } catch {}
+      return null;
+    }
+  }
+  async exacto(partes) {
+    let h = this.asa;
+    for (let i = 0; i < partes.length && h; i++) h = await this.entrar(h, partes[i], i === partes.length - 1);
+    return partes.length ? h : null;
+  }
+  async subcarpetas(partes) {
+    let h = this.asa;
+    for (const x of partes) { h = await this.entrar(h, x, false); if (!h) return []; }
+    const out = [];
+    try { for await (const [n, x] of h.entries()) if (x.kind === 'directory' && !n.startsWith('.')) out.push(n); } catch {}
+    return out;
+  }
+  archivo(h) { return h.getFile(); }
+  async url(h) { const u = URL.createObjectURL(await h.getFile()); this.urls.push(u); return u; }
 }
 
-// Copia del GEDCOM en este aparato (IndexedDB), para no bajar 8 MB cada vez si no ha cambiado.
+// Servidor de pruebas (servidor_local.py), que sirve la carpeta de Dropbox con sus rutas.
+export class Servidor extends Raiz {
+  constructor() { super(); this.nombre = 'servidor local'; }
+  dir(partes) { return encodeURI('/' + partes.join('/')); }
+  async exacto(partes) {
+    if (!partes.length || !/^genealogia/i.test(partes[0])) return null;
+    const u = this.dir(partes), r = await fetch(u, { method: 'HEAD', cache: 'no-store' });
+    return r.ok ? u : null;
+  }
+  async subcarpetas(partes) {
+    if (!partes.length) return ['Genealogia', 'Genealogia_2'];
+    const r = await fetch(this.dir(partes) + '/', { cache: 'no-store' });
+    if (!r.ok) return [];
+    return [...(await r.text()).matchAll(/href="([^"?]+)\/"/g)].map(m => decodeURIComponent(m[1]));
+  }
+  async archivo(u) { return (await fetch(u, { cache: 'no-store' })).blob(); }
+  async url(u) { return u; }
+  async bajar(ruta) { const u = this.dir(trozos(ruta)), r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw noExiste(ruta); return { bytes: new Uint8Array(await r.arrayBuffer()), nombre: ruta.split('/').pop(), fecha: Date.parse(r.headers.get('Last-Modified')) }; }
+}
+
+// ---------- Lo que se guarda en el navegador (IndexedDB) ----------
 const BD = 'arbol', ALM = 'archivos';
 function abrirBD() {
   return new Promise((ok, mal) => { const q = indexedDB.open(BD, 1); q.onupgradeneeded = () => q.result.createObjectStore(ALM); q.onsuccess = () => ok(q.result); q.onerror = () => mal(q.error); });
 }
-export async function cacheLeer(k) {
+export async function bdLeer(k) {
   try { const db = await abrirBD(); return await new Promise(ok => { const q = db.transaction(ALM).objectStore(ALM).get(k); q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null); }); } catch { return null; }
 }
-export async function cacheGuardar(k, v) {
-  try { const db = await abrirBD(); await new Promise(ok => { const t = db.transaction(ALM, 'readwrite'); t.objectStore(ALM).put(v, k); t.oncomplete = ok; t.onerror = ok; }); } catch {}
+export async function bdGuardar(k, v) {
+  try { const db = await abrirBD(); await new Promise(ok => { const t = db.transaction(ALM, 'readwrite'); v == null ? t.objectStore(ALM).delete(k) : t.objectStore(ALM).put(v, k); t.oncomplete = ok; t.onerror = ok; }); } catch {}
 }

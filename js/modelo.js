@@ -45,6 +45,21 @@ export class Arbol {
       else if (r.tipo === 'FAM') this.familias.set(r.xref, this.familia(r));
     }
     this.lineas = {};
+    this.raices = [];   // personas de referencia: [{id, letra, nombre}]
+  }
+
+  // Personas de referencia (las elige el usuario; por defecto, la primera del archivo).
+  ponerRaices(ids) {
+    const validos = ids.filter(id => this.p(id));
+    if (!validos.length) { const r = this.ged.registros.find(r => r.tipo === 'INDI'); if (r) validos.push(r.xref); }
+    const usadas = new Set();
+    this.raices = validos.map(id => {
+      const p = this.p(id), base = (p.nombre || p.apellidos || '?').normalize('NFD').replace(/[^A-Za-z]/g, '').toUpperCase() || '?';
+      let letra = base[0];
+      for (let k = 2; usadas.has(letra) && k <= base.length; k++) letra = base.slice(0, k);
+      usadas.add(letra);
+      return { id, letra, nombre: nombreCompleto(p) };
+    });
   }
 
   persona(r) {
