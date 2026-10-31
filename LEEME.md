@@ -74,7 +74,7 @@ Cada aparato y cada archivo guardan su propia lista.
 ## Editar (fase 2, en el ordenador con Chrome o Edge)
 
 1. Abre el GEDCOM como siempre y pulsa **✎ Editar** en la barra.
-2. Elige la **carpeta donde está el archivo** (por ejemplo `D:\Dropbox\Genealogia_2_arboles\edmundo_actualizado`) y da permiso de escritura.
+2. Elige la **carpeta donde está el archivo** (por ejemplo `D:\Dropbox\Genealogia_2\01_arboles\edmundo_actualizado`) y da permiso de escritura.
 3. En la vista de **Familia** aparecen los botones:
    - **✎ Editar sus datos**: nombre, apellidos, sexo, nacimiento y defunción;
    - **+ Añadir padre / + Añadir madre** (si no los tiene);
