@@ -96,10 +96,11 @@ class Raiz {
 
   // Transcripción de una foto: el .md o .txt con el mismo nombre al lado, o en una carpeta de transcripciones que repita
   // las carpetas de la foto (03_transcripciones/Documentos/x.md para Genealogia/Documentos/x.jpg).
-  async transcripcion(ruta) {
-    const { rel } = await this.buscar(ruta);
+  async transcripcion(ruta) { const { rel } = await this.buscar(ruta); return this.transcripcionDe(rel, true); }
+  // Transcripción de una foto que está en «rel» (en esta carpeta o en otra de las elegidas).
+  async transcripcionDe(rel, aqui) {
     const sin = [...rel.slice(0, -1), rel[rel.length - 1].replace(/\.[^.]+$/, '')];
-    const cand = [[...sin.slice(0, -1), sin[sin.length - 1] + '.md'], [...sin.slice(0, -1), sin[sin.length - 1] + '.txt']];
+    const cand = aqui ? [[...sin.slice(0, -1), sin[sin.length - 1] + '.md'], [...sin.slice(0, -1), sin[sin.length - 1] + '.txt']] : [];
     for (const t of await this.carpetasTranscripcion())
       for (let j = 0; j < sin.length; j++) cand.push([...t, ...sin.slice(j, -1), sin[sin.length - 1] + '.md']);
     for (const c of cand) { const h = await this.exacto(c); if (h) return { texto: await (await this.archivo(h)).text(), rel: c.join('/') }; }
@@ -111,15 +112,44 @@ class Raiz {
   async miniatura(ruta) { return this.enlace(ruta); }
 }
 
+// Varias carpetas de fotos (por ejemplo «Genealogia» y «Genealogia_2»): se busca en todas.
+export class Carpetas {
+  constructor(lista) { this.lista = lista; }
+  get nombre() { return this.lista.map(c => c.nombre).join(' + '); }
+  static async guardadas() {
+    const l = await bdLeer('carpetas');
+    if (l) return l;
+    const c = await bdLeer('carpeta');   // versión anterior: una sola carpeta
+    return c ? [c] : [];
+  }
+  static async guardar(asas) { await bdGuardar('carpetas', asas); await bdGuardar('carpeta', null); }
+  static async elegir() { return window.showDirectoryPicker({ id: 'arbol-fotos', mode: 'read' }); }
+  noEsta(ruta) {
+    const e = new Error(`No está en ${this.lista.map(c => '«' + c.nombre + '»').join(' ni en ')}: ${ruta}`);
+    e.noExiste = true; e.ruta = ruta; return e;
+  }
+  async buscar(ruta) {
+    for (const c of this.lista) { try { return { ...(await c.buscar(ruta)), c }; } catch (e) { if (!e.noExiste) throw e; } }
+    throw this.noEsta(ruta);
+  }
+  async enlace(ruta) { const r = await this.buscar(ruta); return r.c.url(r.h); }
+  async miniatura(ruta) { return this.enlace(ruta); }
+  async texto(ruta) {
+    for (const c of this.lista) { try { return await c.texto(ruta); } catch (e) { if (!e.noExiste) throw e; } }
+    throw this.noEsta(ruta);
+  }
+  // La transcripción puede estar en otra carpeta que la foto (fotos en «Genealogia», transcripciones en «Genealogia_2»).
+  async transcripcion(ruta) {
+    const r = await this.buscar(ruta);
+    const propia = await r.c.transcripcionDe(r.rel, true);
+    if (propia) return propia;
+    for (const c of this.lista) if (c !== r.c) { const t = await c.transcripcionDe(r.rel, false); if (t) return t; }
+    return null;
+  }
+}
+
 export class Carpeta extends Raiz {
   constructor(asa) { super(); this.asa = asa; this.nombre = asa.name; }
-  static async elegir() {
-    const asa = await window.showDirectoryPicker({ id: 'arbol-fotos', mode: 'read' });
-    await bdGuardar('carpeta', asa);
-    return new Carpeta(asa);
-  }
-  static async guardada() { return bdLeer('carpeta'); }
-  static async olvidar() { await bdGuardar('carpeta', null); }
 
   async entrar(dir, nombre, archivo) {
     try { return archivo ? await dir.getFileHandle(nombre) : await dir.getDirectoryHandle(nombre); }

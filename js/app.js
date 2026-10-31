@@ -1,23 +1,23 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611010022';
-import { Arbol, nombreCompleto } from './modelo.js?v=202611010022';
-import { buscar, prepararVariantes } from './buscar.js?v=202611010022';
-import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202611010022';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611010022';
-import { md, esc } from './md.js?v=202611010022';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010022';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010022';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010022';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010022';
-import { Guardado } from './guardar.js?v=202611010022';
-import { formularioPersona } from './formularios.js?v=202611010022';
-import { hijo as nodoHijo, valor as valorNodo } from './gedcom.js?v=202611010022';
+import { Gedcom } from './gedcom.js?v=202611010032';
+import { Arbol, nombreCompleto } from './modelo.js?v=202611010032';
+import { buscar, prepararVariantes } from './buscar.js?v=202611010032';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202611010032';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611010032';
+import { md, esc } from './md.js?v=202611010032';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010032';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010032';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010032';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010032';
+import { Guardado } from './guardar.js?v=202611010032';
+import { formularioPersona } from './formularios.js?v=202611010032';
+import { hijo as nodoHijo, valor as valorNodo } from './gedcom.js?v=202611010032';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
 const esLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 const PRUEBA = '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged';   // solo para el servidor de pruebas
-let fuente = null, carpeta = null, carpetaPendiente = null, arbol, variantes = [], info = {};
+let fuente = null, carpeta = null, carpetaPendiente = [], arbol, variantes = [], info = {};
 let editor = null, guardado = null, renovar = null, guardando = false, bytesAbiertos = null;
 const estadoBusqueda = JSON.parse(sessionStorage.getItem('arbol.busqueda') || '{}');
 
@@ -34,8 +34,9 @@ function error(e) {
 async function arrancar() {
   try {
     if (esLocal && LS.get('modo') === 'servidor') {
-      carpeta = new Servidor();
-      return abrir(await carpeta.bajar(PRUEBA));
+      const srv = new Servidor();
+      carpeta = new Carpetas([srv]);
+      return abrir(await srv.bajar(PRUEBA));
     }
     const ult = await Fuente.ultima();
     if (ult?.asa && await permiso(ult.asa, false)) fuente = await Fuente.desdeAsa(ult.asa);
@@ -47,9 +48,24 @@ async function arrancar() {
 }
 
 async function recuperarCarpeta() {
-  const c = hayDisco ? await Carpeta.guardada() : null;
-  if (!c) return;
-  if (await permiso(c, false)) carpeta = new Carpeta(c); else carpetaPendiente = c;
+  if (!hayDisco) return;
+  const listas = [], pendientes = [];
+  for (const h of await Carpetas.guardadas()) (await permiso(h, false) ? listas : pendientes).push(h);
+  carpeta = listas.length ? new Carpetas(listas.map(h => new Carpeta(h))) : null;
+  carpetaPendiente = pendientes;
+}
+// Añade una carpeta de fotos (o vuelve a dar permiso a las guardadas). Tiene que llamarse desde un clic.
+async function anadirCarpeta(nueva) {
+  const todas = await Carpetas.guardadas();
+  for (const h of carpetaPendiente) await permiso(h, true);
+  if (nueva) {
+    const h = await Carpetas.elegir();
+    let repetida = false;
+    for (const x of todas) if (await x.isSameEntry(h)) repetida = true;
+    if (!repetida) todas.push(h);
+    await Carpetas.guardar(todas);
+  }
+  await recuperarCarpeta();
 }
 
 function inicio(ult) {
@@ -85,7 +101,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010022')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010032')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -497,18 +513,17 @@ function guardarRotulo(id, texto) { const r = rotulosPropios(); if (texto.trim()
 const IMG = /^(jpe?g|png|gif|tiff?|bmp|webp|heic)$/;
 
 // Si no hay carpeta de fotos, se explica y se ofrece elegirla. Devuelve true si se puede seguir.
-function hayCarpeta(caja) {
-  if (carpeta) return true;
+function hayCarpeta(caja, falta) {
+  if (carpeta && !falta) return true;
   caja.innerHTML = hayDisco
-    ? `<p class="peq">Para ver fotos y transcripciones, elige la carpeta donde están (por ejemplo, la de Dropbox).
-       ${carpetaPendiente ? `<button data-c="re">Volver a usar «${esc(carpetaPendiente.name)}»</button>` : ''} <button data-c="elegir">Elegir carpeta…</button></p>`
+    ? `<p class="peq">${falta ? esc(falta) + '<br>Si las fotos están en otra carpeta (por ejemplo «Genealogia» y «Genealogia_2», o toda la de Dropbox), añádela:'
+                              : 'Para ver fotos y transcripciones, elige la carpeta donde están (por ejemplo «Genealogia», o toda la de Dropbox). Puedes añadir varias.'}
+       ${carpetaPendiente.length ? `<button data-c="re">Volver a usar ${carpetaPendiente.map(h => '«' + esc(h.name) + '»').join(', ')}</button>` : ''} <button data-c="elegir">${carpeta ? 'Añadir otra carpeta…' : 'Elegir carpeta…'}</button></p>`
     : '<p class="peq">En este aparato no se pueden ver fotos ni transcripciones: solo el árbol. Se ven en el ordenador, con Chrome o Edge.</p>';
   caja.querySelectorAll('[data-c]').forEach(b => b.onclick = async () => {
     try {
-      if (b.dataset.c === 're') { if (!await permiso(carpetaPendiente, true)) return; carpeta = new Carpeta(carpetaPendiente); }
-      else carpeta = await Carpeta.elegir();
-      carpetaPendiente = null;
-      caja.innerHTML = '<p class="peq">Carpeta lista. Vuelve a pulsar el botón de fotos.</p>';
+      await anadirCarpeta(b.dataset.c === 'elegir');
+      caja.innerHTML = `<p class="peq">Carpetas: ${esc(carpeta?.nombre || 'ninguna')}. Vuelve a abrir la foto.</p>`;
     } catch (e) { if (e.name !== 'AbortError') caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
   });
   return false;
@@ -568,7 +583,7 @@ function visor(lista, i, fuenteDoc) {
       if (lista[i] !== m) return;
       lienzo.innerHTML = IMG.test(m.form) ? `<img src="${esc(u)}" alt="${esc(m.titulo)}" style="width:${zoom * 100}%">`
         : `<p><a class="boton" href="${esc(u)}" target="_blank" rel="noopener">Abrir ${esc(m.form.toUpperCase())}</a></p>`;
-    }).catch(e => { lienzo.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; });
+    }).catch(e => { if (e.noExiste) hayCarpeta(lienzo, e.message); else lienzo.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; });
     try {
       const t = await transcripcion(m, fuenteDoc);
       if (lista[i] !== m) return;
@@ -611,17 +626,17 @@ function ajustes() {
     <p class="peq">Salen en la barra de arriba y en el filtro de línea, y numeran a sus antepasados (Ahnentafel). Se marcan con la estrella en la ficha de cada persona.</p>
     <ul>${arbol.raices.map(r => `<li>${esc(r.letra)} · <a href="#/p/${esc(r.id.slice(1, -1))}">${esc(r.nombre)}</a> <button data-quitar="${esc(r.id)}">Quitar</button></li>`).join('')}</ul>
     <h3>Carpeta de fotos y transcripciones</h3>
-    ${hayDisco ? `<p>${carpeta ? `<b>${esc(carpeta.nombre)}</b>` : carpetaPendiente ? `«${esc(carpetaPendiente.name)}» (pide permiso al usar las fotos)` : 'Ninguna'}</p>
-      <p><button id="carpeta">Elegir carpeta…</button> ${carpeta || carpetaPendiente ? '<button id="sincarpeta">No usar carpeta</button>' : ''}</p>
-      <p class="peq">Elige la carpeta que contiene las fotos, por ejemplo la de Dropbox. El programa las busca dentro aunque el GEDCOM tenga otra ruta delante (otra letra de disco, otro ordenador).</p>`
+    ${hayDisco ? `<p>${carpeta ? carpeta.lista.map(c => `<b>${esc(c.nombre)}</b>`).join(' + ') : 'Ninguna'}${carpetaPendiente.length ? ` · pendientes de permiso: ${carpetaPendiente.map(h => esc(h.name)).join(', ')}` : ''}</p>
+      <p><button id="carpeta">Añadir carpeta…</button> ${carpeta || carpetaPendiente.length ? '<button id="sincarpeta">Quitar todas</button>' : ''}</p>
+      <p class="peq">Elige las carpetas que contienen las fotos y las transcripciones (por ejemplo «Genealogia» y «Genealogia_2», o toda la de Dropbox). El programa las busca dentro aunque el GEDCOM tenga otra ruta delante (otra letra de disco, otro ordenador).</p>`
     : '<p class="peq">En este aparato no se pueden ver fotos: solo en el ordenador, con Chrome o Edge.</p>'}
     <hr><p class="peq">Fase 1: solo lectura. El programa no cambia ningún archivo.</p>
   </div>`);
   $('#otro').onclick = async () => { await Fuente.olvidar(); LS.set('modo', null); location.hash = '#/'; location.reload(); };
   main.querySelectorAll('[data-quitar]').forEach(b => b.onclick = () => { alternarRaiz(b.dataset.quitar); ajustes(); });
   if (hayDisco) {
-    $('#carpeta').onclick = async () => { try { carpeta = await Carpeta.elegir(); carpetaPendiente = null; ajustes(); } catch (e) { if (e.name !== 'AbortError') error(e); } };
-    $('#sincarpeta')?.addEventListener('click', async () => { await Carpeta.olvidar(); carpeta = carpetaPendiente = null; ajustes(); });
+    $('#carpeta').onclick = async () => { try { await anadirCarpeta(true); ajustes(); } catch (e) { if (e.name !== 'AbortError') alert(e.message); } };
+    $('#sincarpeta')?.addEventListener('click', async () => { await Carpetas.guardar([]); carpeta = null; carpetaPendiente = []; ajustes(); });
   }
 }
 

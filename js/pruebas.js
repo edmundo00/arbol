@@ -1,9 +1,9 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611010022';
-import { Arbol } from './modelo.js?v=202611010022';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611010022';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611010032';
+import { Arbol } from './modelo.js?v=202611010032';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611010032';
 const RUTAS = { gedcom: '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged' };
-import { Servidor } from './almacen.js?v=202611010022';
+import { Servidor, Carpetas } from './almacen.js?v=202611010032';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -44,7 +44,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010022')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010032')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);
@@ -72,6 +72,21 @@ async function main() {
   const tr = await srv.transcripcion(foto);
   ok(tr && /03_transcripciones\/Documentos\/Memorias_Edmundo_Fraga_Ferreiro_04\.md$/.test(tr.rel), `Transcripción de la foto: ${tr?.rel}`);
   ok(/Fraga/.test((await srv.texto('03_transcripciones/Documentos/Fraga_Ferreiro_Edmundo_familia_numerosa.md')).texto), 'Archivo citado por ruta relativa encontrado en una subcarpeta');
+
+  // Dos carpetas elegidas por separado: fotos en «Genealogia», transcripciones en «Genealogia_2»
+  class Sub extends Servidor {
+    constructor(base) { super(); this.base = base; this.nombre = base; }
+    exacto(p) { return p.length ? super.exacto([this.base, ...p]) : null; }
+    subcarpetas(p) { return super.subcarpetas([this.base, ...p]); }
+  }
+  const dos = new Carpetas([new Sub('Genealogia_2'), new Sub('Genealogia')]);
+  const padron = String.raw`D:\Dropbox\Genealogia\PADRONES\As Pontes\Puentes_1827_padron_14.jpg`;
+  ok((await dos.buscar(padron)).c.nombre === 'Genealogia', 'Con dos carpetas: la foto del padrón de As Pontes aparece en «Genealogia»');
+  const tr2 = await dos.transcripcion(foto);
+  ok(tr2 && /^03_transcripciones\/Documentos\/Memorias_Edmundo_Fraga_Ferreiro_04\.md$/.test(tr2.rel), `Foto en «Genealogia», transcripción en «Genealogia_2»: ${tr2?.rel}`);
+  const sola = new Carpetas([new Sub('Genealogia_2')]);
+  let e2 = null; try { await sola.buscar(padron); } catch (e) { e2 = e; }
+  ok(e2?.noExiste && /No está en «Genealogia_2»/.test(e2.message), `Solo con «Genealogia_2» lo explica: ${e2?.message}`);
 
   ok(true, `Tiempo total: ${Math.round(performance.now() - t0)} ms`);
   document.title = fallos ? `FALLAN ${fallos}` : 'TODO BIEN';

@@ -15,7 +15,8 @@ Programa para buscar y ver un árbol genealógico en formato GEDCOM, en el orden
 1. Abre la dirección y pulsa **Elegir archivo GEDCOM…**. Elige tu `.ged` (por ejemplo,
    `D:\Dropbox\Genealogia_2\01_arboles\edmundo_actualizado\edmundo.ged`).
 2. Para ver fotos y transcripciones: en una ficha, pestaña **Documentos**, pulsa un botón de fotos y luego **Elegir carpeta…**.
-   Elige la carpeta donde están las fotos (por ejemplo, `D:\Dropbox`).
+   Elige la carpeta donde están las fotos: toda la de Dropbox (`D:\Dropbox`) o, mejor, **varias** por separado con **Añadir otra carpeta…**
+   (por ejemplo `Genealogia`, con las fotos originales, y `Genealogia_2`, con las transcripciones y las descargas).
    - El programa encuentra las fotos dentro de esa carpeta aunque el GEDCOM las cite con otra ruta delante (otra letra de disco, otro ordenador, otra persona).
    - Las transcripciones se buscan junto a cada foto (mismo nombre, `.md` o `.txt`). También se buscan en cualquier carpeta llamada «…transcripciones» que repita las carpetas de las fotos.
 3. Las veces siguientes se abre sola. Como mucho, el navegador pregunta una vez si das permiso para leer el archivo y la carpeta.
