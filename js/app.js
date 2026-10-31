@@ -1,11 +1,11 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202610312334';
-import { Arbol, nombreCompleto } from './modelo.js?v=202610312334';
-import { buscar, prepararVariantes } from './buscar.js?v=202610312334';
-import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202610312334';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202610312334';
-import { md, esc } from './md.js?v=202610312334';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202610312334';
+import { Gedcom } from './gedcom.js?v=202610312337';
+import { Arbol, nombreCompleto } from './modelo.js?v=202610312337';
+import { buscar, prepararVariantes } from './buscar.js?v=202610312337';
+import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202610312337';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202610312337';
+import { md, esc } from './md.js?v=202610312337';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202610312337';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -77,7 +77,7 @@ function abrir(datos) {
       if (!arbol.personas.size) throw new Error(`«${datos.nombre}» no parece un GEDCOM: no tiene personas.`);
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202610312334')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202610312337')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -108,7 +108,10 @@ function cabecera() {
 
 window.addEventListener('hashchange', () => arbol && ir());
 
+function recordar(id) { LS.set('ultima:' + (info.nombre || ''), id); marcarModo(); }
+
 function ir() {
+  if (!/^#\/p\//.test(location.hash)) { main.dataset.persona = ''; marcarModo(); }
   const h = decodeURIComponent(location.hash.slice(1)) || '/';
   let m;
   // Una persona se ve en el modo en que se esté (Familia o Árbol); las pestañas de la ficha son siempre de Familia.
@@ -162,13 +165,16 @@ function lanzar() {
 
 function modo() { return LS.get('modoVista') === 'arbol' ? 'arbol' : 'familia'; }
 function vistaArbol() { return LS.get('vista') || (matchMedia('(max-width: 760px)').matches ? 'lista' : 'grafico'); }
-function selectorModo(id) {
-  const b = (k, t) => `<button data-modo="${k}" class="${modo() === k ? 'activo' : ''}">${t}</button>`;
-  return `<nav class="modos">${b('familia', '👪 Familia')}${b('arbol', '🌳 Árbol')}</nav>`;
-}
-function activarModo(id) {
-  main.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { LS.set('modoVista', b.dataset.modo); main.dataset.persona = ''; ir(); });
-}
+// Botones Familia / Árbol de la barra: cambian el modo y abren a la última persona vista.
+function marcarModo() { document.querySelectorAll('.modo').forEach(b => b.classList.toggle('activo', b.dataset.modo === modo())); }
+document.querySelectorAll('.modo').forEach(b => b.onclick = () => {
+  LS.set('modoVista', b.dataset.modo);
+  const id = main.dataset.persona || LS.get('ultima:' + (info.nombre || '')) || arbol?.raices[0]?.id;
+  if (!arbol || !id) return;
+  main.dataset.persona = '';
+  const h = '#/p/' + id.slice(1, -1);
+  if (location.hash === h) ir(); else location.hash = h;
+});
 
 function verPersona(id, pestana) {
   const p = arbol.p(id);
@@ -177,13 +183,13 @@ function verPersona(id, pestana) {
   const antes = main.dataset.persona === id;
   const y = window.scrollY;
   const raiz = esRaiz(id);
-  main.innerHTML = `<div class="persona">${selectorModo(id)}${familia(arbol, id)}
+  main.innerHTML = `<div class="persona">${familia(arbol, id)}
     <p class="acciones"><button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Persona de referencia' : '☆ Marcar como persona de referencia'}</button></p>
     <section class="detalle">${detalle(arbol, id, pestana)}</section></div>`;
   main.dataset.persona = id;
   if (antes) window.scrollTo(0, y); else window.scrollTo(0, 0);
   $('#raiz').onclick = () => { alternarRaiz(id); verPersona(id, pestana); };
-  activarModo(id);
+  recordar(id);
   const { docs, sueltas } = citas(arbol, id);
   main.querySelectorAll('[data-fotos]').forEach(b => b.onclick = () => {
     const k = b.dataset.fotos;
@@ -202,9 +208,9 @@ function verArbol(id) {
   document.title = 'Árbol de ' + nombreCompleto(p);
   main.dataset.persona = id;
   const cuerpo = vista === 'lista' ? lista(arbol, id) : vista === 'desc' ? descendientes(arbol, id) : grafico(arbol, id);
-  pantalla(`<div class="arbol-vista">${selectorModo(id)}<h2 class="tit-arbol">Árbol de ${esc(nombreCompleto(p))}</h2>
+  pantalla(`<div class="arbol-vista"><h2 class="tit-arbol">Árbol de ${esc(nombreCompleto(p))}</h2>
     <section class="detalle">${pestanasArbol(vista)}<div class="cuerpo">${cuerpo}</div></section></div>`);
-  activarModo(id);
+  recordar(id);
   main.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => { LS.set('vista', b.dataset.vista); verArbol(id); });
   // «Ir al n.º»: abre su generación, la lleva a la vista y la resalta.
   $('#ir-num')?.addEventListener('submit', ev => {

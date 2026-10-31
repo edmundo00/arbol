@@ -1,6 +1,6 @@
 // Árboles: gráfico de ascendientes, lista de antepasados por generaciones y esquema de descendientes.
-import { vida, nombreCompleto } from './modelo.js?v=202610312334';
-import { esc } from './md.js?v=202610312334';
+import { vida, nombreCompleto } from './modelo.js?v=202610312337';
+import { esc } from './md.js?v=202610312337';
 
 const enlace = id => `#/p/${id.slice(1, -1)}`;
 

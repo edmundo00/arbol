@@ -47,7 +47,7 @@ Cada aparato y cada archivo guardan su propia lista.
   - Variantes de apellidos en `variantes.json` (Houwelingen / Abelinguen / Bezlinge…); se pueden añadir más.
   - Filtros por lugar, años y línea.
 - **Vista de familia**: la persona con sus cónyuges e hijos, sus padres y sus hermanos. Con un clic se pone en el centro a cualquiera de ellos.
-- **Dos modos, Familia y Árbol**, con los botones **👪 Familia** y **🌳 Árbol** de arriba de cada persona. El programa recuerda el modo:
+- **Dos modos, Familia y Árbol**, con los dos botones de la barra de arriba (en el móvil, solo los iconos). El programa recuerda el modo:
   si estás en Árbol y pulsas a alguien, el árbol se centra en esa persona; para ver su ficha, pulsas **Familia**.
   - **Gráfico**: la persona y 5 generaciones de antepasados (la flecha ▸ indica que hay más hacia atrás).
   - **Antepasados**: todos, por generaciones, con su número (2 padre, 3 madre, 4 abuelo paterno…). **Ir al n.º** marca la fila de ese antepasado.

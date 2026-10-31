@@ -92,10 +92,12 @@ main { max-width: 1150px; margin: 0 auto; padding: 12px 16px 60px; }
   .pareja .tarjeta { min-height: 0; padding: 7px 9px; font-size: .92em; }
 }
 
-/* Familia / Árbol */
-.modos { display: flex; gap: 0; margin: 0 0 12px; border: 1px solid var(--acento); border-radius: 10px; overflow: hidden; width: max-content; max-width: 100%; }
-.modos button { border: 0; border-radius: 0; padding: 9px 18px; background: var(--papel); color: var(--acento2); font-weight: 600; }
-.modos button.activo { background: var(--acento); color: #fff; }
+/* Familia / Árbol (barra de arriba) */
+.modos-cab { display: flex; gap: 4px; }
+button.boton-cab { border: 0; color: #fff; font: inherit; font-weight: 600; cursor: pointer; padding: 0 10px; display: flex; gap: 6px; align-items: center; }
+.boton-cab svg { width: 22px; height: 22px; }
+.boton-cab.modo.activo { background: #fff; color: var(--acento); }
+@media (max-width: 760px) { .boton-cab.modo span { display: none; } button.boton-cab { padding: 0 8px; } }
 button.pest { background: none; border: 0; border-bottom: 3px solid transparent; border-radius: 0; font: inherit; cursor: pointer; }
 button.pest.activa { border-bottom-color: var(--acento); }
 .fila.marcada { outline: 3px solid var(--acento); }
