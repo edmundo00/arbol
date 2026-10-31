@@ -3,7 +3,6 @@ import { vida, nombreCompleto } from './modelo.js';
 import { esc } from './md.js';
 
 const enlace = id => `#/p/${id.slice(1, -1)}`;
-const arbolDe = (id, vista) => `#/arbol/${id.slice(1, -1)}/${vista}`;
 
 function padresDe(arbol, id) {
   const f = arbol.padres(id)[0];
@@ -26,8 +25,8 @@ export function antepasados(arbol, id, gens) {
 const PARENTESCO = ['', 'La persona', 'Padres', 'Abuelos', 'Bisabuelos', 'Tatarabuelos', 'Trastatarabuelos'];
 function nombreGen(g) { return PARENTESCO[g] || `${g - 1}.ª generación de antepasados`; }
 
-export function pestanasArbol(id, vista) {
-  const p = (k, t) => `<a class="pest${vista === k ? ' activa' : ''}" href="${arbolDe(id, k)}">${t}</a>`;
+export function pestanasArbol(vista) {
+  const p = (k, t) => `<button class="pest${vista === k ? ' activa' : ''}" data-vista="${k}">${t}</button>`;
   return `<nav class="pestanas">${p('grafico', 'Gráfico')}${p('lista', 'Antepasados')}${p('desc', 'Descendientes')}</nav>`;
 }
 
@@ -45,13 +44,13 @@ export function grafico(arbol, id, GENS = 5) {
       celdas += p
         ? `<div class="caja-arbol s${p.sexo}" style="${estilo}"><a href="${enlace(x)}"><span class="num">${n}</span>
              <span class="nom">${esc(p.nombre)} <b>${esc(p.apellidos)}</b></span><span class="vida">${esc(vida(p))}</span></a>
-             ${sigue ? `<a class="seguir" href="${arbolDe(x, 'grafico')}" title="Seguir el árbol desde aquí">▸</a>` : ''}</div>`
+             ${sigue ? '<span class="seguir" aria-hidden="true">▸</span>' : ''}</div>`
         : `<div class="caja-arbol vacia" style="${estilo}"><span class="num">${n}</span>${g > 1 && m.get(Math.floor(n / 2)) ? '<span class="vida">desconocido</span>' : ''}</div>`;
     }
   }
   const hijo = arbol.p(id) && padresHijo(arbol, id);
   return `<div class="grafico" style="grid-template-rows:repeat(${filas}, minmax(44px, auto))">${celdas}</div>
-    ${hijo ? `<p class="peq"><a href="${arbolDe(hijo, 'grafico')}">◂ Volver una generación (${esc(nombreCompleto(arbol.p(hijo)))})</a></p>` : ''}`;
+    ${hijo ? `<p class="peq"><a href="${enlace(hijo)}">◂ Bajar una generación (${esc(nombreCompleto(arbol.p(hijo)))})</a></p>` : ''}`;
 }
 
 // Un hijo de la persona, para poder volver hacia abajo en el gráfico.
@@ -80,14 +79,10 @@ export function lista(arbol, id) {
           <span class="vida">${esc(vida(p))}${lugar ? ' · ' + esc(lugar) : ''}</span></a>`;
       }).join('')}</details>`;
   }).join('');
-  return `<form class="ir-num" id="ir-num"><label>Ir al antepasado n.º<input id="num" inputmode="numeric" autocomplete="off" placeholder="p. ej. 12"></label><button>Ir</button></form>
+  return `<p class="peq">Pulsa a cualquiera para ver su árbol; para ver su ficha, pulsa luego «Familia».</p>
+    <form class="ir-num" id="ir-num"><label>Ir al antepasado n.º<input id="num" inputmode="numeric" autocomplete="off" placeholder="p. ej. 12"></label><button>Ir</button></form>
     <p class="peq">${new Set([...m.values()]).size - 1} antepasados conocidos${m.size > new Set([...m.values()]).size ? ` (${m.size - 1} contando dos veces a los que aparecen por varias ramas)` : ''}. Padre = 2 × hijo; madre = 2 × hijo + 1.</p>
     ${bloques || '<p class="nada">No hay antepasados registrados.</p>'}`;
-}
-
-export function irANumero(arbol, id, n) {
-  const m = antepasados(arbol, id, Math.floor(Math.log2(n)) + 2);
-  return m.get(n) || null;
 }
 
 // ---------- Descendientes ----------
@@ -106,7 +101,7 @@ export function descendientes(arbol, id, MAX = 12) {
       const o = arbol.p(f.marido === x ? f.mujer : f.marido);
       return o ? ` <span class="peq">⚭ <a href="${enlace(o.id)}">${esc(nombreCompleto(o))}</a></span>` : '';
     }).join('');
-    if (!hijos.length || nivel >= MAX) return `<li>${persona}${conyuges}${hijos.length ? ` <span class="peq">(${hijos.length} hijos más abajo: <a href="${arbolDe(x, 'desc')}">ver</a>)</span>` : ''}</li>`;
+    if (!hijos.length || nivel >= MAX) return `<li>${persona}${conyuges}${hijos.length ? ` <span class="peq">(${hijos.length} hijos más abajo: <a href="${enlace(x)}">ver</a>)</span>` : ''}</li>`;
     const y = c => arbol.p(c)?.ymin ?? 9999;
     return `<li><details${nivel < 2 ? ' open' : ''}><summary>${persona}${conyuges} <span class="peq">· ${hijos.length} hijo${hijos.length === 1 ? '' : 's'}</span></summary>
       <ul>${[...hijos].sort((a, b) => y(a) - y(b)).map(h => rama(h, nivel + 1)).join('')}</ul></details></li>`;

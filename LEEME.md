@@ -47,11 +47,11 @@ Cada aparato y cada archivo guardan su propia lista.
   - Variantes de apellidos en `variantes.json` (Houwelingen / Abelinguen / Bezlinge…); se pueden añadir más.
   - Filtros por lugar, años y línea.
 - **Vista de familia**: la persona con sus cónyuges e hijos, sus padres y sus hermanos. Con un clic se pone en el centro a cualquiera de ellos.
-- **Árboles** (botón 🌳 arriba, o «Ver su árbol» en cada ficha):
-  - **Gráfico**: la persona y 5 generaciones de antepasados. Un clic lleva a la ficha; la flecha ▸ sigue el árbol hacia atrás desde ese antepasado.
-  - **Antepasados**: todos, por generaciones, con su número (2 padre, 3 madre, 4 abuelo paterno…). La casilla **Ir al n.º** salta a uno directamente.
+- **Dos modos, Familia y Árbol**, con los botones **👪 Familia** y **🌳 Árbol** de arriba de cada persona. El programa recuerda el modo:
+  si estás en Árbol y pulsas a alguien, el árbol se centra en esa persona; para ver su ficha, pulsas **Familia**.
+  - **Gráfico**: la persona y 5 generaciones de antepasados (la flecha ▸ indica que hay más hacia atrás).
+  - **Antepasados**: todos, por generaciones, con su número (2 padre, 3 madre, 4 abuelo paterno…). **Ir al n.º** marca la fila de ese antepasado.
   - **Descendientes**: hijos, nietos… en un esquema que se abre y se cierra.
-  - En el móvil se abre primero la lista; en el ordenador, el gráfico.
 - **Ficha de cada persona**:
   - hechos ordenados por fecha, notas y el registro GEDCOM tal cual;
   - **documentos** con lo que prueba cada uno (grado A/B/C), sus fotos y la transcripción al lado.

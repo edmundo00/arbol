@@ -5,7 +5,7 @@ import { buscar, prepararVariantes } from './buscar.js';
 import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js';
 import { resultados, familia, detalle, citas } from './vistas.js';
 import { md, esc } from './md.js';
-import { grafico, lista, descendientes, pestanasArbol, irANumero } from './arboles.js';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -111,9 +111,11 @@ window.addEventListener('hashchange', () => arbol && ir());
 function ir() {
   const h = decodeURIComponent(location.hash.slice(1)) || '/';
   let m;
-  if ((m = /^\/p\/([^/]+)(?:\/(\w+))?$/.exec(h))) return verPersona('@' + m[1] + '@', m[2] || 'datos');
-  if ((m = /^\/arbol\/([^/]+)(?:\/(\w+))?$/.exec(h))) return verArbol('@' + m[1] + '@', m[2] || (matchMedia('(max-width: 760px)').matches ? 'lista' : 'grafico'));
-  if (h === '/arbol') return verArbol(main.dataset.persona || arbol.raices[0]?.id, null);
+  // Una persona se ve en el modo en que se esté (Familia o Árbol); las pestañas de la ficha son siempre de Familia.
+  if ((m = /^\/p\/([^/]+)(?:\/(\w+))?$/.exec(h))) {
+    if (m[2]) LS.set('modo', 'familia');
+    return modo() === 'arbol' ? verArbol('@' + m[1] + '@') : verPersona('@' + m[1] + '@', m[2] || 'datos');
+  }
   if (h === '/ajustes') return ajustes();
   return verBuscar();
 }
@@ -156,6 +158,18 @@ function lanzar() {
   }, 120);
 }
 
+// ---------- Modo: Familia o Árbol (se recuerda) ----------
+
+function modo() { return LS.get('modo') === 'arbol' ? 'arbol' : 'familia'; }
+function vistaArbol() { return LS.get('vista') || (matchMedia('(max-width: 760px)').matches ? 'lista' : 'grafico'); }
+function selectorModo(id) {
+  const b = (k, t) => `<button data-modo="${k}" class="${modo() === k ? 'activo' : ''}">${t}</button>`;
+  return `<nav class="modos">${b('familia', '👪 Familia')}${b('arbol', '🌳 Árbol')}</nav>`;
+}
+function activarModo(id) {
+  main.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { LS.set('modo', b.dataset.modo); main.dataset.persona = ''; ir(); });
+}
+
 function verPersona(id, pestana) {
   const p = arbol.p(id);
   if (!p) return pantalla(`<div class="caja"><p class="aviso">No existe la persona ${esc(id)}.</p></div>`);
@@ -163,12 +177,13 @@ function verPersona(id, pestana) {
   const antes = main.dataset.persona === id;
   const y = window.scrollY;
   const raiz = esRaiz(id);
-  main.innerHTML = `<div class="persona">${familia(arbol, id)}
-    <p class="acciones"><a class="boton" href="#/arbol/${esc(id.slice(1, -1))}">🌳 Ver su árbol</a> <button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Persona de referencia' : '☆ Marcar como persona de referencia'}</button></p>
+  main.innerHTML = `<div class="persona">${selectorModo(id)}${familia(arbol, id)}
+    <p class="acciones"><button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Persona de referencia' : '☆ Marcar como persona de referencia'}</button></p>
     <section class="detalle">${detalle(arbol, id, pestana)}</section></div>`;
   main.dataset.persona = id;
   if (antes) window.scrollTo(0, y); else window.scrollTo(0, 0);
   $('#raiz').onclick = () => { alternarRaiz(id); verPersona(id, pestana); };
+  activarModo(id);
   const { docs, sueltas } = citas(arbol, id);
   main.querySelectorAll('[data-fotos]').forEach(b => b.onclick = () => {
     const k = b.dataset.fotos;
@@ -180,23 +195,27 @@ function verPersona(id, pestana) {
 
 // ---------- Árboles ----------
 
-function verArbol(id, vista) {
-  if (!vista) vista = matchMedia('(max-width: 760px)').matches ? 'lista' : 'grafico';
+function verArbol(id) {
+  const vista = vistaArbol();
   if (!arbol.p(id)) return pantalla(`<div class="caja"><p class="aviso">No existe la persona ${esc(id)}.</p></div>`);
-  if (location.hash !== `#/arbol/${id.slice(1, -1)}/${vista}`) history.replaceState(null, '', `#/arbol/${id.slice(1, -1)}/${vista}`);
   const p = arbol.p(id);
   document.title = 'Árbol de ' + nombreCompleto(p);
   main.dataset.persona = id;
   const cuerpo = vista === 'lista' ? lista(arbol, id) : vista === 'desc' ? descendientes(arbol, id) : grafico(arbol, id);
-  pantalla(`<div class="arbol-vista"><h2 class="tit-arbol">Árbol de <a href="#/p/${esc(id.slice(1, -1))}">${esc(nombreCompleto(p))}</a></h2>
-    <section class="detalle">${pestanasArbol(id, vista)}<div class="cuerpo">${cuerpo}</div></section></div>`);
+  pantalla(`<div class="arbol-vista">${selectorModo(id)}<h2 class="tit-arbol">Árbol de ${esc(nombreCompleto(p))}</h2>
+    <section class="detalle">${pestanasArbol(vista)}<div class="cuerpo">${cuerpo}</div></section></div>`);
+  activarModo(id);
+  main.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => { LS.set('vista', b.dataset.vista); verArbol(id); });
+  // «Ir al n.º»: abre su generación, la lleva a la vista y la resalta.
   $('#ir-num')?.addEventListener('submit', ev => {
     ev.preventDefault();
     const n = parseInt($('#num').value, 10);
-    if (!(n >= 1)) return;
-    const x = irANumero(arbol, id, n);
-    if (x) location.hash = '#/p/' + x.slice(1, -1);
-    else alert(`No hay antepasado n.º ${n} en el árbol.`);
+    const fila = n >= 2 && document.getElementById('n' + n);
+    if (!fila) return alert(n === 1 ? 'El n.º 1 es la propia persona.' : `No hay antepasado n.º ${n} en el árbol.`);
+    fila.closest('details').open = true;
+    main.querySelectorAll('.fila.marcada').forEach(f => f.classList.remove('marcada'));
+    fila.classList.add('marcada');
+    fila.scrollIntoView({ block: 'center', behavior: 'smooth' });
   });
 }
 

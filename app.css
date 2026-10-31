@@ -92,6 +92,14 @@ main { max-width: 1150px; margin: 0 auto; padding: 12px 16px 60px; }
   .pareja .tarjeta { min-height: 0; padding: 7px 9px; font-size: .92em; }
 }
 
+/* Familia / Árbol */
+.modos { display: flex; gap: 0; margin: 0 0 12px; border: 1px solid var(--acento); border-radius: 10px; overflow: hidden; width: max-content; max-width: 100%; }
+.modos button { border: 0; border-radius: 0; padding: 9px 18px; background: var(--papel); color: var(--acento2); font-weight: 600; }
+.modos button.activo { background: var(--acento); color: #fff; }
+button.pest { background: none; border: 0; border-bottom: 3px solid transparent; border-radius: 0; font: inherit; cursor: pointer; }
+button.pest.activa { border-bottom-color: var(--acento); }
+.fila.marcada { outline: 3px solid var(--acento); }
+
 /* Árboles */
 .tit-arbol { font-size: 1.1em; margin: 4px 0 10px; }
 .grafico { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 4px 10px; align-items: center; overflow-x: auto; }
@@ -102,7 +110,7 @@ main { max-width: 1150px; margin: 0 auto; padding: 12px 16px 60px; }
 .caja-arbol .num, .fila .num { font-size: .75em; color: var(--suave); }
 .caja-arbol .vida, .fila .vida { font-size: .85em; color: var(--suave); }
 .caja-arbol:has(.seguir) { padding-right: 26px; }
-.caja-arbol .seguir { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 1.3em; color: var(--acento2); padding: 4px; }
+.caja-arbol .seguir { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 1.3em; color: var(--acento2); padding: 4px; pointer-events: none; }
 .ir-num { display: flex; gap: 8px; align-items: end; margin-bottom: 8px; }
 .ir-num label { margin: 0; flex: 0 1 220px; }
 .gen { border-bottom: 1px solid var(--linea); padding: 6px 0; }
