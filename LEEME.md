@@ -32,15 +32,26 @@ Lo haces tú, con tu cuenta. Yo nunca meto contraseñas.
 4. Pestaña **Settings**, apartado **OAuth 2**:
    - **Redirect URIs**: añade estas dos direcciones, una a una, con el botón **Add**:
      - `http://localhost:8765/Genealogia_2/11_aplicacion/` (para probar en este ordenador);
-     - la de la página publicada (paso 2), por ejemplo `https://TU-USUARIO.github.io/arbol/`.
+     - `https://edmundo00.github.io/arbol/` (la página publicada).
    - **Allow public clients (Implicit Grant & PKCE)**: déjalo en **Allow**.
 5. Copia el **App key** (no el «App secret», que no se usa ni se debe copiar en ningún sitio).
 6. La app se queda en estado «Development». Para ti solo es suficiente.
 
 ## Paso 2. Publicar la página (GitHub Pages, gratis)
 
-La página se guarda en GitHub Pages. El código es visible, pero no lleva ningún dato tuyo ni ninguna clave.
-*(Los pasos concretos se añaden aquí cuando decidamos la cuenta.)*
+Ya está hecho: **https://edmundo00.github.io/arbol/** (repositorio público `edmundo00/arbol`, rama `main`).
+El código es visible, pero no lleva ningún dato tuyo ni ninguna clave.
+
+Esta carpeta (`11_aplicacion`) es el repositorio. Para publicar un cambio:
+
+```
+cd 11_aplicacion
+git add -A
+git commit -m "qué cambia"
+git push
+```
+
+GitHub tarda uno o dos minutos en publicarlo.
 
 ## Paso 3. Abrirla en cada aparato
 
@@ -48,7 +59,7 @@ La página se guarda en GitHub Pages. El código es visible, pero no lleva ning�
 2. Pega el **App key** y pulsa **Conectar con Dropbox**. Dropbox te pide permiso: acepta.
 3. Listo. En ese aparato ya no te lo vuelve a pedir. En el móvil puedes «Añadir a pantalla de inicio».
 
-Truco para el móvil: en vez de teclear el App key, ábrete la dirección `https://…/arbol/?appkey=TU_APP_KEY` una vez
+Truco para el móvil: en vez de teclear el App key, ábrete la dirección `https://edmundo00.github.io/arbol/?appkey=TU_APP_KEY` una vez
 (por ejemplo, enviándotela por WhatsApp a ti mismo). Se guarda en el aparato y desaparece de la dirección.
 
 ## Probar en este ordenador sin publicar nada
