@@ -1,9 +1,9 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611010019';
-import { Arbol } from './modelo.js?v=202611010019';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611010019';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611010022';
+import { Arbol } from './modelo.js?v=202611010022';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611010022';
 const RUTAS = { gedcom: '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged' };
-import { Servidor } from './almacen.js?v=202611010019';
+import { Servidor } from './almacen.js?v=202611010022';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -44,7 +44,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010019')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010022')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);

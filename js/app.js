@@ -1,17 +1,17 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611010019';
-import { Arbol, nombreCompleto } from './modelo.js?v=202611010019';
-import { buscar, prepararVariantes } from './buscar.js?v=202611010019';
-import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202611010019';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611010019';
-import { md, esc } from './md.js?v=202611010019';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010019';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010019';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010019';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010019';
-import { Guardado } from './guardar.js?v=202611010019';
-import { formularioPersona } from './formularios.js?v=202611010019';
-import { hijo as nodoHijo, valor as valorNodo } from './gedcom.js?v=202611010019';
+import { Gedcom } from './gedcom.js?v=202611010022';
+import { Arbol, nombreCompleto } from './modelo.js?v=202611010022';
+import { buscar, prepararVariantes } from './buscar.js?v=202611010022';
+import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202611010022';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611010022';
+import { md, esc } from './md.js?v=202611010022';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010022';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010022';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010022';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010022';
+import { Guardado } from './guardar.js?v=202611010022';
+import { formularioPersona } from './formularios.js?v=202611010022';
+import { hijo as nodoHijo, valor as valorNodo } from './gedcom.js?v=202611010022';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -85,7 +85,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010019')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010022')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -236,23 +236,37 @@ function estadoEdicion() {
   d.title = ult ? 'Deshacer: ' + ult.desc : '';
 }
 
-async function activarEdicion() {
+// Aviso antes de editar, en una ventana propia: el botón abre directamente el cuadro de elegir carpeta
+// (Chrome solo lo deja abrir justo después de un clic; un confirm() en medio lo impide).
+function activarEdicion() {
   if (editor) return terminarEdicion();
-  try {
-    if (pruebas()) {
-      if (!confirm('Modo de pruebas: los cambios se guardan en una copia dentro del navegador, no en el archivo de verdad.')) return;
-      guardado = await guardadoDePrueba();
-    } else if (!confirm('Vas a editar «' + info.nombre + '».\n\nCada cambio se guarda al momento en el archivo, con copia de seguridad en la carpeta «copias». ' +
-      'Mientras editas, los scripts no podrán escribirlo (candado).\n\nNo lo edites a la vez con Family Historian.\n\nA continuación elige la carpeta donde está el archivo.')) return;
-    else guardado = await Guardado.preparar(info.nombre, bytesAbiertos);
-    await guardado.ponerCandado();
-    editor = new Editor(arbol.ged, arbol);
-    renovar = setInterval(() => guardado?.ponerCandado().catch(() => {}), 5 * 60000);
-    flotante('Edición activada. Los botones «+ Añadir…» están en la vista de familia.');
-  } catch (e) { if (e.name !== 'AbortError') alert(e.message); guardado = null; }
-  estadoEdicion(); ir();
+  const capa = $('#dialogo');
+  capa.hidden = false; document.body.classList.add('con-visor');
+  capa.innerHTML = `<div class="caja dialogo"><h2>Editar «${esc(info.nombre)}»</h2>
+    ${pruebas() ? '<p><b>Modo de pruebas:</b> los cambios se guardan en una copia dentro del navegador, no en el archivo de verdad.</p>' : `
+    <ul><li>Cada cambio se guarda al momento en el archivo, con <b>copia de seguridad</b> en la carpeta «copias».</li>
+      <li>Mientras editas, los scripts no pueden escribirlo (candado).</li>
+      <li>No lo edites a la vez con Family Historian.</li></ul>
+    <p>Pulsa el botón y elige la <b>carpeta donde está el archivo</b>.</p>`}
+    <p class="aviso" id="e-error"></p>
+    <p class="botones"><button id="e-ok" class="principal">${pruebas() ? 'Empezar' : 'Elegir la carpeta y empezar'}</button> <button id="e-no">Cancelar</button></p></div>`;
+  const cerrar = () => { capa.hidden = true; capa.innerHTML = ''; document.body.classList.remove('con-visor'); };
+  capa.querySelector('#e-no').onclick = cerrar;
+  capa.querySelector('#e-ok').onclick = async () => {
+    try {
+      guardado = pruebas() ? await guardadoDePrueba() : await Guardado.preparar(info.nombre, bytesAbiertos);
+      await guardado.ponerCandado();
+      editor = new Editor(arbol.ged, arbol);
+      renovar = setInterval(() => guardado?.ponerCandado().catch(() => {}), 5 * 60000);
+      cerrar();
+      flotante('Edición activada. Los botones «+ Añadir…» están en la vista de familia.');
+      estadoEdicion(); ir();
+    } catch (e) {
+      guardado = null;
+      if (e.name !== 'AbortError') capa.querySelector('#e-error').textContent = e.message;
+    }
+  };
 }
-
 async function terminarEdicion() {
   clearInterval(renovar);
   try { await guardado?.quitarCandado(); } catch {}
