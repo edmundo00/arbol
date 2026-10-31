@@ -72,16 +72,14 @@ python -I 11_aplicacion/servidor_local.py
 
 ## Publicar un cambio
 
-Esta carpeta es el repositorio de GitHub:
+Esta carpeta es el repositorio de GitHub. Se publica con:
 
 ```
-cd 11_aplicacion
-git add -A
-git commit -m "qué cambia"
-git push
+python -I 11_aplicacion/publicar.py "qué cambia"
 ```
 
-GitHub tarda uno o dos minutos en publicarlo.
+Pone un número de versión nuevo a todos los archivos (así los navegadores no se quedan con la versión vieja), guarda el cambio y lo sube.
+GitHub tarda uno o dos minutos en publicarlo. Si aun así se ve la versión vieja, Ctrl+F5 en el ordenador.
 
 ## Cómo está hecha
 

@@ -1,11 +1,11 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js';
-import { Arbol, nombreCompleto } from './modelo.js';
-import { buscar, prepararVariantes } from './buscar.js';
-import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js';
-import { resultados, familia, detalle, citas } from './vistas.js';
-import { md, esc } from './md.js';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js';
+import { Gedcom } from './gedcom.js?v=202610312334';
+import { Arbol, nombreCompleto } from './modelo.js?v=202610312334';
+import { buscar, prepararVariantes } from './buscar.js?v=202610312334';
+import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202610312334';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202610312334';
+import { md, esc } from './md.js?v=202610312334';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202610312334';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -77,7 +77,7 @@ function abrir(datos) {
       if (!arbol.personas.size) throw new Error(`«${datos.nombre}» no parece un GEDCOM: no tiene personas.`);
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202610312334')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -113,7 +113,7 @@ function ir() {
   let m;
   // Una persona se ve en el modo en que se esté (Familia o Árbol); las pestañas de la ficha son siempre de Familia.
   if ((m = /^\/p\/([^/]+)(?:\/(\w+))?$/.exec(h))) {
-    if (m[2]) LS.set('modo', 'familia');
+    if (m[2]) LS.set('modoVista', 'familia');
     return modo() === 'arbol' ? verArbol('@' + m[1] + '@') : verPersona('@' + m[1] + '@', m[2] || 'datos');
   }
   if (h === '/ajustes') return ajustes();
@@ -160,14 +160,14 @@ function lanzar() {
 
 // ---------- Modo: Familia o Árbol (se recuerda) ----------
 
-function modo() { return LS.get('modo') === 'arbol' ? 'arbol' : 'familia'; }
+function modo() { return LS.get('modoVista') === 'arbol' ? 'arbol' : 'familia'; }
 function vistaArbol() { return LS.get('vista') || (matchMedia('(max-width: 760px)').matches ? 'lista' : 'grafico'); }
 function selectorModo(id) {
   const b = (k, t) => `<button data-modo="${k}" class="${modo() === k ? 'activo' : ''}">${t}</button>`;
   return `<nav class="modos">${b('familia', '👪 Familia')}${b('arbol', '🌳 Árbol')}</nav>`;
 }
 function activarModo(id) {
-  main.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { LS.set('modo', b.dataset.modo); main.dataset.persona = ''; ir(); });
+  main.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { LS.set('modoVista', b.dataset.modo); main.dataset.persona = ''; ir(); });
 }
 
 function verPersona(id, pestana) {
