@@ -1,17 +1,17 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611010018';
-import { Arbol, nombreCompleto } from './modelo.js?v=202611010018';
-import { buscar, prepararVariantes } from './buscar.js?v=202611010018';
-import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202611010018';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611010018';
-import { md, esc } from './md.js?v=202611010018';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010018';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010018';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010018';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010018';
-import { Guardado } from './guardar.js?v=202611010018';
-import { formularioPersona } from './formularios.js?v=202611010018';
-import { hijo as nodoHijo, valor as valorNodo } from './gedcom.js?v=202611010018';
+import { Gedcom } from './gedcom.js?v=202611010019';
+import { Arbol, nombreCompleto } from './modelo.js?v=202611010019';
+import { buscar, prepararVariantes } from './buscar.js?v=202611010019';
+import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202611010019';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611010019';
+import { md, esc } from './md.js?v=202611010019';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010019';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010019';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010019';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010019';
+import { Guardado } from './guardar.js?v=202611010019';
+import { formularioPersona } from './formularios.js?v=202611010019';
+import { hijo as nodoHijo, valor as valorNodo } from './gedcom.js?v=202611010019';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -85,7 +85,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010018')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010019')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
