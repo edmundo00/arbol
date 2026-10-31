@@ -47,6 +47,11 @@ Cada aparato y cada archivo guardan su propia lista.
   - Variantes de apellidos en `variantes.json` (Houwelingen / Abelinguen / Bezlinge…); se pueden añadir más.
   - Filtros por lugar, años y línea.
 - **Vista de familia**: la persona con sus cónyuges e hijos, sus padres y sus hermanos. Con un clic se pone en el centro a cualquiera de ellos.
+- **Árboles** (botón 🌳 arriba, o «Ver su árbol» en cada ficha):
+  - **Gráfico**: la persona y 5 generaciones de antepasados. Un clic lleva a la ficha; la flecha ▸ sigue el árbol hacia atrás desde ese antepasado.
+  - **Antepasados**: todos, por generaciones, con su número (2 padre, 3 madre, 4 abuelo paterno…). La casilla **Ir al n.º** salta a uno directamente.
+  - **Descendientes**: hijos, nietos… en un esquema que se abre y se cierra.
+  - En el móvil se abre primero la lista; en el ordenador, el gráfico.
 - **Ficha de cada persona**:
   - hechos ordenados por fecha, notas y el registro GEDCOM tal cual;
   - **documentos** con lo que prueba cada uno (grado A/B/C), sus fotos y la transcripción al lado.
@@ -101,5 +106,5 @@ Sin compilación ni dependencias: son archivos estáticos que se publican tal cu
 | 0. Abrir el GEDCOM | Hecha |
 | 1. Buscador y vista de familia, solo lectura, con documentos | Hecha y probada con el servidor local; falta la prueba del usuario en su ordenador y en su móvil |
 | 2. Edición (apellidos españoles, asistente de fechas, copias, historial, candado). En el ordenador guardará en el mismo archivo | Pendiente |
-| 3. Árboles en pantalla (Topola) | Pendiente |
+| 3. Árboles en pantalla | Hecho lo básico (gráfico de 5 generaciones, lista de antepasados, descendientes). Pendiente: abanico y reloj de arena (Topola) |
 | 4. PDF y SVG para imprenta (abanicos A0, mural) | Pendiente |
