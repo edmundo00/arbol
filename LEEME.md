@@ -71,13 +71,38 @@ Cada aparato y cada archivo guardan su propia lista.
   - hechos ordenados por fecha, notas y el registro GEDCOM tal cual;
   - **documentos** con lo que prueba cada uno (grado A/B/C), sus fotos y la transcripción al lado.
 
+## Editar (fase 2, en el ordenador con Chrome o Edge)
+
+1. Abre el GEDCOM como siempre y pulsa **✎ Editar** en la barra.
+2. Elige la **carpeta donde está el archivo** (por ejemplo `D:\Dropbox\Genealogia_2_arboles\edmundo_actualizado`) y da permiso de escritura.
+3. En la vista de **Familia** aparecen los botones:
+   - **✎ Editar sus datos**: nombre, apellidos, sexo, nacimiento y defunción;
+   - **+ Añadir padre / + Añadir madre** (si no los tiene);
+   - **+ Añadir hijo** (en cada pareja; o sin cónyuge);
+   - **+ Añadir cónyuge** (con fecha y lugar de boda).
+4. En cada «Añadir» se puede crear una **persona nueva** o **elegir una que ya existe** (con el buscador). Si escribes a alguien que parece que ya está (mismo nombre y nacimiento a ±2 años), te lo propone.
+5. **Apellidos a la española**: el hijo recibe el 1.º del padre y el 1.º de la madre; el padre, el 1.º de la persona; la madre, el 2.º. Se pueden cambiar.
+6. **Fechas en español**: `1750`, `6 mar 1974`, `6/3/1974`, `h. 1750`, `antes de 1733`, `después de 1801`, `entre 1700 y 1710`. Debajo se ve cómo queda en el GEDCOM. Con la **edad al morir** calcula el año de nacimiento.
+7. **Avisos de imposibles** (las reglas de `auditar_gedcom.py`): madre de menos de 14 o más de 52 años, padre de más de 75, nacido tras morir la madre, muere antes de nacer…
+8. **↶ Deshacer** deshace el último cambio (y lo guarda). **Terminar** quita el candado.
+
+**Seguridad** (cada cambio se guarda al momento):
+- antes de escribir se relee el archivo: si cambió en el disco (Family Historian, un script, otro aparato), **no se guarda nada** y avisa;
+- el archivo nuevo se comprueba antes de escribirlo (personas y enlaces);
+- **copias** en `copias/`: `edmundo_app_AAAAMMDD-HHMMSS.ged` (el archivo tal como estaba al empezar la sesión) y `edmundo_app_anterior.ged` (la versión anterior a cada guardado); se releen para comprobarlas;
+- el navegador escribe en un archivo aparte y solo al final lo cambia por el bueno; después se relee y compara byte a byte;
+- **candado** `edmundo.ged.lock` mientras editas; si lo tiene puesto un script, no deja guardar;
+- además, Dropbox guarda 30 días de versiones de cada archivo.
+
+En el móvil no se puede editar (el navegador no puede escribir en tus archivos). **No edites el mismo GEDCOM con Family Historian a la vez.**
+
 ## Pruebas (en este ordenador)
 
 ```
 python -I 11_aplicacion/servidor_local.py
 ```
 
-- Abrir **http://localhost:8765/Genealogia_2/11_aplicacion/pruebas.html**. Son 32 pruebas, entre ellas:
+- Abrir **http://localhost:8765/Genealogia_2/11_aplicacion/pruebas.html** (32 pruebas) y **pruebas_edicion.html** (28 pruebas de edición sobre una copia en el disco privado del navegador, nunca sobre el archivo bueno). Entre ellas:
   - el GEDCOM leído y vuelto a escribir sale **idéntico byte a byte**;
   - el buscador;
   - el Ahnentafel;
@@ -118,6 +143,6 @@ Sin compilación ni dependencias: son archivos estáticos que se publican tal cu
 |---|---|
 | 0. Abrir el GEDCOM | Hecha |
 | 1. Buscador y vista de familia, solo lectura, con documentos | Hecha y probada con el servidor local; falta la prueba del usuario en su ordenador y en su móvil |
-| 2. Edición (apellidos españoles, asistente de fechas, copias, historial, candado). En el ordenador guardará en el mismo archivo | Pendiente |
+| 2. Edición: datos, añadir hijo, padre, madre y cónyuge, elegir existentes, apellidos españoles, fechas, avisos, copias, deshacer, candado | Hecha y probada sobre una copia; falta la prueba del usuario. Pendiente: notas y fuentes, quitar enlaces, móvil sin conexión |
 | 3. Árboles en pantalla | Hecho lo básico (gráfico de 5 generaciones, lista de antepasados, descendientes). Pendiente: abanico y reloj de arena (Topola) |
 | 4. PDF y SVG para imprenta | Hecho desde la app: abanico y cuadro, A4–A0. Pendiente: el mural sobre mapa con escudos (programa `arbol_imprimir_2025`) |

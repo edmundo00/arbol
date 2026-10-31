@@ -1,7 +1,7 @@
 // Pantallas: resultados de búsqueda, vista de familia, datos, notas y documentos de cada persona.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611010002';
-import { fechaES, vida, nombreCompleto, anios } from './modelo.js?v=202611010002';
-import { esc } from './md.js?v=202611010002';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611010017';
+import { fechaES, vida, nombreCompleto, anios } from './modelo.js?v=202611010017';
+import { esc } from './md.js?v=202611010017';
 
 export function insignias(arbol, id) {
   return arbol.raices.map(({ id: r, letra, nombre: quien }) => {
@@ -31,13 +31,15 @@ export function resultados(arbol, r) {
 const rol = (p, h, m) => p?.sexo === 'F' ? m : p?.sexo === 'M' ? h : `${h}/${m}`;
 
 // Vista de familia, como en FamilySearch: la persona y sus cónyuges con los hijos; los padres y los hermanos.
-export function familia(arbol, id) {
+export function familia(arbol, id, editando = false) {
   const p = arbol.p(id);
   const padres = arbol.padres(id);
+  const boton = (accion, texto, fam = '') => editando ? `<button class="mas" data-accion="${accion}"${fam ? ` data-fam="${esc(fam)}"` : ''}>${texto}</button>` : '';
+  const hueco = (rolTxt, accion) => editando ? `<div class="tarjeta vacia">${boton(accion, '+ Añadir ' + rolTxt)}</div>` : tarjeta(arbol, null, { rol: rolTxt[0].toUpperCase() + rolTxt.slice(1) + (rolTxt === 'madre' ? ' desconocida' : ' desconocido') });
   const bloquePadres = padres.length ? padres.map(f => `
-      <div class="pareja">${tarjeta(arbol, f.marido, { rol: 'Padre' })}${tarjeta(arbol, f.mujer, { rol: 'Madre' })}</div>
+      <div class="pareja">${f.marido ? tarjeta(arbol, f.marido, { rol: 'Padre' }) : hueco('padre', 'padre')}${f.mujer ? tarjeta(arbol, f.mujer, { rol: 'Madre' }) : hueco('madre', 'madre')}</div>
       ${matrimonio(f)}`).join('')
-    : `<div class="pareja">${tarjeta(arbol, null, { rol: 'Padre desconocido' })}${tarjeta(arbol, null, { rol: 'Madre desconocida' })}</div>`;
+    : `<div class="pareja">${hueco('padre', 'padre')}${hueco('madre', 'madre')}</div>`;
   const hermanos = arbol.hermanos(id).sort(porNacimiento(arbol));
   const conyuges = p.fams.map(fid => arbol.f(fid)).filter(Boolean).map(f => {
     const otro = f.marido === id ? f.mujer : f.marido;
@@ -46,14 +48,17 @@ export function familia(arbol, id) {
       ${tarjeta(arbol, otro, { rol: otro ? rol(arbol.p(otro), 'Marido', 'Mujer') : 'Cónyuge desconocido' })}
       ${matrimonio(f)}
       ${ch.length ? `<div class="hijos"><h4>Hijos (${ch.length})</h4>${ch.map(c => tarjeta(arbol, c)).join('')}</div>` : '<p class="nada">Sin hijos registrados</p>'}
+      ${boton('hijo', '+ Añadir hijo', f.id)}
     </div>`;
   }).join('');
-  return `<div class="familia">
+  return `<div class="familia${editando ? ' editando' : ''}">
     <section class="col-padres"><h3>Padres</h3>${bloquePadres}
       ${hermanos.length ? `<details class="hermanos"${hermanos.length <= 6 ? ' open' : ''}><summary>Hermanos (${hermanos.length})</summary>${hermanos.map(h => tarjeta(arbol, h)).join('')}</details>` : ''}
     </section>
     <section class="col-centro">${tarjeta(arbol, id, { grande: true })}
+      ${editando ? `<p class="botones">${boton('editar', '✎ Editar sus datos')}</p>` : ''}
       ${conyuges ? `<h3>Cónyuges e hijos</h3>${conyuges}` : '<p class="nada">Sin cónyuges registrados</p>'}
+      ${editando ? `<p class="botones">${boton('conyuge', '+ Añadir cónyuge')}${p.fams.length ? '' : boton('hijo', '+ Añadir hijo (sin cónyuge)')}</p>` : ''}
     </section>
   </div>`;
 }

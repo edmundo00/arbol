@@ -1,19 +1,24 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611010002';
-import { Arbol, nombreCompleto } from './modelo.js?v=202611010002';
-import { buscar, prepararVariantes } from './buscar.js?v=202611010002';
-import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202611010002';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611010002';
-import { md, esc } from './md.js?v=202611010002';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010002';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010002';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010002';
+import { Gedcom } from './gedcom.js?v=202611010017';
+import { Arbol, nombreCompleto } from './modelo.js?v=202611010017';
+import { buscar, prepararVariantes } from './buscar.js?v=202611010017';
+import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202611010017';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611010017';
+import { md, esc } from './md.js?v=202611010017';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010017';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010017';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010017';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010017';
+import { Guardado } from './guardar.js?v=202611010017';
+import { formularioPersona } from './formularios.js?v=202611010017';
+import { hijo as nodoHijo, valor as valorNodo } from './gedcom.js?v=202611010017';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
 const esLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 const PRUEBA = '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged';   // solo para el servidor de pruebas
 let fuente = null, carpeta = null, carpetaPendiente = null, arbol, variantes = [], info = {};
+let editor = null, guardado = null, renovar = null, guardando = false, bytesAbiertos = null;
 const estadoBusqueda = JSON.parse(sessionStorage.getItem('arbol.busqueda') || '{}');
 
 function pantalla(html) { main.innerHTML = html; window.scrollTo(0, 0); }
@@ -77,9 +82,10 @@ function abrir(datos) {
       const ged = Gedcom.desdeBytes(datos.bytes);
       arbol = new Arbol(ged);
       if (!arbol.personas.size) throw new Error(`«${datos.nombre}» no parece un GEDCOM: no tiene personas.`);
+      bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010002')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010017')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -104,6 +110,7 @@ function cabecera() {
   $('#cabecera').hidden = false;
   $('#raices').innerHTML = arbol.raices.map(r => `<a class="boton-cab" href="#/p/${esc(r.id.slice(1, -1))}" title="${esc(r.nombre)}">${esc(r.letra)}</a>`).join('');
   $('#estado').textContent = info.copia ? 'Copia del ' + new Date(info.fecha).toLocaleDateString('es') : '';
+  estadoEdicion();
 }
 
 // ---------- Navegación ----------
@@ -186,7 +193,7 @@ function verPersona(id, pestana) {
   const antes = main.dataset.persona === id;
   const y = window.scrollY;
   const raiz = esRaiz(id);
-  main.innerHTML = `<div class="persona">${familia(arbol, id)}
+  main.innerHTML = `<div class="persona">${familia(arbol, id, !!editor)}
     <p class="acciones"><button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Persona de referencia' : '☆ Marcar como persona de referencia'}</button>
       <label class="rotulo" title="Lo que sale debajo del nombre en los murales; vacío = su título u oficio del GEDCOM">Rótulo en murales<input id="rotulo" value="${esc(rotulosPropios()[id] || '')}" placeholder="${esc(rotuloGedcom(arbol, id) || 'p. ej. Comandante de Marina')}"></label></p>
     <section class="detalle">${detalle(arbol, id, pestana)}</section></div>`;
@@ -194,6 +201,7 @@ function verPersona(id, pestana) {
   if (antes) window.scrollTo(0, y); else window.scrollTo(0, 0);
   $('#raiz').onclick = () => { alternarRaiz(id); verPersona(id, pestana); };
   $('#rotulo').onchange = ev => guardarRotulo(id, ev.target.value);
+  main.querySelectorAll('[data-accion]').forEach(b => b.onclick = () => accion(b.dataset.accion, id, b.dataset.fam || null));
   recordar(id);
   const { docs, sueltas } = citas(arbol, id);
   main.querySelectorAll('[data-fotos]').forEach(b => b.onclick = () => {
@@ -203,6 +211,149 @@ function verPersona(id, pestana) {
   });
   main.querySelectorAll('[data-md]').forEach(b => b.onclick = () => verTexto(b.dataset.md, b.textContent));
 }
+
+// ---------- Edición (fase 2): cada cambio se guarda al momento, con copias y comprobaciones ----------
+
+const pruebas = () => esLocal && LS.get('modo') === 'servidor';   // servidor de pruebas: se edita una copia dentro del navegador
+function puedeEditar() { return hayDisco && (pruebas() || (fuente && !fuente.esCopia)); }
+
+// Copia del GEDCOM en el disco privado del navegador, para probar la edición sin tocar el archivo de verdad.
+async function guardadoDePrueba() {
+  const raiz = await navigator.storage.getDirectory();
+  const dir = await raiz.getDirectoryHandle('prueba-app', { create: true });
+  const w = await (await dir.getFileHandle(info.nombre, { create: true })).createWritable(); await w.write(bytesAbiertos); await w.close();
+  return new Guardado(dir, info.nombre, bytesAbiertos);
+}
+
+function estadoEdicion() {
+  const b = $('#b-editar'), d = $('#b-deshacer');
+  b.hidden = !puedeEditar();
+  b.classList.toggle('activo', !!editor);
+  b.querySelector('span').textContent = editor ? 'Terminar' : 'Editar';
+  b.title = editor ? 'Terminar de editar (quita el candado)' : 'Editar el árbol (con copias de seguridad)';
+  const ult = editor?.historial[editor.historial.length - 1];
+  d.hidden = !ult;
+  d.title = ult ? 'Deshacer: ' + ult.desc : '';
+}
+
+async function activarEdicion() {
+  if (editor) return terminarEdicion();
+  try {
+    if (pruebas()) {
+      if (!confirm('Modo de pruebas: los cambios se guardan en una copia dentro del navegador, no en el archivo de verdad.')) return;
+      guardado = await guardadoDePrueba();
+    } else if (!confirm('Vas a editar «' + info.nombre + '».\n\nCada cambio se guarda al momento en el archivo, con copia de seguridad en la carpeta «copias». ' +
+      'Mientras editas, los scripts no podrán escribirlo (candado).\n\nNo lo edites a la vez con Family Historian.\n\nA continuación elige la carpeta donde está el archivo.')) return;
+    else guardado = await Guardado.preparar(info.nombre, bytesAbiertos);
+    await guardado.ponerCandado();
+    editor = new Editor(arbol.ged, arbol);
+    renovar = setInterval(() => guardado?.ponerCandado().catch(() => {}), 5 * 60000);
+    flotante('Edición activada. Los botones «+ Añadir…» están en la vista de familia.');
+  } catch (e) { if (e.name !== 'AbortError') alert(e.message); guardado = null; }
+  estadoEdicion(); ir();
+}
+
+async function terminarEdicion() {
+  clearInterval(renovar);
+  try { await guardado?.quitarCandado(); } catch {}
+  editor = null; guardado = null;
+  estadoEdicion(); ir();
+}
+
+function flotante(texto, malo = false) {
+  const e = $('#flotante');
+  e.textContent = texto; e.className = malo ? 'malo' : ''; e.hidden = false;
+  clearTimeout(e._t); e._t = setTimeout(() => { e.hidden = true; }, malo ? 12000 : 4000);
+}
+
+async function guardarAhora() {
+  guardando = true;
+  try {
+    const r = await guardado.guardar(arbol.ged.bytes(), arbol.personas.size);
+    bytesAbiertos = guardado.base;   // lo que hay ahora en el disco
+    if (fuente) { fuente.datos.bytes = guardado.base; info.tam = guardado.base.length; }
+    return r;
+  }
+  finally { guardando = false; }
+}
+
+// Hace un cambio y lo guarda. Si algo falla, el cambio se deshace en memoria y el archivo no se toca.
+async function operar(desc, fn) {
+  editor.empezar(desc);
+  try { fn(); } catch (e) { editor.cancelar(); alert(e.message); return; }
+  editor.terminar();
+  try {
+    const r = await guardarAhora();
+    flotante('Guardado: ' + desc + (r.copiaSesion ? ` · copia en ${r.copiaSesion}` : ''));
+  } catch (e) {
+    editor.deshacer();
+    alert('No se ha guardado nada.\n\n' + e.message);
+    if (e.cambiadoFuera) await terminarEdicion();
+  }
+  estadoEdicion(); ir();
+}
+
+async function deshacer() {
+  const tx = editor?.deshacer();
+  if (!tx) return;
+  try { await guardarAhora(); flotante('Deshecho: ' + tx.desc); }
+  catch (e) { alert('No se ha podido guardar el deshacer. Recarga el árbol antes de seguir.\n\n' + e.message); await terminarEdicion(); }
+  estadoEdicion(); ir();
+}
+
+let listaLugares = null;
+function lugares() {
+  if (!listaLugares) { const s = new Set(); for (const p of arbol.personas.values()) p.lugares.forEach(l => s.add(l)); listaLugares = [...s].sort((a, b) => a.localeCompare(b, 'es')); }
+  return listaLugares;
+}
+
+function datosDe(id) {
+  const p = arbol.p(id), a = arbol.registro(id).arbol;
+  const ev = tag => { const n = nodoHijo(a, tag); return n ? { fecha: valorNodo(n, 'DATE'), lugar: valorNodo(n, 'PLAC') } : { fecha: '', lugar: '' }; };
+  return { nombre: p.nombre, apellidos: p.apellidos, sexo: p.sexo, nac: ev('BIRT'), def: ev('DEAT') };
+}
+
+async function accion(tipo, id, famId) {
+  if (!editor) return;
+  const p = arbol.p(id), nom = nombreCompleto(p);
+  const base = { arbol, variantes, lugares: lugares(), excluir: new Set([id]) };
+  if (tipo === 'editar') {
+    const r = await formularioPersona({ ...base, titulo: 'Editar a ' + nom, datos: datosDe(id),
+      contexto: { padres: arbol.padres(id).flatMap(f => [f.marido, f.mujer]).filter(Boolean).map(x => arbol.p(x)), hijos: p.fams.flatMap(f => arbol.f(f)?.hijos || []).map(x => arbol.p(x)) } });
+    if (r?.nueva) await operar('Editar a ' + nom, () => editor.datosPersona(id, r.nueva));
+    return;
+  }
+  if (tipo === 'hijo') {
+    const f = famId && arbol.f(famId);
+    const padre = f ? arbol.p(f.marido) : p.sexo !== 'F' ? p : null, madre = f ? arbol.p(f.mujer) : p.sexo === 'F' ? p : null;
+    const ap = apellidosHijo(padre, madre);
+    const quien = [padre, madre].filter(Boolean).map(nombreCompleto).join(' y ');
+    const r = await formularioPersona({ ...base, titulo: 'Añadir hijo de ' + quien, existente: true, propuesta: ap,
+      datos: { apellidos: ap }, contexto: { padres: [padre, madre].filter(Boolean) }, excluir: new Set([padre?.id, madre?.id].filter(Boolean)) });
+    if (!r) return;
+    await operar('Añadir hijo de ' + quien, () => { const h = r.nueva ? editor.nuevaPersona(r.nueva) : r.existente; editor.hijo(id, famId, h); });
+    return;
+  }
+  if (tipo === 'padre' || tipo === 'madre') {
+    const ap = tipo === 'padre' ? apellidosPadre(p) : apellidosMadre(p);
+    const r = await formularioPersona({ ...base, titulo: `Añadir ${tipo} de ${nom}`, existente: true, propuesta: ap,
+      datos: { apellidos: ap, sexo: tipo === 'padre' ? 'M' : 'F' }, contexto: { hijos: [p] } });
+    if (!r) return;
+    await operar(`Añadir ${tipo} de ${nom}`, () => { const x = r.nueva ? editor.nuevaPersona(r.nueva) : r.existente; editor.progenitor(id, tipo === 'padre' ? 'HUSB' : 'WIFE', x); });
+    return;
+  }
+  if (tipo === 'conyuge') {
+    const r = await formularioPersona({ ...base, titulo: 'Añadir cónyuge de ' + nom, existente: true, boda: true,
+      datos: { sexo: p.sexo === 'M' ? 'F' : p.sexo === 'F' ? 'M' : 'U' } });
+    if (!r) return;
+    await operar('Añadir cónyuge de ' + nom, () => { const x = r.nueva ? editor.nuevaPersona(r.nueva) : r.existente; editor.conyuge(id, x, r.nueva?.boda); });
+  }
+}
+
+$('#b-editar').onclick = activarEdicion;
+$('#b-deshacer').onclick = deshacer;
+window.addEventListener('beforeunload', ev => { if (guardando) { ev.preventDefault(); ev.returnValue = ''; } });
+window.addEventListener('pagehide', () => { guardado?.quitarCandado(); });
 
 // ---------- Árboles ----------
 

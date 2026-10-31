@@ -97,10 +97,34 @@ main { max-width: 1150px; margin: 0 auto; padding: 12px 16px 60px; }
 button.boton-cab { border: 0; color: #fff; font: inherit; font-weight: 600; cursor: pointer; padding: 0 10px; display: flex; gap: 6px; align-items: center; }
 .boton-cab svg { width: 22px; height: 22px; }
 .boton-cab.modo.activo { background: #fff; color: var(--acento); }
-@media (max-width: 760px) { .boton-cab.modo span { display: none; } button.boton-cab { padding: 0 8px; } }
+@media (max-width: 760px) { .boton-cab.modo span, .boton-cab.editar span { display: none; } button.boton-cab { padding: 0 8px; } }
 button.pest { background: none; border: 0; border-bottom: 3px solid transparent; border-radius: 0; font: inherit; cursor: pointer; }
 button.pest.activa { border-bottom-color: var(--acento); }
 .fila.marcada { outline: 3px solid var(--acento); }
+
+/* Edición */
+#dialogo { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.45); overflow: auto; padding: 16px; }
+.caja.dialogo { max-width: 680px; margin: 3vh auto; }
+.dialogo .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+@media (max-width: 560px) { .dialogo .dos { grid-template-columns: 1fr; } }
+.dialogo label { margin: 6px 0; }
+.dialogo .ged { display: block; font-size: .8em; color: var(--ok); min-height: 1.1em; font-family: ui-monospace, monospace; }
+.dialogo .ged.mal { color: var(--aviso); }
+.dialogo fieldset.sexo { border: 0; padding: 0; margin: 6px 0; display: flex; gap: 14px; align-items: center; }
+.dialogo fieldset.sexo legend { font-size: .85em; color: var(--suave); float: left; margin-right: 8px; }
+.dialogo fieldset.sexo label { display: inline-flex; gap: 4px; align-items: center; margin: 0; color: var(--tinta); font-size: .95em; }
+.dialogo fieldset.sexo input { width: auto; margin: 0; }
+.dialogo .pestanas { margin-bottom: 8px; }
+.elegir { display: grid; gap: 4px; max-height: 40vh; overflow: auto; }
+.elegir button { text-align: left; }
+.avisos .aviso { margin: 4px 0; }
+.avisos button { font-size: .85em; padding: 3px 8px; margin: 2px; }
+button.mas { font-size: .85em; padding: 6px 10px; border-style: dashed; color: var(--acento2); background: transparent; }
+.tarjeta.vacia button.mas { width: 100%; }
+.familia.editando .union { border-style: dashed; }
+#flotante { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 70; background: var(--ok); color: #fff; padding: 10px 16px; border-radius: 10px; max-width: 90vw; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+#flotante.malo { background: var(--aviso); }
+#b-editar.activo { background: #ffe9a8; color: #5b3a1e; }
 
 /* Imprimir */
 a.boton.imprimir { font-size: .8em; font-weight: 600; margin-left: 10px; vertical-align: middle; }
