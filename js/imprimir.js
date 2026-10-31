@@ -1,8 +1,8 @@
 // Árboles para imprimir, como dibujos SVG en milímetros: cuadro de ascendientes y abanico.
 // Se guardan como PDF con el «Guardar como PDF» del navegador o se descargan en SVG para la imprenta.
-import { antepasados } from './arboles.js?v=202610312343';
-import { anios, nombreCompleto } from './modelo.js?v=202610312343';
-import { esc } from './md.js?v=202610312343';
+import { antepasados } from './arboles.js?v=202611010002';
+import { anios, nombreCompleto } from './modelo.js?v=202611010002';
+import { esc } from './md.js?v=202611010002';
 
 export const PAPELES = { A4: [297, 210], A3: [420, 297], A2: [594, 420], A1: [841, 594], A0: [1189, 841] };
 const LETRA = "Georgia, 'Times New Roman', serif";
@@ -37,8 +37,8 @@ function svg(W, H, cuerpo) {
 }
 
 // ---------- Cuadro de ascendientes: la persona a la izquierda, los antepasados hacia la derecha ----------
-export function cuadro(arbol, id, { gens = 5, papel = 'A3', lugares = true, titulo, sub } = {}) {
-  const [W, H] = PAPELES[papel];
+export function cuadro(arbol, id, { gens = 5, papel = 'A3', lugares = true, titulo, sub, W: W0, H: H0 } = {}) {
+  const [W, H] = W0 ? [W0, H0] : PAPELES[papel];
   const m = antepasados(arbol, id, gens);
   const margen = W * 0.03, tit = H * 0.07;
   const hueco = (W - 2 * margen) * 0.025;
@@ -85,8 +85,8 @@ export function cuadro(arbol, id, { gens = 5, papel = 'A3', lugares = true, titu
 }
 
 // ---------- Abanico: la persona en el centro abajo y cada generación en un anillo ----------
-export function abanico(arbol, id, { gens = 7, papel = 'A3', lugares = false, titulo, sub } = {}) {
-  const [W, H] = PAPELES[papel];
+export function abanico(arbol, id, { gens = 7, papel = 'A3', lugares = false, titulo, sub, W: W0, H: H0 } = {}) {
+  const [W, H] = W0 ? [W0, H0] : PAPELES[papel];
   const m = antepasados(arbol, id, gens);
   const margen = W * 0.025, tit = H * 0.07;
   const R = Math.min((W - 2 * margen) / 2, H - tit - margen * 1.5);

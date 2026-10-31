@@ -1,12 +1,13 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202610312343';
-import { Arbol, nombreCompleto } from './modelo.js?v=202610312343';
-import { buscar, prepararVariantes } from './buscar.js?v=202610312343';
-import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202610312343';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202610312343';
-import { md, esc } from './md.js?v=202610312343';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202610312343';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202610312343';
+import { Gedcom } from './gedcom.js?v=202611010002';
+import { Arbol, nombreCompleto } from './modelo.js?v=202611010002';
+import { buscar, prepararVariantes } from './buscar.js?v=202611010002';
+import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202611010002';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611010002';
+import { md, esc } from './md.js?v=202611010002';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010002';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010002';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010002';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -78,7 +79,7 @@ function abrir(datos) {
       if (!arbol.personas.size) throw new Error(`«${datos.nombre}» no parece un GEDCOM: no tiene personas.`);
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202610312343')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010002')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -186,11 +187,13 @@ function verPersona(id, pestana) {
   const y = window.scrollY;
   const raiz = esRaiz(id);
   main.innerHTML = `<div class="persona">${familia(arbol, id)}
-    <p class="acciones"><button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Persona de referencia' : '☆ Marcar como persona de referencia'}</button></p>
+    <p class="acciones"><button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Persona de referencia' : '☆ Marcar como persona de referencia'}</button>
+      <label class="rotulo" title="Lo que sale debajo del nombre en los murales; vacío = su título u oficio del GEDCOM">Rótulo en murales<input id="rotulo" value="${esc(rotulosPropios()[id] || '')}" placeholder="${esc(rotuloGedcom(arbol, id) || 'p. ej. Comandante de Marina')}"></label></p>
     <section class="detalle">${detalle(arbol, id, pestana)}</section></div>`;
   main.dataset.persona = id;
   if (antes) window.scrollTo(0, y); else window.scrollTo(0, 0);
   $('#raiz').onclick = () => { alternarRaiz(id); verPersona(id, pestana); };
+  $('#rotulo').onchange = ev => guardarRotulo(id, ev.target.value);
   recordar(id);
   const { docs, sueltas } = citas(arbol, id);
   main.querySelectorAll('[data-fotos]').forEach(b => b.onclick = () => {
@@ -235,38 +238,68 @@ function verImprimir(id) {
   if (!p) return pantalla(`<div class="caja"><p class="aviso">No existe la persona ${esc(id)}.</p></div>`);
   document.title = 'Imprimir · ' + nombreCompleto(p);
   let o = {}; try { o = JSON.parse(LS.get('imprimir') || '{}'); } catch {}
-  o = { tipo: 'abanico', gens: 7, papel: 'A3', lugares: false, ...o };
+  o = { tipo: 'abanico', gens: 7, papel: 'A3', lugares: false, ancho: 1350, alto: 1034, minLetra: 2, rotulos: true, firma: '', ...o };
+  if (!('fam' in o) || (o.fam && !p.fams.includes(o.fam))) o.fam = p.fams[0] || null;   // por defecto, la pareja con sus hijos
   const opc = (v, t, sel) => `<option value="${v}"${String(sel) === String(v) ? ' selected' : ''}>${t}</option>`;
+  const familias = p.fams.map(f => arbol.f(f)).filter(Boolean);
+  const nombreDe = x => x ? nombreCompleto(arbol.p(x)) : '?';
+  const titulo0 = tipo => (tipo === 'mural' ? 'Árbol genealógico · ' : 'Antepasados de ') + nombreCompleto(p);
   pantalla(`<div class="imprimir-vista">
     <h2 class="tit-arbol">Imprimir el árbol de <a href="#/p/${esc(id.slice(1, -1))}">${esc(nombreCompleto(p))}</a></h2>
     <div class="filtros opciones">
-      <label>Tipo<select id="o-tipo">${opc('abanico', 'Abanico', o.tipo)}${opc('cuadro', 'Cuadro de ascendientes', o.tipo)}</select></label>
-      <label>Generaciones<select id="o-gens">${[3, 4, 5, 6, 7, 8, 9, 10].map(g => opc(g, g, o.gens)).join('')}</select></label>
-      <label>Papel<select id="o-papel">${Object.keys(PAPELES).map(k => opc(k, `${k} (${PAPELES[k][0]}×${PAPELES[k][1]} mm)`, o.papel)).join('')}</select></label>
-      <label>Lugares<select id="o-lugares">${opc('', 'Sin lugares', o.lugares ? '1' : '')}${opc('1', 'Con lugar de nacimiento', o.lugares ? '1' : '')}</select></label>
-      <label class="ancho">Título<input id="o-titulo" value="${esc('Antepasados de ' + nombreCompleto(p))}"></label>
+      <label>Tipo<select id="o-tipo">${opc('abanico', 'Abanico', o.tipo)}${opc('cuadro', 'Cuadro de ascendientes', o.tipo)}${opc('mural', 'Mural (mariposa)', o.tipo)}</select></label>
+      <label>Generaciones<select id="o-gens">${[3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map(g => opc(g, g, o.gens)).join('')}</select></label>
+      <label>Papel<select id="o-papel">${Object.keys(PAPELES).map(k => opc(k, `${k} (${PAPELES[k][0]}×${PAPELES[k][1]} mm)`, o.papel)).join('')}${opc('medida', 'A medida…', o.papel)}</select></label>
+      <label class="solo-normal">Lugares<select id="o-lugares">${opc('', 'Sin lugares', o.lugares ? '1' : '')}${opc('1', 'Con lugar de nacimiento', o.lugares ? '1' : '')}</select></label>
+      <label class="solo-medida">Ancho (mm)<input id="o-ancho" inputmode="numeric" value="${esc(o.ancho)}"></label>
+      <label class="solo-medida">Alto (mm)<input id="o-alto" inputmode="numeric" value="${esc(o.alto)}"></label>
+      <label class="solo-mural">En el centro<select id="o-fam">${familias.map(f => opc(f.id, `${esc(nombreDe(f.marido))} y ${esc(nombreDe(f.mujer))}, con sus hijos`, o.fam)).join('')}${opc('', `${esc(nombreCompleto(p))}, entre su padre y su madre`, o.fam ?? '')}</select></label>
+      <label class="solo-mural">Letra mínima<select id="o-min">${[1.5, 2, 2.5, 3, 4].map(v => opc(v, v + ' mm', o.minLetra)).join('')}</select></label>
+      <label class="solo-mural">Títulos y oficios<select id="o-rot">${opc('1', 'Sí (del GEDCOM y los tuyos)', o.rotulos ? '1' : '')}${opc('', 'No', o.rotulos ? '1' : '')}</select></label>
+      <label class="ancho">Título<input id="o-titulo" value="${esc(titulo0(o.tipo))}"></label>
+      <label class="ancho solo-mural">Firma (abajo a la derecha)<input id="o-firma" value="${esc(o.firma)}" placeholder="Investigado por…"></label>
+      <details class="ancho solo-mural"><summary>Lugares acortados (uno por renglón: «lugar largo = corto»)</summary>
+        <textarea id="o-cortos" rows="5" placeholder="Sint Jan, Bolduque ('s-Hertogenbosch), Brabante = Bolduque">${esc(LS.get('lugaresCortos') || '')}</textarea>
+        <p class="peq">Sin tabla, se quita lo que va entre paréntesis y lo que va tras la primera coma.</p></details>
     </div>
     <p class="botones"><button id="pdf" class="principal">Guardar como PDF / Imprimir</button> <button id="descargar">Descargar SVG (imprenta)</button></p>
     <p class="peq" id="consejo"></p>
     <div class="previa" id="previa"></div>
   </div>`);
-  const leer = () => ({ tipo: $('#o-tipo').value, gens: +$('#o-gens').value, papel: $('#o-papel').value, lugares: !!$('#o-lugares').value });
+  const tam = op => op.papel === 'medida' ? [Math.max(100, +op.ancho || 1000), Math.max(100, +op.alto || 700)] : PAPELES[op.papel];
+  const leer = () => ({ tipo: $('#o-tipo').value, gens: +$('#o-gens').value, papel: $('#o-papel').value, lugares: !!$('#o-lugares').value,
+    ancho: $('#o-ancho').value, alto: $('#o-alto').value, fam: $('#o-fam').value || null, minLetra: +$('#o-min').value, rotulos: !!$('#o-rot').value, firma: $('#o-firma').value });
+  let tipoAntes = o.tipo;
+  const vista = main.querySelector('.imprimir-vista');
   const dibujar = () => {
     const op = leer();
     LS.set('imprimir', JSON.stringify(op));
+    LS.set('lugaresCortos', $('#o-cortos').value);
+    vista.dataset.tipo = op.tipo; vista.dataset.papel = op.papel;
+    if (op.tipo !== tipoAntes) { $('#o-titulo').value = titulo0(op.tipo); tipoAntes = op.tipo; }
     const sub = `${new Date().toLocaleDateString('es')} · ${info.nombre}`;
-    const f = op.tipo === 'cuadro' ? cuadro : abanico;
-    const s = f(arbol, id, { ...op, titulo: $('#o-titulo').value, sub });
+    const [W, H] = tam(op);
+    let s;
+    if (op.tipo === 'mural') {
+      const propios = rotulosPropios();
+      const r = mural(arbol, { id, fam: op.fam, gens: op.gens, W, H, minLetra: op.minLetra, titulo: $('#o-titulo').value, sub, firma: op.firma,
+        lugar: acortador($('#o-cortos').value), rotulo: x => propios[x] ?? (op.rotulos ? rotuloGedcom(arbol, x) : '') });
+      s = r.svg;
+      $('#consejo').textContent = `${r.personas} personas · letra de ${r.letra.toFixed(1)} mm${r.letra < op.minLetra ? ' (no cabe con la letra mínima: usa un papel mayor o menos generaciones)' : ''} · ${W}×${H} mm. En «Guardar como PDF», márgenes «Ninguno» y escala 100 %.`;
+    } else {
+      s = (op.tipo === 'cuadro' ? cuadro : abanico)(arbol, id, { ...op, W, H, titulo: $('#o-titulo').value, sub });
+      const hojas = 2 ** (op.gens - 1);
+      $('#consejo').textContent = op.tipo === 'cuadro' && H / hojas < 6
+        ? `Con ${op.gens} generaciones en este papel, cada caja de la última columna tiene ${(H / hojas).toFixed(1)} mm de alto: la letra saldrá diminuta. Usa un papel mayor, menos generaciones, el abanico o el mural.`
+        : `Ancho ${W} mm × alto ${H} mm. En «Guardar como PDF», deja los márgenes en «Ninguno» y la escala al 100 %.`;
+    }
     $('#previa').innerHTML = s;
-    const hojas = 2 ** (op.gens - 1), [W, H] = PAPELES[op.papel];
-    $('#consejo').textContent = op.tipo === 'cuadro' && H / hojas < 6
-      ? `Con ${op.gens} generaciones en ${op.papel}, cada caja de la última columna tiene ${(H / hojas).toFixed(1)} mm de alto: la letra saldrá diminuta. Usa un papel mayor, menos generaciones o el abanico.`
-      : `Ancho ${W} mm × alto ${H} mm. En «Guardar como PDF», deja los márgenes en «Ninguno» y la escala al 100 %.`;
     return s;
   };
-  main.querySelectorAll('.opciones select, .opciones input').forEach(e => e.addEventListener('input', dibujar));
+  let espera;
+  main.querySelectorAll('.opciones select, .opciones input, .opciones textarea').forEach(e => e.addEventListener('input', () => { clearTimeout(espera); espera = setTimeout(dibujar, 250); }));
   dibujar();
-  const nombreArchivo = ext => `${leer().tipo}_${nombreCompleto(p).replace(/[^\p{L}\p{N}]+/gu, '_')}_${leer().gens}gen_${leer().papel}.${ext}`;
+  const nombreArchivo = ext => { const op = leer(), [W, H] = tam(op); return `${op.tipo}_${nombreCompleto(p).replace(/[^\p{L}\p{N}]+/gu, '_')}_${op.gens}gen_${W}x${H}.${ext}`; };
   $('#descargar').onclick = () => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([dibujar()], { type: 'image/svg+xml' }));
@@ -274,7 +307,7 @@ function verImprimir(id) {
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   };
   $('#pdf').onclick = () => {
-    const s = dibujar(), [W, H] = PAPELES[leer().papel];
+    const s = dibujar(), [W, H] = tam(leer());
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(nombreArchivo('pdf').replace(/\.pdf$/, ''))}</title>
       <style>@page { size: ${W}mm ${H}mm; margin: 0 } html, body { margin: 0; padding: 0 } svg { display: block; width: ${W}mm; height: ${H}mm }</style></head><body>${s}</body></html>`;
     // En una ventana nueva; si el navegador la bloquea, desde un marco escondido en esta misma página.
@@ -288,6 +321,11 @@ function verImprimir(id) {
     document.body.appendChild(f);
   };
 }
+
+// Rótulos propios para los murales («Doctor ingeniero industrial»), por archivo y en este navegador.
+const claveRotulos = () => 'rotulos:' + (info.nombre || '');
+function rotulosPropios() { try { return JSON.parse(LS.get(claveRotulos()) || '{}'); } catch { return {}; } }
+function guardarRotulo(id, texto) { const r = rotulosPropios(); if (texto.trim()) r[id] = texto.trim(); else delete r[id]; LS.set(claveRotulos(), JSON.stringify(r)); }
 
 // ---------- Fotos y transcripciones (se leen de la carpeta elegida, solo al mirarlas) ----------
 

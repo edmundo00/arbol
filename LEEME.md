@@ -58,6 +58,15 @@ Cada aparato y cada archivo guardan su propia lista.
   - **Guardar como PDF / Imprimir** usa el «Guardar como PDF» del navegador: es vectorial, con el tamaño de papel elegido. Hay que dejar los márgenes en «Ninguno» y la escala al 100 %;
   - **Descargar SVG** da el dibujo para la imprenta, que lo amplía sin perder calidad;
   - si el cuadro va a salir con letra diminuta (muchas generaciones en papel pequeño), lo avisa.
+  - **Mural (mariposa)**, para carteles grandes (A0 o a medida, por ejemplo 1350 × 1034 mm):
+    - en el centro, una pareja con sus hijos (o una persona); los antepasados de él a la izquierda y los de ella a la derecha;
+    - cada rama ocupa solo el sitio de los antepasados conocidos, cada persona va a media altura entre sus padres
+      y las columnas se meten unas encima de otras cuando no chocan;
+    - los padres sin antepasados conocidos van uno al lado del otro en el mismo renglón («Juan ⚭ María»);
+    - el detalle se elige solo: 3 renglones (✻ ⚭ ✝ con fecha y lugar), 2 o 1, empezando por fuera y solo donde hace crecer la letra hasta la **letra mínima**;
+    - **rótulo** debajo del nombre: el título u oficio del GEDCOM (`TITL`, `OCCU`) o el que se escriba en la ficha de la persona («Rótulo en murales», se guarda en el navegador);
+    - **lugares cortos**: se quita lo que va entre paréntesis y tras la primera coma, o se usa la tabla «lugar largo = corto»;
+    - título, firma y leyenda de símbolos. Pendiente: fondo (mapa), escudos y ramas que siguen en los huecos.
 - **Ficha de cada persona**:
   - hechos ordenados por fecha, notas y el registro GEDCOM tal cual;
   - **documentos** con lo que prueba cada uno (grado A/B/C), sus fotos y la transcripción al lado.

@@ -110,6 +110,12 @@ a.boton.imprimir { font-size: .8em; font-weight: 600; margin-left: 10px; vertica
 .previa { background: #fff; border: 1px solid var(--linea); border-radius: 8px; padding: 8px; overflow: auto; }
 .previa svg { width: 100%; height: auto; display: block; }
 
+.imprimir-vista:not([data-tipo="mural"]) .solo-mural, .imprimir-vista[data-tipo="mural"] .solo-normal, .imprimir-vista:not([data-papel="medida"]) .solo-medida { display: none; }
+.opciones details { margin: 0 0 8px; font-size: .9em; }
+.opciones textarea { width: 100%; font: 14px/1.4 ui-monospace, monospace; padding: 8px; border: 1px solid var(--linea); border-radius: 8px; background: var(--papel); color: var(--tinta); }
+.acciones label.rotulo { display: inline-flex; gap: 6px; align-items: center; margin: 0 0 0 8px; font-size: .9em; }
+.acciones label.rotulo input { width: min(340px, 60vw); padding: 6px 8px; margin: 0; }
+
 /* Árboles */
 .tit-arbol { font-size: 1.1em; margin: 4px 0 10px; }
 .grafico { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 4px 10px; align-items: center; overflow-x: auto; }
