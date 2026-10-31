@@ -1,11 +1,12 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202610312337';
-import { Arbol, nombreCompleto } from './modelo.js?v=202610312337';
-import { buscar, prepararVariantes } from './buscar.js?v=202610312337';
-import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202610312337';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202610312337';
-import { md, esc } from './md.js?v=202610312337';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202610312337';
+import { Gedcom } from './gedcom.js?v=202610312343';
+import { Arbol, nombreCompleto } from './modelo.js?v=202610312343';
+import { buscar, prepararVariantes } from './buscar.js?v=202610312343';
+import { Fuente, Carpeta, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202610312343';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202610312343';
+import { md, esc } from './md.js?v=202610312343';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202610312343';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202610312343';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -77,7 +78,7 @@ function abrir(datos) {
       if (!arbol.personas.size) throw new Error(`«${datos.nombre}» no parece un GEDCOM: no tiene personas.`);
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202610312337')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202610312343')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -119,6 +120,7 @@ function ir() {
     if (m[2]) LS.set('modoVista', 'familia');
     return modo() === 'arbol' ? verArbol('@' + m[1] + '@') : verPersona('@' + m[1] + '@', m[2] || 'datos');
   }
+  if ((m = /^\/imprimir\/([^/]+)$/.exec(h))) return verImprimir('@' + m[1] + '@');
   if (h === '/ajustes') return ajustes();
   return verBuscar();
 }
@@ -208,7 +210,8 @@ function verArbol(id) {
   document.title = 'Árbol de ' + nombreCompleto(p);
   main.dataset.persona = id;
   const cuerpo = vista === 'lista' ? lista(arbol, id) : vista === 'desc' ? descendientes(arbol, id) : grafico(arbol, id);
-  pantalla(`<div class="arbol-vista"><h2 class="tit-arbol">Árbol de ${esc(nombreCompleto(p))}</h2>
+  pantalla(`<div class="arbol-vista"><h2 class="tit-arbol">Árbol de ${esc(nombreCompleto(p))}
+      <a class="boton imprimir" href="#/imprimir/${esc(id.slice(1, -1))}">🖨 Imprimir / PDF</a></h2>
     <section class="detalle">${pestanasArbol(vista)}<div class="cuerpo">${cuerpo}</div></section></div>`);
   recordar(id);
   main.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => { LS.set('vista', b.dataset.vista); verArbol(id); });
@@ -223,6 +226,67 @@ function verArbol(id) {
     fila.classList.add('marcada');
     fila.scrollIntoView({ block: 'center', behavior: 'smooth' });
   });
+}
+
+// ---------- Imprimir: cuadro o abanico, en PDF (con el navegador) o SVG ----------
+
+function verImprimir(id) {
+  const p = arbol.p(id);
+  if (!p) return pantalla(`<div class="caja"><p class="aviso">No existe la persona ${esc(id)}.</p></div>`);
+  document.title = 'Imprimir · ' + nombreCompleto(p);
+  let o = {}; try { o = JSON.parse(LS.get('imprimir') || '{}'); } catch {}
+  o = { tipo: 'abanico', gens: 7, papel: 'A3', lugares: false, ...o };
+  const opc = (v, t, sel) => `<option value="${v}"${String(sel) === String(v) ? ' selected' : ''}>${t}</option>`;
+  pantalla(`<div class="imprimir-vista">
+    <h2 class="tit-arbol">Imprimir el árbol de <a href="#/p/${esc(id.slice(1, -1))}">${esc(nombreCompleto(p))}</a></h2>
+    <div class="filtros opciones">
+      <label>Tipo<select id="o-tipo">${opc('abanico', 'Abanico', o.tipo)}${opc('cuadro', 'Cuadro de ascendientes', o.tipo)}</select></label>
+      <label>Generaciones<select id="o-gens">${[3, 4, 5, 6, 7, 8, 9, 10].map(g => opc(g, g, o.gens)).join('')}</select></label>
+      <label>Papel<select id="o-papel">${Object.keys(PAPELES).map(k => opc(k, `${k} (${PAPELES[k][0]}×${PAPELES[k][1]} mm)`, o.papel)).join('')}</select></label>
+      <label>Lugares<select id="o-lugares">${opc('', 'Sin lugares', o.lugares ? '1' : '')}${opc('1', 'Con lugar de nacimiento', o.lugares ? '1' : '')}</select></label>
+      <label class="ancho">Título<input id="o-titulo" value="${esc('Antepasados de ' + nombreCompleto(p))}"></label>
+    </div>
+    <p class="botones"><button id="pdf" class="principal">Guardar como PDF / Imprimir</button> <button id="descargar">Descargar SVG (imprenta)</button></p>
+    <p class="peq" id="consejo"></p>
+    <div class="previa" id="previa"></div>
+  </div>`);
+  const leer = () => ({ tipo: $('#o-tipo').value, gens: +$('#o-gens').value, papel: $('#o-papel').value, lugares: !!$('#o-lugares').value });
+  const dibujar = () => {
+    const op = leer();
+    LS.set('imprimir', JSON.stringify(op));
+    const sub = `${new Date().toLocaleDateString('es')} · ${info.nombre}`;
+    const f = op.tipo === 'cuadro' ? cuadro : abanico;
+    const s = f(arbol, id, { ...op, titulo: $('#o-titulo').value, sub });
+    $('#previa').innerHTML = s;
+    const hojas = 2 ** (op.gens - 1), [W, H] = PAPELES[op.papel];
+    $('#consejo').textContent = op.tipo === 'cuadro' && H / hojas < 6
+      ? `Con ${op.gens} generaciones en ${op.papel}, cada caja de la última columna tiene ${(H / hojas).toFixed(1)} mm de alto: la letra saldrá diminuta. Usa un papel mayor, menos generaciones o el abanico.`
+      : `Ancho ${W} mm × alto ${H} mm. En «Guardar como PDF», deja los márgenes en «Ninguno» y la escala al 100 %.`;
+    return s;
+  };
+  main.querySelectorAll('.opciones select, .opciones input').forEach(e => e.addEventListener('input', dibujar));
+  dibujar();
+  const nombreArchivo = ext => `${leer().tipo}_${nombreCompleto(p).replace(/[^\p{L}\p{N}]+/gu, '_')}_${leer().gens}gen_${leer().papel}.${ext}`;
+  $('#descargar').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([dibujar()], { type: 'image/svg+xml' }));
+    a.download = nombreArchivo('svg'); a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  };
+  $('#pdf').onclick = () => {
+    const s = dibujar(), [W, H] = PAPELES[leer().papel];
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(nombreArchivo('pdf').replace(/\.pdf$/, ''))}</title>
+      <style>@page { size: ${W}mm ${H}mm; margin: 0 } html, body { margin: 0; padding: 0 } svg { display: block; width: ${W}mm; height: ${H}mm }</style></head><body>${s}</body></html>`;
+    // En una ventana nueva; si el navegador la bloquea, desde un marco escondido en esta misma página.
+    const v = window.open('', '_blank');
+    if (v) { v.document.write(html); v.document.close(); setTimeout(() => v.print(), 300); return; }
+    document.querySelector('#marco-imprimir')?.remove();
+    const f = document.createElement('iframe');
+    f.id = 'marco-imprimir'; f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+    f.srcdoc = html;
+    f.onload = () => setTimeout(() => f.contentWindow.print(), 200);
+    document.body.appendChild(f);
+  };
 }
 
 // ---------- Fotos y transcripciones (se leen de la carpeta elegida, solo al mirarlas) ----------

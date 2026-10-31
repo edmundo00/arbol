@@ -52,6 +52,12 @@ Cada aparato y cada archivo guardan su propia lista.
   - **Gráfico**: la persona y 5 generaciones de antepasados (la flecha ▸ indica que hay más hacia atrás).
   - **Antepasados**: todos, por generaciones, con su número (2 padre, 3 madre, 4 abuelo paterno…). **Ir al n.º** marca la fila de ese antepasado.
   - **Descendientes**: hijos, nietos… en un esquema que se abre y se cierra.
+- **Imprimir / PDF** (botón en el modo Árbol):
+  - **Abanico** (semicírculo, como el cartel de Corrubedo) o **cuadro de ascendientes**, de 3 a 10 generaciones;
+  - papel A4, A3, A2, A1 o A0, con o sin lugares y con el título que se quiera;
+  - **Guardar como PDF / Imprimir** usa el «Guardar como PDF» del navegador: es vectorial, con el tamaño de papel elegido. Hay que dejar los márgenes en «Ninguno» y la escala al 100 %;
+  - **Descargar SVG** da el dibujo para la imprenta, que lo amplía sin perder calidad;
+  - si el cuadro va a salir con letra diminuta (muchas generaciones en papel pequeño), lo avisa.
 - **Ficha de cada persona**:
   - hechos ordenados por fecha, notas y el registro GEDCOM tal cual;
   - **documentos** con lo que prueba cada uno (grado A/B/C), sus fotos y la transcripción al lado.
@@ -105,4 +111,4 @@ Sin compilación ni dependencias: son archivos estáticos que se publican tal cu
 | 1. Buscador y vista de familia, solo lectura, con documentos | Hecha y probada con el servidor local; falta la prueba del usuario en su ordenador y en su móvil |
 | 2. Edición (apellidos españoles, asistente de fechas, copias, historial, candado). En el ordenador guardará en el mismo archivo | Pendiente |
 | 3. Árboles en pantalla | Hecho lo básico (gráfico de 5 generaciones, lista de antepasados, descendientes). Pendiente: abanico y reloj de arena (Topola) |
-| 4. PDF y SVG para imprenta (abanicos A0, mural) | Pendiente |
+| 4. PDF y SVG para imprenta | Hecho desde la app: abanico y cuadro, A4–A0. Pendiente: el mural sobre mapa con escudos (programa `arbol_imprimir_2025`) |

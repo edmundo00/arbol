@@ -102,6 +102,14 @@ button.pest { background: none; border: 0; border-bottom: 3px solid transparent;
 button.pest.activa { border-bottom-color: var(--acento); }
 .fila.marcada { outline: 3px solid var(--acento); }
 
+/* Imprimir */
+a.boton.imprimir { font-size: .8em; font-weight: 600; margin-left: 10px; vertical-align: middle; }
+.opciones { grid-template-columns: repeat(4, 1fr); }
+.opciones .ancho { grid-column: 1 / -1; }
+@media (max-width: 640px) { .opciones { grid-template-columns: 1fr 1fr; } }
+.previa { background: #fff; border: 1px solid var(--linea); border-radius: 8px; padding: 8px; overflow: auto; }
+.previa svg { width: 100%; height: auto; display: block; }
+
 /* Árboles */
 .tit-arbol { font-size: 1.1em; margin: 4px 0 10px; }
 .grafico { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 4px 10px; align-items: center; overflow-x: auto; }
