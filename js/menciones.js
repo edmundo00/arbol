@@ -1,6 +1,6 @@
 // Pantallas de la base de nombres y lugares: menciones de una persona y buscadores «¿dónde aparece…?» y «¿quién hay en…?».
-import { esc } from './md.js?v=202611011145';
-import { fiabilidad } from './nombresdb.js?v=202611011145';
+import { esc } from './md.js?v=202611011155';
+import { fiabilidad } from './nombresdb.js?v=202611011155';
 
 const TEXTO = /\.(md|txt|csv|html?)$/i, IMAGEN = /\.(jpe?g|png|gif|tiff?|bmp|webp)$/i;
 const ORIGEN = { registro: 'registro', transcripcion: 'transcripción', pdf_texto: 'texto de PDF', copia_ligera: 'copia ligera', ficha: 'ficha',
@@ -31,6 +31,7 @@ export function filaMencion(m, i, { enlazar = true, confirmar = false } = {}) {
       ${m.n_veces > 1 ? `<span class="peq"> ×${m.n_veces}</span>` : ''}</div>
     <div class="peq">${esc((m.titulo || '').trim())} · ${esc(ORIGEN[m.origen] || m.origen || '')}${m.pagina && !['gedcom_notas', 'arbol'].includes(m.origen) ? ' · p. ' + esc(m.pagina) : ''}${m.anio || m.danio ? ' · ' + esc(m.anio || m.danio) : ''}</div>
     ${m._p?.notas.length ? `<div class="peq encaje ${m._p.n > 0 ? 'si' : m._p.n < 0 ? 'no' : ''}">${m._p.n > 0 ? '✔' : m._p.n < 0 ? '✘' : '·'} ${esc(m._p.notas.join(', '))}</div>` : ''}
+    ${m._otros?.length ? `<div class="peq repes">El mismo texto en ${m._otros.length} documento${m._otros.length === 1 ? '' : 's'} más: ${esc([...new Set(m._otros.map(o => (o.titulo || '').trim()))].slice(0, 12).join(' · '))}${m._otros.length > 12 ? ' …' : ''}</div>` : ''}
     ${m.contexto ? `<div class="ctx">«${esc(m.contexto.slice(0, 300))}${m.contexto.length > 300 ? '…' : ''}»</div>` : ''}
     ${botones || confirmar ? `<div class="botones">${botones}${confirmar ? `<button class="si" data-conf="${i}">✓ Es esta persona</button>` : ''}</div>` : ''}
   </div>`;
@@ -63,16 +64,44 @@ function puntuar(m, p) {
   return { n, notas };
 }
 
+// Árboles ya hechos (impresos en PDF o SVG, listados de otros programas, el árbol antiguo): repiten los datos del GEDCOM,
+// no son fuentes. Se reconocen por el formato: «b: / m: / d:», ✻ ⚭, o varias fechas a la inglesa (29 NOV 1947).
+const FECHA_GED = /\b\d{1,2} (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\.? \d{4}\b/gi;
+export function esArbolHecho(m) {
+  if (m.origen === 'arbol' || /\.svg$/i.test(m.ruta || '') || /\.svg$/i.test((m.titulo || '').trim())) return true;
+  if (!['pdf_texto', 'copia_ligera', 'original', 'descarga'].includes(m.origen)) return false;
+  const c = m.contexto || '';
+  return /(^|\s)[bmd]: |[✻⚭]|\b(ancestors|descendants) of\b|font-family=/i.test(c) || (c.match(FECHA_GED) || []).length >= 2;
+}
+// Mismo texto en varios documentos (copias del mismo archivo, versiones del mismo árbol): se muestra una vez.
+const claveTexto = m => plano(m.contexto || '').replace(/\b(in|en|b|m|d)\b/g, ' ').replace(/[^a-z0-9]+/g, '');
+function agrupar(lista) {
+  const g = new Map();
+  for (const m of lista) {
+    const k = (m.xref || '') + '|' + (claveTexto(m) || 'doc:' + (m.ruta || m.titulo));
+    if (g.has(k)) g.get(k)._otros.push(m); else g.set(k, { ...m, _otros: [] });
+  }
+  return [...g.values()];
+}
+
 // Pestaña «Menciones» de la ficha de una persona
 export function pintarMenciones(caja, { enlazadas, posibles }, acciones, persona = null) {
   posibles = posibles.map(x => ({ ...x, _p: puntuar(x, persona) })).sort((a, b) => b._p.n - a._p.n);
-  const seguras = enlazadas.filter(m => fiabilidad(m.enlace) === 'seguro'), pistas = enlazadas.filter(m => fiabilidad(m.enlace) !== 'seguro');
-  const todas = [...seguras, ...pistas, ...posibles];
+  const hechos = [...enlazadas, ...posibles].filter(esArbolHecho);
+  enlazadas = enlazadas.filter(m => !esArbolHecho(m)); posibles = posibles.filter(m => !esArbolHecho(m));
+  const seguras = agrupar(enlazadas.filter(m => fiabilidad(m.enlace) === 'seguro')), pistas = agrupar(enlazadas.filter(m => fiabilidad(m.enlace) !== 'seguro'));
+  posibles = agrupar(posibles);
+  const arboles = agrupar(hechos);
+  const todas = [...seguras, ...pistas, ...posibles, ...arboles];
   let i = 0;
-  const bloque = (titulo, lista, ayuda, conf) => lista.length ? `<h4>${titulo} (${lista.length})</h4><p class="peq">${ayuda}</p>${lista.map(m => filaMencion(m, i++, { enlazar: false, confirmar: conf && !!acciones.confirmar })).join('')}` : '';
+  const cuenta = l => { const n = l.reduce((s, m) => s + 1 + m._otros.length, 0); return n > l.length ? `${l.length} distintas; ${n} con las repetidas` : l.length; };
+  const filas = (lista, conf) => lista.map(m => filaMencion(m, i++, { enlazar: false, confirmar: conf && !!acciones.confirmar })).join('');
+  const bloque = (titulo, lista, ayuda, conf) => lista.length ? `<h4>${titulo} (${cuenta(lista)})</h4><p class="peq">${ayuda}</p>${filas(lista, conf)}` : '';
   caja.innerHTML = todas.length ? bloque('Enlazadas con seguridad', seguras, 'Citas del registro, número o identificador escrito en el texto, o cabecera de la transcripción.')
       + bloque('Pistas', pistas, 'Enlazadas solo por el nombre (único en el árbol) o por nombre y año: hay que comprobarlas.', true)
       + bloque('Posibles por el nombre', posibles, 'Mismo nombre (con la misma clave fonética) en documentos sin enlace a nadie del árbol: pueden ser otra persona. Ordenadas: primero las que encajan con sus fechas y lugares.', true)
+      + (arboles.length ? `<details class="arboles-hechos"><summary>Árboles ya hechos (${cuenta(arboles)}): impresos en PDF o SVG, listados de otros programas y el árbol antiguo</summary>
+          <p class="peq">Repiten lo que ya está en el árbol: no son fuentes. Sirven, como mucho, para ver qué se sabía antes.</p>${filas(arboles, false)}</details>` : '')
     : '<p class="nada">No sale en la base de nombres.</p>';
   conectar(caja, todas, acciones);
 }
@@ -81,14 +110,17 @@ const etiquetaAhn = p => [p.ahnentafel ? `n.º ${p.ahnentafel}` : '', p.ahnentaf
 
 // Resultados de «¿Dónde aparece…?»
 export function pintarDonde(caja, { personas, menciones }, acciones) {
+  let grupos = [];
   caja.innerHTML = `<h3>En el árbol: ${personas.length} persona${personas.length === 1 ? '' : 's'}</h3>
     <div class="lista">${personas.map(p => `<a class="tarjeta s${p.sexo || 'U'}" href="#/p/${esc(p.xref.slice(1, -1))}">
       <span class="nom">${esc(p.nombre)}</span>
       <span class="vida">${[p.nac_fecha && 'n. ' + p.nac_fecha + (p.nac_lugar ? ' ' + p.nac_lugar : ''), p.def_fecha && 'f. ' + p.def_fecha + (p.def_lugar ? ' ' + p.def_lugar : '')].filter(Boolean).map(esc).join(' — ')}</span>
       ${etiquetaAhn(p) ? `<span class="insig"><span class="ahn">${esc(etiquetaAhn(p))}</span></span>` : ''}</a>`).join('')}</div>
     <h3>En documentos: ${menciones.length} ${menciones.length === 1 ? 'mención' : 'menciones'}${menciones.length >= 300 ? ' (las 300 primeras)' : ''}</h3>
-    ${menciones.map((m, i) => filaMencion(m, i)).join('') || '<p class="nada">Ninguna.</p>'}`;
-  conectar(caja, menciones, acciones);
+    ${(() => { const l = agrupar(menciones.filter(m => !esArbolHecho(m))), a = agrupar(menciones.filter(esArbolHecho)); grupos = [...l, ...a];
+      return (l.map((m, i) => filaMencion(m, i)).join('') || '<p class="nada">Ninguna fuera de los árboles ya hechos.</p>')
+        + (a.length ? `<details class="arboles-hechos"><summary>Árboles ya hechos (${a.length}): no son fuentes</summary>${a.map((m, i) => filaMencion(m, l.length + i)).join('')}</details>` : ''); })()}`;
+  conectar(caja, grupos, acciones);
 }
 
 // Resultados de «¿Quién hay en el lugar…?»

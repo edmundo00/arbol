@@ -323,3 +323,8 @@ table.yaml th { color: var(--suave); font-weight: 500; white-space: nowrap; }
 details.yaml summary { cursor: pointer; color: var(--suave); font-size: .85em; }
 .tabla { overflow-x: auto; }
 hr { border: 0; border-top: 1px solid var(--linea); margin: 16px 0; }
+
+/* Exportar a Excel */
+.exportar { margin: .6em 0 } .exportar:empty { display: none }
+.arboles-hechos { margin: 1em 0 } .arboles-hechos > summary { cursor: pointer; color: var(--suave, #666) }
+.mencion .repes { color: #7a5a2a }

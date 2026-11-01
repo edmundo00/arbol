@@ -17,6 +17,12 @@ for js in (AQUI / 'js').glob('*.js'):
     versionar(js, r"""fetch\('variantes\.json(\?v=\d+)?'\)""", f"fetch('variantes.json?v={v}')")
 versionar(AQUI / 'index.html', r'href="app\.css(\?v=\d+)?"', f'href="app.css?v={v}"')
 versionar(AQUI / 'index.html', r'src="js/app\.js(\?v=\d+)?"', f'src="js/app.js?v={v}"')
+# Lista de archivos del programa que el service worker guarda en el aparato para abrir sin conexión
+archivos = [f'app.css?v={v}', f'variantes.json?v={v}', 'manifest.webmanifest', 'icono-192.png', 'icono-512.png',
+            *sorted(f'js/{j.name}?v={v}' for j in (AQUI / 'js').glob('*.js') if not j.name.startswith('pruebas')),
+            *sorted(f'vendor/sqljs/{x.name}' for x in (AQUI / 'vendor' / 'sqljs').glob('sql-wasm.*'))]
+versionar(AQUI / 'sw.js', r"const VERSION = '\d+';", f"const VERSION = '{v}';")
+versionar(AQUI / 'sw.js', r"const ARCHIVOS = \[.*?\];", 'const ARCHIVOS = ' + repr(archivos).replace('"', "'") + ';')
 
 if len(sys.argv) > 1 and sys.argv[1] == '--solo-version':
     print('Versión', v); sys.exit()
