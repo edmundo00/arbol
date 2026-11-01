@@ -1,17 +1,19 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611010032';
-import { Arbol, nombreCompleto } from './modelo.js?v=202611010032';
-import { buscar, prepararVariantes } from './buscar.js?v=202611010032';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso } from './almacen.js?v=202611010032';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611010032';
-import { md, esc } from './md.js?v=202611010032';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010032';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010032';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010032';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010032';
-import { Guardado } from './guardar.js?v=202611010032';
-import { formularioPersona } from './formularios.js?v=202611010032';
-import { hijo as nodoHijo, valor as valorNodo } from './gedcom.js?v=202611010032';
+import { Gedcom } from './gedcom.js?v=202611010926';
+import { Arbol, nombreCompleto } from './modelo.js?v=202611010926';
+import { buscar, prepararVariantes } from './buscar.js?v=202611010926';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611010926';
+import { BaseNombres } from './nombresdb.js?v=202611010926';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611010926';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611010926';
+import { md, esc } from './md.js?v=202611010926';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010926';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010926';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010926';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010926';
+import { Guardado } from './guardar.js?v=202611010926';
+import { formularioPersona } from './formularios.js?v=202611010926';
+import { hijo as nodoHijo, valor as valorNodo } from './gedcom.js?v=202611010926';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -101,7 +103,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010032')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010926')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -145,6 +147,7 @@ function ir() {
     return modo() === 'arbol' ? verArbol('@' + m[1] + '@') : verPersona('@' + m[1] + '@', m[2] || 'datos');
   }
   if ((m = /^\/imprimir\/([^/]+)$/.exec(h))) return verImprimir('@' + m[1] + '@');
+  if (h === '/nombres') return verNombres();
   if (h === '/ajustes') return ajustes();
   return verBuscar();
 }
@@ -154,6 +157,7 @@ function verBuscar() {
   const e = estadoBusqueda;
   if (e.linea && !arbol.raices.some(r => r.id === e.linea)) e.linea = null;
   pantalla(`<div class="buscador">
+    <nav class="pestanas donde"><a class="pest activa" href="#/buscar">En el árbol</a><a class="pest" href="#/nombres">En los documentos (base de nombres)</a></nav>
     <div class="filtros">
       <label>Lugar<input id="f-lugar" value="${esc(e.lugar || '')}" placeholder="Ferrol, Corrubedo…"></label>
       <label>Desde<input id="f-desde" inputmode="numeric" value="${esc(e.desde ?? '')}" placeholder="1600"></label>
@@ -226,6 +230,7 @@ function verPersona(id, pestana) {
     galeria($('#gal' + k), lista, docs[k]?.fuente);
   });
   main.querySelectorAll('[data-md]').forEach(b => b.onclick = () => verTexto(b.dataset.md, b.textContent));
+  if (pestana === 'menc') mencionesDe(id);
 }
 
 // ---------- Edición (fase 2): cada cambio se guarda al momento, con copias y comprobaciones ----------
@@ -611,6 +616,108 @@ async function verTexto(ruta, titulo) {
   catch (e) { caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
 }
 
+// ---------- Base de nombres y lugares (00_control/nombres_lugares.db) ----------
+
+let baseNombres = null;
+const accionesDoc = {
+  texto: (ruta, titulo) => verTexto(ruta, titulo),
+  imagen: (ruta, titulo) => visor([{ titulo, ruta, form: ruta.split('.').pop().toLowerCase() }], 0, null),
+  archivo: async (ruta, titulo) => {
+    if (!carpeta) return verTexto(ruta, titulo);   // explica cómo elegir las carpetas
+    try { const u = await carpeta.enlace(ruta); window.open(u, '_blank'); } catch (e) { alert(e.message); }
+  },
+};
+
+async function leerBase(asaOArchivo) {
+  const f = asaOArchivo.getFile ? await asaOArchivo.getFile() : asaOArchivo;
+  const bytes = new Uint8Array(await f.arrayBuffer());
+  baseNombres?.cerrar();
+  baseNombres = null;
+  baseNombres = await BaseNombres.abrir(bytes, f.name, f.lastModified);
+}
+
+// Si la base no está abierta, explica y ofrece abrirla. Llama a «listo» cuando lo esté. Devuelve true si ya lo estaba.
+async function necesitaBase(caja, listo) {
+  if (baseNombres) return true;
+  if (pruebas()) {   // servidor de pruebas: la base del proyecto, sin elegir archivo
+    caja.innerHTML = '<p class="cargando">Abriendo la base de nombres…</p>';
+    const r = await fetch('/Genealogia_2/00_control/nombres_lugares.db', { cache: 'no-store' });
+    baseNombres = await BaseNombres.abrir(new Uint8Array(await r.arrayBuffer()), 'nombres_lugares.db', Date.parse(r.headers.get('Last-Modified')));
+    listo(); return false;
+  }
+  const guardada = await bdLeer('nombresDb');
+  if (guardada && await permiso(guardada, false)) {
+    caja.innerHTML = '<p class="cargando">Abriendo la base de nombres…</p>';
+    try { await leerBase(guardada); listo(); return false; } catch (e) { caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
+  }
+  caja.innerHTML = `<div class="caja-base"><p>Para ver dónde sale cada persona en los documentos, abre la <b>base de nombres y lugares</b>
+      (<code>00_control/nombres_lugares.db</code>). Se lee aquí mismo, sin internet.</p>
+    ${!hayDisco ? '<p class="aviso">Pesa unos 180 MB: en el móvil puede ir muy lento o no abrir.</p>' : ''}
+    <p class="botones">${guardada ? `<button data-b="re" class="principal">Abrir «${esc(guardada.name)}»</button>` : ''}
+      ${hayDisco ? `<button data-b="elegir"${guardada ? '' : ' class="principal"'}>Elegir base de nombres (.db)…</button>`
+                 : '<label class="boton principal">Elegir base de nombres (.db)…<input type="file" hidden data-b="archivo"></label>'}</p>
+    <p class="aviso" data-error></p></div>`;
+  const error = e => { if (e.name !== 'AbortError') caja.querySelector('[data-error]').textContent = e.message; };
+  const abrir = async obtener => {
+    try {
+      const x = await obtener();
+      caja.querySelector('.botones').innerHTML = '<span class="cargando">Leyendo la base (unos 180 MB)…</span>';
+      await leerBase(x); listo();
+    } catch (e) { error(e); }
+  };
+  caja.querySelector('[data-b=re]')?.addEventListener('click', () => abrir(async () => { if (!await permiso(guardada, true)) throw new Error('Sin permiso para leer el archivo.'); return guardada; }));
+  caja.querySelector('[data-b=elegir]')?.addEventListener('click', () => abrir(async () => {
+    const [asa] = await window.showOpenFilePicker({ id: 'arbol-nombres', types: [{ description: 'Base de nombres', accept: { 'application/x-sqlite3': ['.db', '.sqlite'] } }] });
+    await bdGuardar('nombresDb', asa); return asa;
+  }));
+  caja.querySelector('[data-b=archivo]')?.addEventListener('change', ev => ev.target.files[0] && abrir(async () => ev.target.files[0]));
+  return false;
+}
+
+async function mencionesDe(id) {
+  const caja = $('#menciones');
+  if (!caja) return;
+  if (!await necesitaBase(caja, () => mencionesDe(id))) return;
+  try { pintarMenciones(caja, baseNombres.menciones(id), accionesDoc); }
+  catch (e) { caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
+}
+
+const estadoNombres = JSON.parse(sessionStorage.getItem('arbol.nombres') || '{}');
+function verNombres() {
+  document.title = 'Árbol · Documentos';
+  main.dataset.persona = '';
+  const e = estadoNombres;
+  pantalla(`<div class="buscador">
+    <nav class="pestanas donde"><a class="pest" href="#/buscar">En el árbol</a><a class="pest activa" href="#/nombres">En los documentos (base de nombres)</a></nav>
+    <div class="filtros nombres">
+      <label>¿Dónde aparece…?<input id="n-quien" value="${esc(e.quien || '')}" placeholder="Ysabel Fraga · Pardo Osorio · Ferr*"></label>
+      <label>¿Quién hay en el lugar…?<input id="n-lugar" value="${esc(e.lugar || '')}" placeholder="Corrubedo · Valdoviño"></label>
+      <label>Desde<input id="n-desde" inputmode="numeric" value="${esc(e.desde ?? '')}" placeholder="1600"></label>
+      <label>Hasta<input id="n-hasta" inputmode="numeric" value="${esc(e.hasta ?? '')}" placeholder="1800"></label>
+    </div>
+    <p class="peq">No importan los acentos ni la ortografía antigua (Ysabel = Isabel, Joseph = José, Bázquez = Vázquez). Un «*» al final busca por el comienzo.
+      Pulsa Intro para buscar.${baseNombres ? ` · Base: ${esc(baseNombres.nombre)}, del ${esc(new Date(baseNombres.fecha).toLocaleDateString('es'))}` : ''}</p>
+    <div id="n-res"></div>
+  </div>`);
+  const caja = $('#n-res');
+  const lanzarN = () => {
+    const num = v => /^\d{3,4}$/.test(v.trim()) ? +v.trim() : null;
+    Object.assign(e, { quien: $('#n-quien').value, lugar: $('#n-lugar').value, desde: num($('#n-desde').value), hasta: num($('#n-hasta').value) });
+    sessionStorage.setItem('arbol.nombres', JSON.stringify(e));
+    if (!e.quien.trim() && !e.lugar.trim()) { caja.innerHTML = ''; return; }
+    caja.innerHTML = '<p class="cargando">Buscando…</p>';
+    setTimeout(() => {
+      try {
+        if (e.lugar.trim() && (!e.quien.trim() || document.activeElement === $('#n-lugar'))) pintarLugar(caja, baseNombres.enLugar(e.lugar, e), accionesDoc);
+        else pintarDonde(caja, baseNombres.donde(e.quien, e), accionesDoc);
+      } catch (err) { caja.innerHTML = `<p class="aviso">${esc(err.message)}</p>`; }
+    }, 20);
+  };
+  const intentar = () => necesitaBase(caja, () => verNombres()).then(ok => ok && lanzarN());
+  main.querySelectorAll('.filtros.nombres input').forEach(i => i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); intentar(); } }));
+  intentar();
+}
+
 // ---------- Ajustes ----------
 
 function ajustes() {
@@ -625,6 +732,10 @@ function ajustes() {
     <h3>Personas de referencia</h3>
     <p class="peq">Salen en la barra de arriba y en el filtro de línea, y numeran a sus antepasados (Ahnentafel). Se marcan con la estrella en la ficha de cada persona.</p>
     <ul>${arbol.raices.map(r => `<li>${esc(r.letra)} · <a href="#/p/${esc(r.id.slice(1, -1))}">${esc(r.nombre)}</a> <button data-quitar="${esc(r.id)}">Quitar</button></li>`).join('')}</ul>
+    <h3>Base de nombres y lugares</h3>
+    <p>${baseNombres ? `<b>${esc(baseNombres.nombre)}</b>, del ${esc(new Date(baseNombres.fecha).toLocaleString('es'))}` : 'Sin abrir'}
+      · se abre al usar la pestaña «Menciones» o «En los documentos».</p>
+    ${baseNombres ? '<p><button id="sinbase">Cerrar y olvidar la base</button></p>' : ''}
     <h3>Carpeta de fotos y transcripciones</h3>
     ${hayDisco ? `<p>${carpeta ? carpeta.lista.map(c => `<b>${esc(c.nombre)}</b>`).join(' + ') : 'Ninguna'}${carpetaPendiente.length ? ` · pendientes de permiso: ${carpetaPendiente.map(h => esc(h.name)).join(', ')}` : ''}</p>
       <p><button id="carpeta">Añadir carpeta…</button> ${carpeta || carpetaPendiente.length ? '<button id="sincarpeta">Quitar todas</button>' : ''}</p>
@@ -633,6 +744,7 @@ function ajustes() {
     <hr><p class="peq">Fase 1: solo lectura. El programa no cambia ningún archivo.</p>
   </div>`);
   $('#otro').onclick = async () => { await Fuente.olvidar(); LS.set('modo', null); location.hash = '#/'; location.reload(); };
+  $('#sinbase')?.addEventListener('click', async () => { baseNombres?.cerrar(); baseNombres = null; await bdGuardar('nombresDb', null); ajustes(); });
   main.querySelectorAll('[data-quitar]').forEach(b => b.onclick = () => { alternarRaiz(b.dataset.quitar); ajustes(); });
   if (hayDisco) {
     $('#carpeta').onclick = async () => { try { await anadirCarpeta(true); ajustes(); } catch (e) { if (e.name !== 'AbortError') alert(e.message); } };

@@ -1,7 +1,7 @@
 // Pantallas: resultados de búsqueda, vista de familia, datos, notas y documentos de cada persona.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611010032';
-import { fechaES, vida, nombreCompleto, anios } from './modelo.js?v=202611010032';
-import { esc } from './md.js?v=202611010032';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611010926';
+import { fechaES, vida, nombreCompleto, anios } from './modelo.js?v=202611010926';
+import { esc } from './md.js?v=202611010926';
 
 export function insignias(arbol, id) {
   return arbol.raices.map(({ id: r, letra, nombre: quien }) => {
@@ -133,8 +133,9 @@ export function detalle(arbol, id, pestana) {
   if (pestana === 'notas') cuerpo = notas.length ? notas.map(n => `<div class="nota">${esc(n).replace(/\n/g, '<br>')}</div>`).join('') : '<p class="nada">Sin notas.</p>';
   else if (pestana === 'docs') cuerpo = documentos(docs, sueltas);
   else if (pestana === 'ged') cuerpo = `<pre class="ged">${esc(r.texto())}</pre>`;
+  else if (pestana === 'menc') cuerpo = '<div id="menciones"><p class="cargando">Buscando en la base de nombres…</p></div>';
   else cuerpo = hechos(arbol, p);
-  return `<nav class="pestanas">${pest('datos', 'Datos')}${pest('docs', `Documentos (${nDocs})`)}${pest('notas', `Notas (${notas.length})`)}${pest('ged', 'GEDCOM')}</nav>
+  return `<nav class="pestanas">${pest('datos', 'Datos')}${pest('docs', `Documentos (${nDocs})`)}${pest('notas', `Notas (${notas.length})`)}${pest('menc', 'Menciones')}${pest('ged', 'GEDCOM')}</nav>
     <div class="cuerpo">${cuerpo}</div>`;
 }
 

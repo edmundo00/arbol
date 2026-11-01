@@ -72,6 +72,20 @@ Cada aparato y cada archivo guardan su propia lista.
   - hechos ordenados por fecha, notas y el registro GEDCOM tal cual;
   - **documentos** con lo que prueba cada uno (grado A/B/C), sus fotos y la transcripción al lado.
 
+## Base de nombres y lugares
+
+La base `00_control/nombres_lugares.db` (la hace `00_control/scripts/nombres_lugares.py`) dice en qué documentos sale cada persona y quién hay en cada lugar.
+Se lee del disco con **sql.js**, que va dentro del programa (`vendor/sqljs`, licencia MIT): no hace falta internet.
+
+- **Ficha → pestaña «Menciones»**: dónde sale la persona, en tres grupos:
+  - **enlazadas con seguridad** (citas del registro, número o identificador escrito en el texto, cabecera de la transcripción);
+  - **pistas** (enlazadas solo por el nombre: hay que comprobarlas);
+  - **posibles por el nombre** (mismo nombre en documentos sin enlace: pueden ser otra persona).
+  Cada una con su documento, papel, fecha y contexto, y botones **📜 Texto** y **📷 Imagen** que abren la transcripción o la foto con las carpetas elegidas.
+- **Buscador → «En los documentos»**: **¿Dónde aparece…?** y **¿Quién hay en el lugar…?**, con años desde y hasta. Da lo mismo que `python -I 00_control/scripts/buscar_nombres.py` (comprobado en las pruebas).
+- La primera vez pide **Elegir base de nombres (.db)…**; después se recuerda, como el GEDCOM, y se lee siempre del disco.
+- Pesa unos 180 MB: en el ordenador abre en un par de segundos; en el móvil puede ir muy lento.
+
 ## Editar (fase 2, en el ordenador con Chrome o Edge)
 
 1. Abre el GEDCOM como siempre y pulsa **✎ Editar** en la barra.
@@ -134,6 +148,7 @@ GitHub tarda uno o dos minutos en publicarlo. Si aun así se ve la versión viej
 | `js/vistas.js`, `js/app.js` | Pantallas y navegación |
 | `js/md.js` | Muestra las transcripciones y fichas (.md) |
 | `variantes.json` | Grupos de apellidos que se buscan juntos |
+| `js/nombresdb.js`, `js/menciones.js`, `vendor/sqljs/` | Base de nombres y lugares (sql.js, sin internet) |
 | `servidor_local.py`, `pruebas.html`, `js/pruebas.js` | Pruebas |
 
 Sin compilación ni dependencias: son archivos estáticos que se publican tal cual.

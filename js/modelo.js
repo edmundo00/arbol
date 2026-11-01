@@ -1,6 +1,6 @@
 // Personas y familias sacadas del GEDCOM, listas para buscar y mostrar.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611010032';
-import { clave } from './buscar.js?v=202611010032';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611010926';
+import { clave } from './buscar.js?v=202611010926';
 
 export const EVENTOS = {
   BIRT: 'Nacimiento', CHR: 'Bautismo', BAPM: 'Bautismo', CONF: 'Confirmación', DEAT: 'Defunción', BURI: 'Entierro',

@@ -102,6 +102,19 @@ button.pest { background: none; border: 0; border-bottom: 3px solid transparent;
 button.pest.activa { border-bottom-color: var(--acento); }
 .fila.marcada { outline: 3px solid var(--acento); }
 
+/* Base de nombres */
+.pestanas.donde { margin: 0 0 10px; border-bottom: 1px solid var(--linea); }
+.filtros.nombres { grid-template-columns: 2fr 2fr 1fr 1fr; }
+@media (max-width: 640px) { .filtros.nombres { grid-template-columns: 1fr 1fr; } .filtros.nombres label:nth-child(-n+2) { grid-column: span 2; } }
+.mencion { padding: 8px 0; border-bottom: 1px solid var(--linea); }
+.mencion .ctx { font-size: .88em; color: var(--suave); font-style: italic; margin: 3px 0; overflow-wrap: anywhere; }
+.mencion .botones button { font-size: .82em; padding: 3px 8px; margin-top: 4px; }
+.fiab { font-size: .72em; padding: 1px 6px; border-radius: 6px; color: #fff; background: var(--u); vertical-align: 1px; }
+.fiab.seguro { background: var(--ok); } .fiab.pista { background: #c77c02; }
+.eventos div { padding: 3px 0; border-bottom: 1px dotted var(--linea); }
+.eventos .anio { display: inline-block; min-width: 3.2em; color: var(--suave); }
+.caja-base { padding: 6px 0; }
+
 /* Edición */
 #dialogo { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.45); overflow: auto; padding: 16px; }
 .caja.dialogo { max-width: 680px; margin: 3vh auto; }

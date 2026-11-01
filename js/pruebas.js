@@ -1,9 +1,10 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611010032';
-import { Arbol } from './modelo.js?v=202611010032';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611010032';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611010926';
+import { Arbol } from './modelo.js?v=202611010926';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611010926';
 const RUTAS = { gedcom: '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged' };
-import { Servidor, Carpetas } from './almacen.js?v=202611010032';
+import { Servidor, Carpetas } from './almacen.js?v=202611010926';
+import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611010926';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -44,7 +45,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010032')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010926')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);
@@ -87,6 +88,24 @@ async function main() {
   const sola = new Carpetas([new Sub('Genealogia_2')]);
   let e2 = null; try { await sola.buscar(padron); } catch (e) { e2 = e; }
   ok(e2?.noExiste && /No está en «Genealogia_2»/.test(e2.message), `Solo con «Genealogia_2» lo explica: ${e2?.message}`);
+
+  // Base de nombres y lugares, con sql.js (sin internet)
+  const bdb = new Uint8Array(await (await fetch('/Genealogia_2/00_control/nombres_lugares.db', { cache: 'no-store' })).arrayBuffer());
+  const base = await BaseNombres.abrir(bdb, 'nombres_lugares.db', Date.now());
+  const claveNombre = n => tokensClave(n).filter(k => !TRATAMIENTOS.has(k)).join(' ');
+  const pg = base.filas('SELECT nombre, clave FROM personas_gedcom');
+  const malP = pg.filter(r => claveNombre(r.nombre || '') !== (r.clave || ''));
+  ok(malP.length === 0, `Clave fonética igual que en Python en las ${pg.length} personas` + (malP.length ? `; distintas ${malP.length}: ${malP.slice(0, 3).map(r => r.nombre + ' → ' + claveNombre(r.nombre) + ' ≠ ' + r.clave).join(' | ')}` : ''));
+  const mm = base.filas('SELECT nombre, clave FROM menciones WHERE id % 20 = 0');
+  const malM = mm.filter(r => claveNombre(r.nombre || '') !== (r.clave || ''));
+  ok(malM.length / mm.length < 0.001, `Clave igual en ${mm.length - malM.length} de ${mm.length} menciones` + (malM.length ? `: ${malM.slice(0, 3).map(r => r.nombre + ' → ' + claveNombre(r.nombre) + ' ≠ ' + r.clave).join(' | ')}` : ''));
+  const comp = (t, p, m) => { const r = base.donde(t); ok(r.personas.length === p && r.menciones.length === m, `«${t}»: ${r.personas.length} personas y ${r.menciones.length} menciones (Python: ${p} y ${m})`); };
+  comp('Ysabel Fraga', 1, 31); comp('Pardo Osorio', 61, 300); comp('Ferr* Romero', 3, 156); comp('Houwelingen', 6, 69);
+  const lv = base.enLugar('Valdoviño', { desde: 1700, hasta: 1750 });
+  ok(lv.lugares.length === 18 && lv.eventos.length === 143 && lv.menciones.length === 400, `Lugar «Valdoviño» 1700–1750: ${lv.lugares.length} lugares, ${lv.eventos.length} hechos, ${lv.menciones.length} menciones (Python: 18, 143, 400)`);
+  const me = base.menciones('@I1@');
+  ok(me.enlazadas.length > 0, `Menciones de Edmundo (I1): ${me.enlazadas.length} enlazadas y ${me.posibles.length} posibles`);
+  base.cerrar();
 
   ok(true, `Tiempo total: ${Math.round(performance.now() - t0)} ms`);
   document.title = fallos ? `FALLAN ${fallos}` : 'TODO BIEN';
