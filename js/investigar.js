@@ -1,9 +1,9 @@
 // Herramientas para investigar: grado de prueba de cada dato, qué falta por probar, parentesco, antepasados repetidos,
 // cronología, tareas pendientes y lugares.
-import { hijos, valor } from './gedcom.js?v=202611011711';
-import { anios, nombreCompleto, vida, fechaES, miles } from './modelo.js?v=202611011711';
-import { clave } from './buscar.js?v=202611011711';
-import { esc } from './md.js?v=202611011711';
+import { hijos, valor } from './gedcom.js?v=202611011941';
+import { anios, nombreCompleto, vida, fechaES, miles } from './modelo.js?v=202611011941';
+import { clave } from './buscar.js?v=202611011941';
+import { esc } from './md.js?v=202611011941';
 
 const enlace = p => `<a href="#/p/${esc(p.id.slice(1, -1))}">${esc(nombreCompleto(p))}</a>`;
 const LETRA = { 3: 'A', 2: 'B', 1: 'C', 0: '?' };

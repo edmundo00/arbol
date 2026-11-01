@@ -1,27 +1,27 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611011711';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611011711';
-import { buscar, prepararVariantes } from './buscar.js?v=202611011711';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011711';
-import { BaseNombres } from './nombresdb.js?v=202611011711';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011711';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011711';
-import { revisarSalud, repararSalud } from './salud.js?v=202611011711';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011711';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011711';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011711';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611011711';
-import { md, esc } from './md.js?v=202611011711';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011711';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011711';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011711';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011711';
-import { Guardado } from './guardar.js?v=202611011711';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011711';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611011711';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011711';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011711';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611011711';
+import { Gedcom } from './gedcom.js?v=202611011941';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611011941';
+import { buscar, prepararVariantes } from './buscar.js?v=202611011941';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011941';
+import { BaseNombres } from './nombresdb.js?v=202611011941';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011941';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011941';
+import { revisarSalud, repararSalud } from './salud.js?v=202611011941';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011941';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011941';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011941';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611011941';
+import { md, esc } from './md.js?v=202611011941';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011941';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011941';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011941';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011941';
+import { Guardado } from './guardar.js?v=202611011941';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011941';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611011941';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011941';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011941';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611011941';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -134,7 +134,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011711')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011941')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();

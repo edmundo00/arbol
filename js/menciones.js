@@ -1,6 +1,6 @@
 // Pantallas de la base de nombres y lugares: menciones de una persona y buscadores «¿dónde aparece…?» y «¿quién hay en…?».
-import { esc } from './md.js?v=202611011711';
-import { fiabilidad } from './nombresdb.js?v=202611011711';
+import { esc } from './md.js?v=202611011941';
+import { fiabilidad } from './nombresdb.js?v=202611011941';
 
 const TEXTO = /\.(md|txt|csv|html?)$/i, IMAGEN = /\.(jpe?g|png|gif|tiff?|bmp|webp)$/i;
 const ORIGEN = { registro: 'registro', transcripcion: 'transcripción', pdf_texto: 'texto de PDF', copia_ligera: 'copia ligera', ficha: 'ficha',
@@ -8,9 +8,12 @@ const ORIGEN = { registro: 'registro', transcripcion: 'transcripción', pdf_text
 const sinOriginal = r => r && r.startsWith('ORIGINAL/') ? r.slice(9) : r;
 
 // Qué se puede abrir de una mención: su texto (transcripción, ficha…) y su imagen.
-function abribles(m) {
+function abribles(mm) {
   const out = [];
-  if (m.origen === 'gedcom' || m.origen === 'gedcom_notas') return out;   // es el propio GEDCOM
+  if (mm.origen === 'gedcom' || mm.origen === 'gedcom_notas') return out;   // es el propio GEDCOM
+  // Un documento del registro con varias páginas trae «a.md|b.md|…»: se abre la primera
+  const primera = r => r && r.split('|')[0].trim();
+  const m = { ...mm, transcripcion: primera(mm.transcripcion), ruta: primera(mm.ruta), ruta_original: primera(mm.ruta_original) };
   // En el registro, la ruta es documentos.csv: solo vale su transcripción.
   const candidatas = m.origen === 'registro' ? [m.transcripcion] : [m.transcripcion, m.ruta];
   const texto = candidatas.find(r => r && TEXTO.test(r) && !r.includes('*'));
