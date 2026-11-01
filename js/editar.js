@@ -1,6 +1,6 @@
 // Cambios en el GEDCOM: personas, familias y enlaces. Cada cambio es una «operación» que se puede deshacer.
 // Solo se tocan las líneas necesarias: el resto de cada registro se conserva tal cual (con sus etiquetas propias).
-import { Registro, hijo, hijos } from './gedcom.js?v=202611011024';
+import { Registro, hijo, hijos } from './gedcom.js?v=202611011045';
 
 const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'do', 'das', 'dos', 'van', 'von', 'der', 'den', 'di']);
 
@@ -387,6 +387,28 @@ export class Editor {
     if (i < 0) throw new Error('Esa nota ya no está en la ficha.');
     a.hijos.splice(i, 1);
     if (/^@[^@]+@$/.test(nodoNota.valor) && !this.referencias(nodoNota.valor).length) this.eliminar(nodoNota.valor);
+  }
+
+  // ---------- Citas del registro (como las escribe generar.py) ----------
+  // Fuente de un documento del registro: el registro SOUR con «1 REFN reg:<id>» (su xref cambia entre pasadas de generar.py).
+  fuenteDe(doc) {
+    for (const r of this.ged.registros) if (r.tipo === 'SOUR' && r.raw.includes('reg:' + doc) && hijos(r.arbol, 'REFN').some(n => n.valor === 'reg:' + doc)) return r.xref;
+    return null;
+  }
+  // Escribe la cita en la persona si el documento ya tiene fuente. Devuelve false si no la tiene (la pondrá generar.py).
+  cita(xref, { doc, papel, que, pagina, quay }) {
+    const sr = this.fuenteDe(doc);
+    if (!sr) return false;
+    const r = this.tocar(xref), h = r.arbol.hijos;
+    if (h.some(n => n.tag === 'SOUR' && n.valor === sr && n.hijos.some(x => x.tag === '_REG' && x.valor === doc))) return true;
+    const t = Editor.texto(2, `${papel}: ${que}`);
+    const c = nodo(1, 'SOUR', sr, [...(pagina ? [nodo(2, 'PAGE', pagina)] : []), nodo(2, 'QUAY', quay), nodo(2, 'NOTE', t.valor, t.hijos), nodo(2, '_REG', doc)]);
+    // Detrás de sus otras citas del registro; si no tiene, delante de sus fotos del registro y de «1 CHAN»
+    let i = -1;
+    h.forEach((n, k) => { if (n.tag === 'SOUR' && n.hijos.some(x => x.tag === '_REG')) i = k; });
+    if (i < 0) { const k = h.findIndex(n => n.tag === 'CHAN' || (n.tag === 'OBJE' && /^@M\d/.test(n.valor))); i = (k < 0 ? h.length : k) - 1; }
+    h.splice(i + 1, 0, c);
+    return true;
   }
 
   // ---------- Fusionar dos fichas de la misma persona ----------

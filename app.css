@@ -141,6 +141,9 @@ button.mas { font-size: .85em; padding: 6px 10px; border-style: dashed; color: v
 #flotante.malo { background: var(--aviso); }
 #b-editar.activo { background: #ffe9a8; color: #5b3a1e; }
 
+/* Citas */
+.mencion button.si { color: var(--ok); border-color: var(--ok); }
+
 /* Revisar */
 .raiz-rev { display: inline-flex; gap: 8px; align-items: center; margin: 8px 0; color: var(--tinta); font-size: .95em; }
 .raiz-rev select { width: auto; margin: 0; }

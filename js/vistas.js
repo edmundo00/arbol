@@ -1,7 +1,7 @@
 // Pantallas: resultados de búsqueda, vista de familia, datos, notas y documentos de cada persona.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011024';
-import { fechaES, vida, nombreCompleto, anios } from './modelo.js?v=202611011024';
-import { esc } from './md.js?v=202611011024';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011045';
+import { fechaES, vida, nombreCompleto, anios } from './modelo.js?v=202611011045';
+import { esc } from './md.js?v=202611011045';
 
 export function insignias(arbol, id) {
   return arbol.raices.map(({ id: r, letra, nombre: quien }) => {
@@ -136,7 +136,7 @@ export function detalle(arbol, id, pestana, editando = false) {
   if (pestana === 'notas') cuerpo = (nodosNota.length ? nodosNota.map((n, i) => `<div class="nota">${esc(arbol.notaTexto(n)).replace(/\n/g, '<br>')}
       ${editando ? `<p class="botones"><button class="mas" data-accion="nota" data-nota="${i}">✎ Cambiar</button><button class="mas" data-accion="borrar-nota" data-nota="${i}">✕ Quitar</button></p>` : ''}</div>`).join('') : '<p class="nada">Sin notas.</p>')
       + (editando ? '<p class="botones"><button class="mas" data-accion="nota">+ Añadir nota</button></p>' : '');
-  else if (pestana === 'docs') cuerpo = documentos(docs, sueltas);
+  else if (pestana === 'docs') cuerpo = documentos(docs, sueltas) + (editando ? '<p class="botones"><button class="mas" data-accion="citar">+ Citar un documento del registro</button></p>' : '');
   else if (pestana === 'ged') cuerpo = `<pre class="ged">${esc(r.texto())}</pre>`;
   else if (pestana === 'menc') cuerpo = '<div id="menciones"><p class="cargando">Buscando en la base de nombres…</p></div>';
   else cuerpo = hechos(arbol, p, editando);

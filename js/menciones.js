@@ -1,6 +1,6 @@
 // Pantallas de la base de nombres y lugares: menciones de una persona y buscadores «¿dónde aparece…?» y «¿quién hay en…?».
-import { esc } from './md.js?v=202611011024';
-import { fiabilidad } from './nombresdb.js?v=202611011024';
+import { esc } from './md.js?v=202611011045';
+import { fiabilidad } from './nombresdb.js?v=202611011045';
 
 const TEXTO = /\.(md|txt|csv|html?)$/i, IMAGEN = /\.(jpe?g|png|gif|tiff?|bmp|webp)$/i;
 const ORIGEN = { registro: 'registro', transcripcion: 'transcripción', pdf_texto: 'texto de PDF', copia_ligera: 'copia ligera', ficha: 'ficha',
@@ -22,7 +22,7 @@ function abribles(m) {
   return out;
 }
 
-export function filaMencion(m, i, { enlazar = true } = {}) {
+export function filaMencion(m, i, { enlazar = true, confirmar = false } = {}) {
   const f = fiabilidad(m.enlace);
   const enl = enlazar && m.xref ? ` → <a href="#/p/${esc(m.xref.slice(1, -1))}">${esc(m.enlazado || m.xref)}</a> <span class="fiab ${f}" title="${esc(m.enlace || '')}">${f === 'seguro' ? 'seguro' : 'pista'}</span>` : '';
   const botones = abribles(m).map((a, k) => `<button data-m="${i}" data-a="${k}">${a.tipo === 'imagen' ? '📷 Imagen' : a.tipo === 'texto' ? '📜 Texto' : '📄 Archivo'}</button>`).join('');
@@ -31,12 +31,13 @@ export function filaMencion(m, i, { enlazar = true } = {}) {
       ${m.n_veces > 1 ? `<span class="peq"> ×${m.n_veces}</span>` : ''}</div>
     <div class="peq">${esc((m.titulo || '').trim())} · ${esc(ORIGEN[m.origen] || m.origen || '')}${m.pagina && !['gedcom_notas', 'arbol'].includes(m.origen) ? ' · p. ' + esc(m.pagina) : ''}${m.anio || m.danio ? ' · ' + esc(m.anio || m.danio) : ''}</div>
     ${m.contexto ? `<div class="ctx">«${esc(m.contexto.slice(0, 300))}${m.contexto.length > 300 ? '…' : ''}»</div>` : ''}
-    ${botones ? `<div class="botones">${botones}</div>` : ''}
+    ${botones || confirmar ? `<div class="botones">${botones}${confirmar ? `<button class="si" data-conf="${i}">✓ Es esta persona</button>` : ''}</div>` : ''}
   </div>`;
 }
 
 // Conecta los botones «Texto / Imagen / Archivo» de una lista de menciones.
 export function conectar(caja, lista, acciones) {
+  caja.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => acciones.confirmar(lista[+b.dataset.conf]));
   caja.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
     const m = lista[+b.dataset.m], a = abribles(m)[+b.dataset.a];
     const titulo = (m.titulo || m.nombre || '').trim();
@@ -51,10 +52,10 @@ export function pintarMenciones(caja, { enlazadas, posibles }, acciones) {
   const seguras = enlazadas.filter(m => fiabilidad(m.enlace) === 'seguro'), pistas = enlazadas.filter(m => fiabilidad(m.enlace) !== 'seguro');
   const todas = [...seguras, ...pistas, ...posibles];
   let i = 0;
-  const bloque = (titulo, lista, ayuda) => lista.length ? `<h4>${titulo} (${lista.length})</h4><p class="peq">${ayuda}</p>${lista.map(m => filaMencion(m, i++, { enlazar: false })).join('')}` : '';
+  const bloque = (titulo, lista, ayuda, conf) => lista.length ? `<h4>${titulo} (${lista.length})</h4><p class="peq">${ayuda}</p>${lista.map(m => filaMencion(m, i++, { enlazar: false, confirmar: conf && !!acciones.confirmar })).join('')}` : '';
   caja.innerHTML = todas.length ? bloque('Enlazadas con seguridad', seguras, 'Citas del registro, número o identificador escrito en el texto, o cabecera de la transcripción.')
-      + bloque('Pistas', pistas, 'Enlazadas solo por el nombre (único en el árbol) o por nombre y año: hay que comprobarlas.')
-      + bloque('Posibles por el nombre', posibles, 'Mismo nombre (con la misma clave fonética) en documentos sin enlace a nadie del árbol: pueden ser otra persona.')
+      + bloque('Pistas', pistas, 'Enlazadas solo por el nombre (único en el árbol) o por nombre y año: hay que comprobarlas.', true)
+      + bloque('Posibles por el nombre', posibles, 'Mismo nombre (con la misma clave fonética) en documentos sin enlace a nadie del árbol: pueden ser otra persona.', true)
     : '<p class="nada">No sale en la base de nombres.</p>';
   conectar(caja, todas, acciones);
 }
