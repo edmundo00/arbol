@@ -151,6 +151,25 @@ button.mas { font-size: .85em; padding: 6px 10px; border-style: dashed; color: v
 label.check { display: flex; gap: 8px; align-items: center; color: var(--tinta); font-size: .95em; }
 label.check input { width: auto; margin: 0; }
 
+/* Investigar */
+.pruebas { margin: 0 0 8px; font-size: .9em; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.pruebas .prueba { white-space: nowrap; }
+.grado.gN { background: transparent; color: var(--suave); border: 1px solid var(--linea); }
+.hecho .et .grado { margin: 0 0 0 6px; font-size: .72em; }
+table.falta-probar { border-collapse: collapse; width: 100%; font-size: .9em; }
+table.falta-probar td, table.falta-probar th { border-bottom: 1px solid var(--linea); padding: 4px 6px; text-align: left; }
+table.falta-probar td.num { color: var(--suave); text-align: right; white-space: nowrap; }
+table.solo-huecos tr.completo { display: none; }
+.parentesco-raiz { margin: 8px 0 0; font-size: .9em; color: var(--suave); }
+.parentesco-raiz b { color: var(--tinta); }
+ol.camino li { margin: 3px 0; }
+.crono .hecho.propio .dato { font-weight: 600; }
+.crono .edad { color: var(--acento2); font-size: .85em; margin-left: 4px; }
+.tarea { display: inline-block; font-size: .75em; color: #fff; background: #c77c02; border-radius: 6px; padding: 1px 6px; margin-top: 4px; }
+.encaje.si { color: var(--ok); } .encaje.no { color: var(--aviso); }
+.grupo-lugar { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+mark { background: #ffe9a8; color: inherit; }
+
 /* Revisar */
 .raiz-rev { display: inline-flex; gap: 8px; align-items: center; margin: 8px 0; color: var(--tinta); font-size: .95em; }
 .raiz-rev select { width: auto; margin: 0; }

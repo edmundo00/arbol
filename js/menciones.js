@@ -1,6 +1,6 @@
 // Pantallas de la base de nombres y lugares: menciones de una persona y buscadores «¿dónde aparece…?» y «¿quién hay en…?».
-import { esc } from './md.js?v=202611011129';
-import { fiabilidad } from './nombresdb.js?v=202611011129';
+import { esc } from './md.js?v=202611011136';
+import { fiabilidad } from './nombresdb.js?v=202611011136';
 
 const TEXTO = /\.(md|txt|csv|html?)$/i, IMAGEN = /\.(jpe?g|png|gif|tiff?|bmp|webp)$/i;
 const ORIGEN = { registro: 'registro', transcripcion: 'transcripción', pdf_texto: 'texto de PDF', copia_ligera: 'copia ligera', ficha: 'ficha',
@@ -30,6 +30,7 @@ export function filaMencion(m, i, { enlazar = true, confirmar = false } = {}) {
     <div><b>${esc(m.nombre)}</b>${m.papel && m.papel !== 'texto' ? ' — ' + esc(m.papel) : ''}${m.fecha ? ', ' + esc(m.fecha) : ''}${enl}
       ${m.n_veces > 1 ? `<span class="peq"> ×${m.n_veces}</span>` : ''}</div>
     <div class="peq">${esc((m.titulo || '').trim())} · ${esc(ORIGEN[m.origen] || m.origen || '')}${m.pagina && !['gedcom_notas', 'arbol'].includes(m.origen) ? ' · p. ' + esc(m.pagina) : ''}${m.anio || m.danio ? ' · ' + esc(m.anio || m.danio) : ''}</div>
+    ${m._p?.notas.length ? `<div class="peq encaje ${m._p.n > 0 ? 'si' : m._p.n < 0 ? 'no' : ''}">${m._p.n > 0 ? '✔' : m._p.n < 0 ? '✘' : '·'} ${esc(m._p.notas.join(', '))}</div>` : ''}
     ${m.contexto ? `<div class="ctx">«${esc(m.contexto.slice(0, 300))}${m.contexto.length > 300 ? '…' : ''}»</div>` : ''}
     ${botones || confirmar ? `<div class="botones">${botones}${confirmar ? `<button class="si" data-conf="${i}">✓ Es esta persona</button>` : ''}</div>` : ''}
   </div>`;
@@ -47,15 +48,31 @@ export function conectar(caja, lista, acciones) {
   });
 }
 
+// Puntuación de una mención posible para una persona: año dentro de su vida y lugar entre los suyos.
+const plano = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+function puntuar(m, p) {
+  if (!p) return { n: 0, notas: [] };
+  let n = 0; const notas = [];
+  const y = m.anio || m.danio;
+  if (y && p.ymin != null) {
+    const desde = p.ymin - 3, hasta = (p.ymax != null && p.ymax > p.ymin ? p.ymax : p.ymin + 90) + 3;
+    if (y >= desde && y <= hasta) { n += 2; notas.push('año dentro de su vida'); } else { n -= 2; notas.push('año fuera de su vida'); }
+  }
+  const l = plano((m.lugar || '').split(/[,(]/)[0]).trim();
+  if (l.length > 2 && plano((p.lugares || []).join(' | ')).includes(l)) { n += 1; notas.push('lugar suyo'); }
+  return { n, notas };
+}
+
 // Pestaña «Menciones» de la ficha de una persona
-export function pintarMenciones(caja, { enlazadas, posibles }, acciones) {
+export function pintarMenciones(caja, { enlazadas, posibles }, acciones, persona = null) {
+  posibles = posibles.map(x => ({ ...x, _p: puntuar(x, persona) })).sort((a, b) => b._p.n - a._p.n);
   const seguras = enlazadas.filter(m => fiabilidad(m.enlace) === 'seguro'), pistas = enlazadas.filter(m => fiabilidad(m.enlace) !== 'seguro');
   const todas = [...seguras, ...pistas, ...posibles];
   let i = 0;
   const bloque = (titulo, lista, ayuda, conf) => lista.length ? `<h4>${titulo} (${lista.length})</h4><p class="peq">${ayuda}</p>${lista.map(m => filaMencion(m, i++, { enlazar: false, confirmar: conf && !!acciones.confirmar })).join('')}` : '';
   caja.innerHTML = todas.length ? bloque('Enlazadas con seguridad', seguras, 'Citas del registro, número o identificador escrito en el texto, o cabecera de la transcripción.')
       + bloque('Pistas', pistas, 'Enlazadas solo por el nombre (único en el árbol) o por nombre y año: hay que comprobarlas.', true)
-      + bloque('Posibles por el nombre', posibles, 'Mismo nombre (con la misma clave fonética) en documentos sin enlace a nadie del árbol: pueden ser otra persona.', true)
+      + bloque('Posibles por el nombre', posibles, 'Mismo nombre (con la misma clave fonética) en documentos sin enlace a nadie del árbol: pueden ser otra persona. Ordenadas: primero las que encajan con sus fechas y lugares.', true)
     : '<p class="nada">No sale en la base de nombres.</p>';
   conectar(caja, todas, acciones);
 }

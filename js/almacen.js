@@ -172,6 +172,14 @@ export class Carpeta extends Raiz {
     return out;
   }
   archivo(h) { return h.getFile(); }
+  // Contenido de una subcarpeta: [{ nombre, dir, h }]
+  async listar(partes) {
+    let h = this.asa;
+    for (const x of partes) { h = await this.entrar(h, x, false); if (!h) return []; }
+    const out = [];
+    try { for await (const [n, x] of h.entries()) out.push({ nombre: n, dir: x.kind === 'directory', h: x }); } catch {}
+    return out;
+  }
   async url(h) { const u = URL.createObjectURL(await h.getFile()); this.urls.push(u); return u; }
 }
 
@@ -191,6 +199,12 @@ export class Servidor extends Raiz {
     return [...(await r.text()).matchAll(/href="([^"?]+)\/"/g)].map(m => decodeURIComponent(m[1]));
   }
   async archivo(u) { return (await fetch(u, { cache: 'no-store' })).blob(); }
+  async listar(partes) {
+    const r = await fetch(this.dir(partes) + '/', { cache: 'no-store' });
+    if (!r.ok) return [];
+    return [...(await r.text()).matchAll(/href="([^"?]+)"/g)].map(m => decodeURIComponent(m[1])).filter(n => !n.startsWith('/') && !n.startsWith('.'))
+      .map(n => ({ nombre: n.replace(/\/$/, ''), dir: n.endsWith('/'), h: this.dir([...partes, n.replace(/\/$/, '')]) }));
+  }
   async url(u) { return u; }
   async bajar(ruta) { const u = this.dir(trozos(ruta)), r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw noExiste(ruta); return { bytes: new Uint8Array(await r.arrayBuffer()), nombre: ruta.split('/').pop(), fecha: Date.parse(r.headers.get('Last-Modified')) }; }
 }

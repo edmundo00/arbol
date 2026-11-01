@@ -1,6 +1,6 @@
 // Cambios en el GEDCOM: personas, familias y enlaces. Cada cambio es una «operación» que se puede deshacer.
 // Solo se tocan las líneas necesarias: el resto de cada registro se conserva tal cual (con sus etiquetas propias).
-import { Registro, hijo, hijos } from './gedcom.js?v=202611011129';
+import { Registro, hijo, hijos } from './gedcom.js?v=202611011136';
 
 const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'do', 'das', 'dos', 'van', 'von', 'der', 'den', 'di']);
 
@@ -460,6 +460,23 @@ export class Editor {
     h.forEach((n, k) => { if ((n.tag === 'OBJE' && /^@M[0-9A-FX]+@$/.test(n.valor)) || (n.tag === 'SOUR' && n.hijos.some(x => x.tag === '_REG'))) j = k; });
     for (const o of objs) if (!ya.has(o)) { h.splice(++j, 0, nodo(1, 'OBJE', o)); ya.add(o); }
     return true;
+  }
+
+  // Cambia un lugar por otro en todos los hechos (unificar variantes). Devuelve cuántas líneas cambia.
+  renombrarLugar(variantes, nuevo) {
+    const vs = new Set(variantes.filter(v => v !== nuevo)); let n = 0;
+    if (!vs.size) return 0;
+    for (const r of [...this.ged.registros]) {
+      if (r.tipo !== 'INDI' && r.tipo !== 'FAM') continue;
+      if (!r.modificado && ![...vs].some(v => r.raw.includes(' PLAC ' + v))) continue;
+      const cambiar = [];
+      const ver = x => { if (x.tag === 'PLAC' && vs.has(x.valor)) cambiar.push(x); x.hijos.forEach(ver); };
+      ver(r.arbol);
+      if (!cambiar.length) continue;
+      this.tocar(r.xref);
+      for (const x of cambiar) { x.valor = nuevo; x.cambiado = true; n++; }
+    }
+    return n;
   }
 
   // Vuelve a poner un registro tal como está en una copia (si no existe, se crea).

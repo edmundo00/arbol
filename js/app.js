@@ -1,23 +1,25 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611011129';
-import { Arbol, nombreCompleto } from './modelo.js?v=202611011129';
-import { buscar, prepararVariantes } from './buscar.js?v=202611011129';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011129';
-import { BaseNombres } from './nombresdb.js?v=202611011129';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011129';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011129';
-import { revisarSalud, repararSalud } from './salud.js?v=202611011129';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011129';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611011129';
-import { md, esc } from './md.js?v=202611011129';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes } from './arboles.js?v=202611011129';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011129';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011129';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011129';
-import { Guardado } from './guardar.js?v=202611011129';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011129';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011129';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011129';
+import { Gedcom } from './gedcom.js?v=202611011136';
+import { Arbol, nombreCompleto, vida, miles } from './modelo.js?v=202611011136';
+import { buscar, prepararVariantes } from './buscar.js?v=202611011136';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011136';
+import { BaseNombres } from './nombresdb.js?v=202611011136';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011136';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011136';
+import { revisarSalud, repararSalud } from './salud.js?v=202611011136';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011136';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011136';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011136';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611011136';
+import { md, esc } from './md.js?v=202611011136';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011136';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011136';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011136';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011136';
+import { Guardado } from './guardar.js?v=202611011136';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011136';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011136';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011136';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -107,7 +109,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011129')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011136')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -152,6 +154,7 @@ function ir() {
   }
   if ((m = /^\/imprimir\/([^/]+)$/.exec(h))) return verImprimir('@' + m[1] + '@');
   if (h === '/nombres') return verNombres();
+  if (h === '/texto') return verTexto2();
   if ((m = /^\/revisar(?:\/(\w+))?$/.exec(h))) return verRevisar(m[1] || 'fronteras');
   if (h === '/ajustes') return ajustes();
   return verBuscar();
@@ -162,7 +165,7 @@ function verBuscar() {
   const e = estadoBusqueda;
   if (e.linea && !arbol.raices.some(r => r.id === e.linea)) e.linea = null;
   pantalla(`<div class="buscador">
-    <nav class="pestanas donde"><a class="pest activa" href="#/buscar">En el árbol</a><a class="pest" href="#/nombres">En los documentos (base de nombres)</a><a class="pest" href="#/revisar">Revisar el árbol</a></nav>
+    <nav class="pestanas donde"><a class="pest activa" href="#/buscar">En el árbol</a><a class="pest" href="#/nombres">En los documentos (base de nombres)</a><a class="pest" href="#/texto">Texto libre</a><a class="pest" href="#/revisar">Revisar el árbol</a></nav>
     <div class="filtros arbol">
       <label>Nombre<input id="f-nombre" value="${esc(e.nombre || '')}" placeholder="Juan, Mª Josefa…"></label>
       <label>Apellidos<input id="f-apellidos" value="${esc(e.apellidos || '')}" placeholder="Fraga, Pardo Osorio…"></label>
@@ -221,12 +224,14 @@ function verPersona(id, pestana) {
   const y = window.scrollY;
   const raiz = esRaiz(id);
   main.innerHTML = `<div class="persona">${familia(arbol, id, !!editor)}
-    <p class="acciones"><button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Persona de referencia' : '☆ Marcar como persona de referencia'}</button>
+    ${parentescoRaices(id)}
+    <p class="acciones"><button id="parentesco" title="¿Qué parentesco tiene con otra persona?">⚯ ¿Parentesco con…?</button> <button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Persona de referencia' : '☆ Marcar como persona de referencia'}</button>
       <label class="rotulo" title="Lo que sale debajo del nombre en los murales; vacío = su título u oficio del GEDCOM">Rótulo en murales<input id="rotulo" value="${esc(rotulosPropios()[id] || '')}" placeholder="${esc(rotuloGedcom(arbol, id) || 'p. ej. Comandante de Marina')}"></label></p>
     <section class="detalle">${detalle(arbol, id, pestana, !!editor)}</section></div>`;
   main.dataset.persona = id;
   if (antes) window.scrollTo(0, y); else window.scrollTo(0, 0);
   $('#raiz').onclick = () => { alternarRaiz(id); verPersona(id, pestana); };
+  $('#parentesco').onclick = () => elegirParentesco(id);
   $('#rotulo').onchange = ev => guardarRotulo(id, ev.target.value);
   main.querySelectorAll('[data-accion]').forEach(b => b.onclick = () => accion(b.dataset.accion, id, b.dataset.fam || null, b.dataset));
   recordar(id);
@@ -608,6 +613,17 @@ async function accion(tipo, id, famId, ds = {}) {
     return operar(`Quitar ${ev.etiqueta.toLowerCase()} de ${nom}`, () => editor.borrarHecho(famId || id, ev.nodo));
   }
   // ---------- Notas ----------
+  if (tipo === 'tarea') {
+    const t = await formularioNota('Tarea pendiente de ' + nom, 'PENDIENTE: ');
+    if (t == null) return;
+    const texto = /^\s*(PENDIENTE|TAREA)\s*:/i.test(t) ? t : 'PENDIENTE: ' + t;
+    return operar('Añadir tarea a ' + nom, () => editor.nota(id, null, texto));
+  }
+  if (tipo === 'tarea-hecha') {
+    const n = hijos(arbol.registro(id).arbol, 'NOTE')[+ds.nota]; if (!n) return;
+    const t = arbol.notaTexto(n).replace(ES_TAREA, `HECHO (${new Date().toLocaleDateString('es')}):`);
+    return operar('Tarea hecha de ' + nom, () => editor.nota(id, n, t));
+  }
   if (tipo === 'nota' || tipo === 'borrar-nota') {
     const nodos = hijos(arbol.registro(id).arbol, 'NOTE'), n = ds.nota != null && ds.nota !== '' ? nodos[+ds.nota] : null;
     if (tipo === 'borrar-nota') {
@@ -925,7 +941,7 @@ async function mencionesDe(id) {
   const caja = $('#menciones');
   if (!caja) return;
   if (!await necesitaBase(caja, () => mencionesDe(id))) return;
-  try { pintarMenciones(caja, baseNombres.menciones(id), { ...accionesDoc, confirmar: editor ? m => confirmarMencion(id, m) : null }); }
+  try { pintarMenciones(caja, baseNombres.menciones(id), { ...accionesDoc, confirmar: editor ? m => confirmarMencion(id, m) : null }, arbol.p(id)); }
   catch (e) { caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
 }
 
@@ -935,7 +951,7 @@ function verNombres() {
   main.dataset.persona = '';
   const e = estadoNombres;
   pantalla(`<div class="buscador">
-    <nav class="pestanas donde"><a class="pest" href="#/buscar">En el árbol</a><a class="pest activa" href="#/nombres">En los documentos (base de nombres)</a><a class="pest" href="#/revisar">Revisar el árbol</a></nav>
+    <nav class="pestanas donde"><a class="pest" href="#/buscar">En el árbol</a><a class="pest activa" href="#/nombres">En los documentos (base de nombres)</a><a class="pest" href="#/texto">Texto libre</a><a class="pest" href="#/revisar">Revisar el árbol</a></nav>
     <div class="filtros nombres">
       <label>Nombre<input id="n-nombre" value="${esc(e.nombre || '')}" placeholder="Ysabel · Joseph · Mª Josefa"></label>
       <label>Apellidos<input id="n-apellidos" value="${esc(e.apellidos || '')}" placeholder="Fraga · Pardo Osorio · Ferr*"></label>
@@ -975,14 +991,19 @@ function verRevisar(tab) {
   const raiz = LS.get('revisarRaiz') && arbol.p(LS.get('revisarRaiz')) ? LS.get('revisarRaiz') : arbol.raices[0]?.id;
   const sub = (k, t) => `<a class="pest${tab === k ? ' activa' : ''}" href="#/revisar/${k}">${t}</a>`;
   pantalla(`<div class="buscador">
-    <nav class="pestanas donde"><a class="pest" href="#/buscar">En el árbol</a><a class="pest" href="#/nombres">En los documentos (base de nombres)</a><a class="pest activa" href="#/revisar">Revisar el árbol</a></nav>
-    <nav class="pestanas">${sub('fronteras', 'Dónde se corta la línea')}${sub('incoherencias', 'Incoherencias')}${sub('duplicados', 'Posibles duplicados')}${sub('salud', 'Salud del archivo')}${sub('copias', 'Copias e historial')}</nav>
-    ${tab === 'fronteras' ? `<label class="raiz-rev">Antepasados de <select id="r-raiz">${arbol.raices.map(r => `<option value="${esc(r.id)}"${r.id === raiz ? ' selected' : ''}>${esc(r.nombre)}</option>`).join('')}</select></label>` : ''}
+    <nav class="pestanas donde"><a class="pest" href="#/buscar">En el árbol</a><a class="pest" href="#/nombres">En los documentos (base de nombres)</a><a class="pest" href="#/texto">Texto libre</a><a class="pest activa" href="#/revisar">Revisar el árbol</a></nav>
+    <nav class="pestanas">${sub('fronteras', 'Dónde se corta la línea')}${sub('incoherencias', 'Incoherencias')}${sub('duplicados', 'Posibles duplicados')}${sub('pruebas', 'Qué falta por probar')}${sub('repetidos', 'Antepasados repetidos')}${sub('tareas', 'Tareas pendientes')}${sub('lugares', 'Lugares')}${sub('salud', 'Salud del archivo')}${sub('copias', 'Copias e historial')}</nav>
+    ${['fronteras', 'pruebas', 'repetidos'].includes(tab) ? `<label class="raiz-rev">Antepasados de <select id="r-raiz">${arbol.raices.map(r => `<option value="${esc(r.id)}"${r.id === raiz ? ' selected' : ''}>${esc(r.nombre)}</option>`).join('')}</select></label>` : ''}
     <div id="r-res"><p class="cargando">Revisando…</p></div></div>`);
   $('#r-raiz')?.addEventListener('change', ev => { LS.set('revisarRaiz', ev.target.value); verRevisar(tab); });
   setTimeout(() => {
     const caja = $('#r-res'); if (!caja) return;
     if (tab === 'salud') return verSalud(caja);
+    if (tab === 'lugares') return verLugares(caja);
+    if (tab === 'pruebas') { caja.innerHTML = pintarFaltaProbar(arbol, raiz, antepasados.length ? (a, r) => antepasados(a, r, 40) : null);
+      const f = () => caja.querySelector('table')?.classList.toggle('solo-huecos', $('#fp-huecos').checked); $('#fp-huecos').onchange = f; f(); return; }
+    if (tab === 'repetidos') { caja.innerHTML = pintarRepetidos(arbol, raiz); return; }
+    if (tab === 'tareas') { caja.innerHTML = pintarTareas(arbol); return; }
     if (tab === 'copias') return verCopias(caja);
     caja.innerHTML = tab === 'incoherencias' ? pintarIncoherencias(arbol) : tab === 'duplicados' ? pintarDuplicados(arbol, !!editor) : pintarFronteras(arbol, raiz);
     caja.querySelectorAll('[data-fusionar]').forEach(b => b.onclick = async () => {
@@ -1073,6 +1094,99 @@ async function historialDe(id) {
   if (!guardado) { caja.innerHTML = '<p class="peq">El historial de cambios se ve con «Editar» activado.</p>'; return; }
   const l = (await guardado.diario()).filter(d => d.xrefs.includes(id)).reverse();
   caja.innerHTML = `<h4>Historial de cambios</h4>${l.map(d => `<div class="fila-rev"><span class="peq">${esc(d.fecha)} · ${esc(d.aparato)}</span> ${esc(d.desc)}</div>`).join('') || '<p class="nada">Sin cambios apuntados en el diario.</p>'}`;
+}
+
+// ---------- Parentesco ----------
+function parentescoRaices(id) {
+  const l = arbol.raices.filter(r => r.id !== id).map(r => {
+    const ns = arbol.ahnentafel(r.id).get(id);
+    const pa = parentesco(arbol, r.id, id);
+    return pa ? `<span>De ${esc(r.nombre.split(' ')[0])}: <b>${esc(pa.texto)}</b>${ns ? ` (n.º ${ns.slice(0, 2).map(miles).join(' y ')})` : ''}</span>` : '';
+  }).filter(Boolean);
+  return l.length ? `<p class="parentesco-raiz">${l.join(' · ')}</p>` : '';
+}
+function elegirParentesco(id) {
+  const capa = $('#dialogo');
+  capa.hidden = false; document.body.classList.add('con-visor');
+  capa.innerHTML = `<div class="caja dialogo"><h2>Parentesco de ${esc(nombreCompleto(arbol.p(id)))} con…</h2>
+    <label>Busca a la otra persona<input id="pa-buscar" autocomplete="off"></label><div id="pa-res" class="elegir"></div><div id="pa-sal"></div>
+    <p class="botones"><button id="pa-cerrar">Cerrar</button></p></div>`;
+  const cerrar = () => { capa.hidden = true; capa.innerHTML = ''; document.body.classList.remove('con-visor'); };
+  $('#pa-cerrar').onclick = cerrar;
+  let t;
+  $('#pa-buscar').addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => {
+    const r = buscar(arbol, $('#pa-buscar').value, { variantes, limite: 12 });
+    $('#pa-res').innerHTML = r.lista.filter(p => p.id !== id).map(p => `<button type="button" data-id="${esc(p.id)}"><b>${esc(nombreCompleto(p))}</b> <span class="peq">${esc(vida(p))}</span></button>`).join('');
+    $('#pa-res').querySelectorAll('[data-id]').forEach(b => b.onclick = () => { $('#pa-res').innerHTML = ''; $('#pa-sal').innerHTML = pintarParentesco(arbol, id, b.dataset.id);
+      $('#pa-sal').querySelectorAll('a').forEach(a => a.addEventListener('click', cerrar)); });
+  }, 150); });
+  $('#pa-buscar').focus();
+}
+
+// ---------- Lugares: lista y unificar variantes ----------
+function verLugares(caja) {
+  const { todos, grupos } = listaDeLugares(arbol);
+  caja.innerHTML = `<p class="peq">${todos.length.toLocaleString('es')} lugares distintos en los hechos del árbol. Arriba, grupos que parecen el mismo lugar escrito de varias formas.
+      ${editor ? 'Elige la forma buena y pulsa «Unificar»: se cambia en todos los hechos (se puede deshacer).' : 'Para unificar, activa «Editar».'}</p>
+    <h3>Posibles variantes (${grupos.length})</h3>
+    ${grupos.slice(0, 200).map((g, i) => `<div class="fila-rev grupo-lugar">${g.map((e, k) => `<label class="check"><input type="radio" name="gl${i}" value="${k}"${k === 0 ? ' checked' : ''}> ${esc(e.lugar)} <span class="peq">${e.hechos} hechos</span></label>`).join('')}
+      ${editor ? `<button class="mas" data-unificar="${i}">Unificar en la elegida</button>` : ''}</div>`).join('') || '<p class="nada">No se ven variantes.</p>'}
+    <h3>Todos los lugares</h3>
+    <label>Filtrar<input id="lg-filtro" placeholder="Escribe parte del nombre"></label>
+    <div id="lg-lista"></div>`;
+  const pintar = () => {
+    const q = planoTexto($('#lg-filtro').value);
+    $('#lg-lista').innerHTML = todos.filter(e => !q || planoTexto(e.lugar).includes(q)).slice(0, 400).map(e => `<div class="fila-rev">${esc(e.lugar)} <span class="peq">${e.hechos} hechos · ${e.personas.size} personas</span>
+      ${editor ? `<button class="mas" data-renombrar="${esc(e.lugar)}">Cambiar nombre</button>` : ''}</div>`).join('');
+    $('#lg-lista').querySelectorAll('[data-renombrar]').forEach(b => b.onclick = async () => {
+      const v = b.dataset.renombrar, n = prompt(`Nuevo nombre para «${v}» (se cambia en todos los hechos):`, v);
+      if (!n || n.trim() === v) return;
+      let c = 0; await operar(`Cambiar el lugar «${v}» por «${n.trim()}»`, () => { c = editor.renombrarLugar([v], n.trim()); });
+      flotante(`Cambiado en ${c} hechos.`); verRevisar('lugares');
+    });
+  };
+  $('#lg-filtro').addEventListener('input', pintar); pintar();
+  caja.querySelectorAll('[data-unificar]').forEach(b => b.onclick = async () => {
+    const g = grupos[+b.dataset.unificar], k = +caja.querySelector(`input[name=gl${b.dataset.unificar}]:checked`).value, buena = g[k].lugar;
+    if (!confirm(`¿Poner «${buena}» en lugar de:\n${g.filter((e, j) => j !== k).map(e => '· ' + e.lugar).join('\n')}\n\nen todos los hechos? Se puede deshacer.`)) return;
+    let c = 0; await operar(`Unificar el lugar «${buena}»`, () => { c = editor.renombrarLugar(g.map(e => e.lugar), buena); });
+    flotante(`Unificado en ${c} hechos.`); verRevisar('lugares');
+  });
+}
+
+// ---------- Texto libre ----------
+let busquedaTexto = 0;
+function verTexto2() {
+  document.title = 'Árbol · Texto libre';
+  main.dataset.persona = '';
+  const e = JSON.parse(sessionStorage.getItem('arbol.texto') || '{}');
+  pantalla(`<div class="buscador">
+    <nav class="pestanas donde"><a class="pest" href="#/buscar">En el árbol</a><a class="pest" href="#/nombres">En los documentos (base de nombres)</a><a class="pest activa" href="#/texto">Texto libre</a><a class="pest" href="#/revisar">Revisar el árbol</a></nav>
+    <div class="filtros nombres"><label class="ancho">Frase o palabra<input id="t-q" value="${esc(e.q || '')}" placeholder="molino de Illade · Casa de Andeiro · escribano"></label></div>
+    <label class="check"><input type="checkbox" id="t-trans"${e.trans ? ' checked' : ''}> Buscar también dentro de los archivos de transcripción (más lento)</label>
+    <p class="peq">Busca en las notas del árbol${baseNombres ? ', en el texto de las menciones de la base de nombres' : ' (y en la base de nombres, si la abres en «En los documentos»)'} y, si lo marcas, en las transcripciones. Pulsa Intro.</p>
+    <div id="t-res"></div></div>`);
+  const lanzarT = async () => {
+    const q = $('#t-q').value.trim(), trans = $('#t-trans').checked;
+    sessionStorage.setItem('arbol.texto', JSON.stringify({ q, trans }));
+    const caja = $('#t-res'), yo = ++busquedaTexto;
+    if (q.length < 3) { caja.innerHTML = '<p class="peq">Escribe al menos 3 letras.</p>'; return; }
+    const notas = enNotas(arbol, q), menc = enMenciones(baseNombres, q);
+    caja.innerHTML = `<h3>En las notas del árbol: ${notas.length}</h3>${pintarNotas(notas, q)}
+      ${baseNombres ? `<h3>En las menciones (base de nombres): ${menc.length}</h3>${menc.map(m => `<div class="fila-rev"><b>${esc(m.nombre)}</b>${m.xref && arbol.p(m.xref) ? ` → <a href="#/p/${esc(m.xref.slice(1, -1))}">${esc(nombreCompleto(arbol.p(m.xref)))}</a>` : ''}
+        <div class="peq">${esc((m.titulo || '').trim())}</div><div class="peq">${resaltar(m.contexto || '', planoTexto(q))}</div></div>`).join('') || '<p class="nada">Nada.</p>'}` : ''}
+      ${trans ? `<h3>En las transcripciones: <span id="t-av">buscando…</span></h3><div id="t-tr"></div>` : ''}`;
+    if (!trans) return;
+    if (!carpeta) { $('#t-tr').innerHTML = ''; hayCarpeta($('#t-tr')); $('#t-av').textContent = ''; return; }
+    const l = await enTranscripciones(carpeta, q, { alAvance: n => { if (yo === busquedaTexto && $('#t-av')) $('#t-av').textContent = `${n.toLocaleString('es')} archivos leídos…`; }, parar: () => yo !== busquedaTexto });
+    if (yo !== busquedaTexto || !$('#t-tr')) return;
+    $('#t-av').textContent = l.length;
+    $('#t-tr').innerHTML = pintarTranscripciones(l, q);
+    $('#t-tr').querySelectorAll('[data-tr]').forEach(b => b.onclick = () => verTexto(l[+b.dataset.tr].ruta, l[+b.dataset.tr].ruta.split('/').pop()));
+  };
+  $('#t-q').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); lanzarT(); } });
+  $('#t-trans').addEventListener('change', lanzarT);
+  if (e.q) lanzarT();
 }
 
 // ---------- Ajustes ----------

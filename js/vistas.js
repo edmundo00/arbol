@@ -1,7 +1,8 @@
 // Pantallas: resultados de búsqueda, vista de familia, datos, notas y documentos de cada persona.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011129';
-import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611011129';
-import { esc } from './md.js?v=202611011129';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011136';
+import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611011136';
+import { esc } from './md.js?v=202611011136';
+import { pruebasDe, resumenPruebas, cronologia, ES_TAREA } from './investigar.js?v=202611011136';
 
 export function insignias(arbol, id) {
   return arbol.raices.map(({ id: r, letra, nombre: quien }) => {
@@ -134,23 +135,28 @@ export function detalle(arbol, id, pestana, editando = false) {
   const pest = (k, t) => `<a class="pest${pestana === k ? ' activa' : ''}" href="#/p/${id.slice(1, -1)}/${k}">${t}</a>`;
   let cuerpo = '';
   if (pestana === 'notas') cuerpo = (nodosNota.length ? nodosNota.map((n, i) => `<div class="nota">${esc(arbol.notaTexto(n)).replace(/\n/g, '<br>')}
-      ${editando ? `<p class="botones"><button class="mas" data-accion="nota" data-nota="${i}">✎ Cambiar</button><button class="mas" data-accion="borrar-nota" data-nota="${i}">✕ Quitar</button></p>` : ''}</div>`).join('') : '<p class="nada">Sin notas.</p>')
-      + (editando ? '<p class="botones"><button class="mas" data-accion="nota">+ Añadir nota</button></p>' : '');
+      ${ES_TAREA.test(arbol.notaTexto(n)) ? '<span class="tarea">tarea pendiente</span>' : ''}${editando ? `<p class="botones">${ES_TAREA.test(arbol.notaTexto(n)) ? `<button class="mas si" data-accion="tarea-hecha" data-nota="${i}">✓ Hecha</button>` : ''}<button class="mas" data-accion="nota" data-nota="${i}">✎ Cambiar</button><button class="mas" data-accion="borrar-nota" data-nota="${i}">✕ Quitar</button></p>` : ''}</div>`).join('') : '<p class="nada">Sin notas.</p>')
+      + (editando ? '<p class="botones"><button class="mas" data-accion="nota">+ Añadir nota</button><button class="mas" data-accion="tarea">+ Añadir tarea pendiente</button></p>' : '');
   else if (pestana === 'docs') cuerpo = documentos(docs, sueltas) + (editando ? '<p class="botones"><button class="mas" data-accion="citar">+ Citar un documento del registro</button></p>' : '');
   else if (pestana === 'ged') cuerpo = `<div id="historial"></div><pre class="ged">${esc(r.texto())}</pre>`;
+  else if (pestana === 'crono') cuerpo = cronologia(arbol, id);
   else if (pestana === 'menc') cuerpo = '<div id="menciones"><p class="cargando">Buscando en la base de nombres…</p></div>';
-  else cuerpo = hechos(arbol, p, editando);
-  return `<nav class="pestanas">${pest('datos', 'Datos')}${pest('docs', `Documentos (${nDocs})`)}${pest('notas', `Notas (${notas.length})`)}${pest('menc', 'Menciones')}${pest('ged', 'GEDCOM')}</nav>
+  else cuerpo = resumenPruebas(arbol, id) + hechos(arbol, p, editando);
+  return `<nav class="pestanas">${pest('datos', 'Datos')}${pest('docs', `Documentos (${nDocs})`)}${pest('notas', `Notas (${notas.length})`)}${pest('menc', 'Menciones')}${pest('crono', 'Cronología')}${pest('ged', 'GEDCOM')}</nav>
     <div class="cuerpo">${cuerpo}</div>`;
 }
 
 function hechos(arbol, p, editando) {
   const y = e => anios(e.fecha)[0] ?? 99999;
+  const pr = pruebasDe(arbol, p.id) || {};
+  const LET = { 3: 'A', 2: 'B', 1: 'C', 0: '?' };
+  const grado = tag => { const k = ['BIRT', 'CHR', 'BAPM'].includes(tag) ? 'nac' : ['DEAT', 'BURI'].includes(tag) ? 'muerte' : tag === 'MARR' ? 'boda' : null;
+    return k ? (pr[k] == null ? ' <span class="grado gN" title="Sin documento">—</span>' : ` <span class="grado g${LET[pr[k]]}" title="${esc((pr.docs[k] || []).slice(0, 3).join(' · '))}">${LET[pr[k]]}</span>`) : ''; };
   const ed = (datos, quitar = true) => editando ? `<span class="ed">${`<button class="mas" data-accion="hecho" ${datos}>✎</button>`}${quitar ? `<button class="mas" data-accion="borrar-hecho" ${datos}>✕</button>` : ''}</span>` : '';
   const filas = [...p.eventos].sort((a, b) => y(a) - y(b)).map(e => {
     const notas = hijos(e.nodo, 'NOTE').map(n => arbol.notaTexto(n)).filter(Boolean);
     const fuentes = hijos(e.nodo, 'SOUR').map(s => /^@/.test(s.valor) ? fuente(arbol, s.valor).titulo : s.valor);
-    return `<div class="hecho"><span class="et">${esc(e.etiqueta)}${e.tipo ? ' (' + esc(e.tipo) + ')' : ''}</span>
+    return `<div class="hecho"><span class="et">${esc(e.etiqueta)}${e.tipo ? ' (' + esc(e.tipo) + ')' : ''}${grado(e.tag)}</span>
       <span class="dato">${esc(fechaES(e.fecha))}${e.fecha && e.lugar ? ' · ' : ''}${esc(e.lugar)}${e.valor ? `${e.fecha || e.lugar ? ' · ' : ''}${esc(e.valor)}` : ''}</span>
       ${notas.map(n => `<span class="nh">${esc(n).replace(/\n/g, '<br>')}</span>`).join('')}
       ${fuentes.length ? `<span class="fh">Fuente: ${fuentes.map(esc).join(' · ')}</span>` : ''}${ed(`data-ev="${p.eventos.indexOf(e)}"`)}</div>`;
@@ -158,7 +164,7 @@ function hechos(arbol, p, editando) {
   const otros = p.otros.length ? `<div class="hecho"><span class="et">Otros nombres</span><span class="dato">${p.otros.map(esc).join(' · ')}</span></div>` : '';
   const fams = p.fams.map(f => arbol.f(f)).filter(Boolean).flatMap(f => f.eventos.filter(e => e.tag !== 'MARR' || e.fecha || e.lugar).map(e => {
     const otro = arbol.p(f.marido === p.id ? f.mujer : f.marido);
-    return `<div class="hecho"><span class="et">${esc(e.etiqueta)}${otro ? ' con ' + esc(nombreCompleto(otro)) : ''}</span><span class="dato">${esc(fechaES(e.fecha))}${e.fecha && e.lugar ? ' · ' : ''}${esc(e.lugar)}</span>${ed(`data-fam="${esc(f.id)}" data-fev="${f.eventos.indexOf(e)}"`)}</div>`;
+    return `<div class="hecho"><span class="et">${esc(e.etiqueta)}${otro ? ' con ' + esc(nombreCompleto(otro)) : ''}${grado(e.tag)}</span><span class="dato">${esc(fechaES(e.fecha))}${e.fecha && e.lugar ? ' · ' : ''}${esc(e.lugar)}</span>${ed(`data-fam="${esc(f.id)}" data-fev="${f.eventos.indexOf(e)}"`)}</div>`;
   }));
   const ids = `<div class="hecho"><span class="et">Identificador</span><span class="dato">${esc(p.id)}</span></div>`;
   return (filas.join('') + fams.join('') + otros + ids || '<p class="nada">Sin datos.</p>')
