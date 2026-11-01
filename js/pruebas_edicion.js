@@ -1,10 +1,10 @@
 // Pruebas de la edición sobre una COPIA del GEDCOM en el disco privado del navegador (OPFS): nunca toca el archivo bueno.
-import { Gedcom, decodificar, textoLargo } from './gedcom.js?v=202611011155';
-import { Arbol } from './modelo.js?v=202611011155';
-import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011155';
-import { Guardado, comprobar } from './guardar.js?v=202611011155';
-import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611011155';
-import { clave } from './buscar.js?v=202611011155';
+import { Gedcom, decodificar, textoLargo } from './gedcom.js?v=202611011432';
+import { Arbol } from './modelo.js?v=202611011432';
+import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011432';
+import { Guardado, comprobar } from './guardar.js?v=202611011432';
+import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611011432';
+import { clave } from './buscar.js?v=202611011432';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -49,8 +49,15 @@ async function main() {
   const copias = await dir.getDirectoryHandle('copias');
   ok(iguales(await bytesDe(copias, r1.copiaSesion.slice(7)), original), `Copia de la sesión: ${r1.copiaSesion}, idéntica al original`);
   ok(iguales(await bytesDe(copias, 'edmundo_app_anterior.ged'), original), 'Copia «anterior» idéntica al original');
+  ok(!(await dir.getFileHandle('edmundo.ged.lock').then(() => true, () => false)), 'Tras guardar no queda candado (solo se pone mientras se escribe)');
+  await g.ponerCandado();
   const candado = JSON.parse(await (await (await dir.getFileHandle('edmundo.ged.lock')).getFile()).text());
-  ok(candado.quien.startsWith('app:') && Date.parse(candado.hasta) > Date.now(), 'Candado puesto mientras se edita');
+  const dura = Date.parse(candado.hasta) - Date.now();
+  ok(candado.quien.startsWith('app:') && dura > 0 && dura <= 120000 && !!g.renovando, `Candado mientras se escribe: caduca en ${Math.round(dura / 1000)} s y se renueva`);
+  await g.guardar(ged.bytes(), arbol.personas.size);
+  ok(await dir.getFileHandle('edmundo.ged.lock').then(() => true, () => false), 'Un guardado dentro de una operación más larga no suelta su candado');
+  await g.quitarCandado();
+  ok(!(await dir.getFileHandle('edmundo.ged.lock').then(() => true, () => false)) && !g.renovando, 'Al acabar la operación se quita el candado y deja de renovarse');
 
   // Solo cambian los registros tocados
   const t0 = decodificar(original).texto, t1 = decodificar(disco1).texto;

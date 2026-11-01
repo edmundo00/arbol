@@ -1,34 +1,34 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611011155';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611011155';
-import { buscar, prepararVariantes } from './buscar.js?v=202611011155';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011155';
-import { BaseNombres } from './nombresdb.js?v=202611011155';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011155';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011155';
-import { revisarSalud, repararSalud } from './salud.js?v=202611011155';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011155';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011155';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011155';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611011155';
-import { md, esc } from './md.js?v=202611011155';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011155';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011155';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011155';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011155';
-import { Guardado } from './guardar.js?v=202611011155';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011155';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611011155';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011155';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011155';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611011155';
+import { Gedcom } from './gedcom.js?v=202611011432';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611011432';
+import { buscar, prepararVariantes } from './buscar.js?v=202611011432';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011432';
+import { BaseNombres } from './nombresdb.js?v=202611011432';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011432';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011432';
+import { revisarSalud, repararSalud } from './salud.js?v=202611011432';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011432';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011432';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011432';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611011432';
+import { md, esc } from './md.js?v=202611011432';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011432';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011432';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011432';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011432';
+import { Guardado } from './guardar.js?v=202611011432';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011432';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611011432';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011432';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011432';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611011432';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
 const esLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 const PRUEBA = '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged';   // solo para el servidor de pruebas
 let fuente = null, carpeta = null, carpetaPendiente = [], arbol, variantes = [], info = {};
-let editor = null, guardado = null, renovar = null, guardando = false, bytesAbiertos = null;
+let editor = null, guardado = null, guardando = false, bytesAbiertos = null;
 const estadoBusqueda = JSON.parse(sessionStorage.getItem('arbol.busqueda') || '{}');
 
 function pantalla(html) { main.innerHTML = html; window.scrollTo(0, 0); }
@@ -116,7 +116,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011155')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011432')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -301,9 +301,8 @@ function activarEdicion() {
   capa.querySelector('#e-ok').onclick = async () => {
     try {
       guardado = pruebas() ? await guardadoDePrueba() : await Guardado.preparar(info.nombre, bytesAbiertos);
-      await guardado.ponerCandado();
+      await guardado.comprobarCandado();   // solo se mira: el candado se pone cuando se escribe
       editor = new Editor(arbol.ged, arbol);
-      renovar = setInterval(() => guardado?.ponerCandado().catch(() => {}), 5 * 60000);
       cerrar();
       flotante('Edición activada. Los botones «+ Añadir…» están en la vista de familia.');
       estadoEdicion(); ir();
@@ -314,7 +313,6 @@ function activarEdicion() {
   };
 }
 async function terminarEdicion() {
-  clearInterval(renovar);
   try { await guardado?.quitarCandado(); } catch {}
   editor = null; guardado = null;
   estadoEdicion(); ir();
@@ -423,7 +421,9 @@ async function asegurarRegistro() {
 async function quitarCsv(lista) { for (const x of lista || []) try { await registro.quitar(x.archivo, x.linea); } catch (e) { console.warn(e); } }
 
 // Escribe primero en los CSV (dentro del candado) y luego, si hace falta, en el GEDCOM. Si algo falla, no queda nada a medias.
-async function operarRegistro(desc, escribirCsv, cambiarGed) {
+// El candado se pone al empezar a escribir (CSV y GEDCOM) y se quita al acabar, haya ido bien o mal.
+async function operarRegistro(...a) { try { return await operarRegistroDentro(...a); } finally { await guardado?.quitarCandado().catch(() => {}); } }
+async function operarRegistroDentro(desc, escribirCsv, cambiarGed) {
   if (await actualizarSiCambio()) { alert('El árbol acababa de cambiar fuera de la aplicación y se ha actualizado. Repite el cambio.'); return null; }
   await guardado.ponerCandado();
   let csv = [];
@@ -598,7 +598,8 @@ function aplicarPartida(r) {
   return ids;
 }
 
-async function altaPartida(id) {
+async function altaPartida(id) { try { return await altaPartidaDentro(id); } finally { await guardado?.quitarCandado().catch(() => {}); } }
+async function altaPartidaDentro(id) {
   if (!editor) return;
   try { await asegurarRegistro(); } catch (e) { if (e.name !== 'AbortError') console.warn(e); }
   const docs = registro ? await documentosCitables() : [];
@@ -768,7 +769,10 @@ async function accion(tipo, id, famId, ds = {}) {
 $('#b-editar').onclick = activarEdicion;
 $('#b-deshacer').onclick = deshacer;
 window.addEventListener('beforeunload', ev => { if (guardando) { ev.preventDefault(); ev.returnValue = ''; } });
+// Al cerrar o salir de la pestaña, se quita el candado si es nuestro (no se deja bloqueado el GEDCOM)
 window.addEventListener('pagehide', () => { guardado?.quitarCandado(); });
+window.addEventListener('beforeunload', () => { if (!guardando) guardado?.quitarCandado(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && !guardando && guardado?.tengo) guardado.quitarCandado(); });
 
 // ---------- Árboles ----------
 

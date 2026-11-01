@@ -5,14 +5,15 @@
 //   3. el archivo nuevo se lee otra vez y se comprueba: mismas personas más las añadidas, enlaces que apuntan a algo;
 //   4. copias en copias/: la de la sesión (una vez) y la anterior a cada guardado, comprobadas tras escribirlas.
 // La escritura la hace el navegador en un archivo aparte que solo al cerrar sustituye al bueno; después se relee y compara.
-import { Gedcom } from './gedcom.js?v=202611011155';
-import { bdLeer, bdGuardar } from './almacen.js?v=202611011155';
+import { Gedcom } from './gedcom.js?v=202611011432';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611011432';
 
 const iguales = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
 const sello = () => { const d = new Date(), p = x => String(x).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
 const sesion = (() => { try { let s = sessionStorage.getItem('arbol.sesion'); if (!s) { s = Math.random().toString(36).slice(2, 10); sessionStorage.setItem('arbol.sesion', s); } return s; } catch { return 'x'; } })();
 const QUIEN = 'app:' + sesion;
-const MINUTOS = 20;
+// El candado solo está puesto mientras se escribe: dura 2 minutos y se renueva cada 30 s mientras haga falta.
+const MINUTOS = 2, RENOVAR = 30000;
 
 export function comprobar(bytes, personasEsperadas) {
   const g = Gedcom.desdeBytes(bytes);
@@ -57,15 +58,25 @@ export class Guardado {
     try { const c = JSON.parse(await f.text()); if (c && c.quien && !isNaN(Date.parse(c.hasta))) return c; } catch {}
     return { quien: 'desconocido (candado ilegible)', hasta: new Date(f.lastModified + 10 * 60000).toISOString() };
   }
-  async ponerCandado() {
+  // Sin poner nada: falla si otro lo tiene puesto
+  async comprobarCandado() {
     const c = await this.leerCandado();
     if (c && c.quien !== QUIEN && Date.parse(c.hasta) > Date.now())
       throw new Error(`El archivo lo está usando «${c.quien}»${c.aparato ? ' en ' + c.aparato : ''} hasta las ${new Date(c.hasta).toLocaleTimeString('es')}. Espera a que termine.`);
+  }
+  async ponerCandado() {
+    await this.comprobarCandado();
+    await this.escribirCandado();
+    this.tengo = true;
+    if (!this.renovando) this.renovando = setInterval(() => { if (this.tengo) this.escribirCandado().catch(() => {}); }, RENOVAR);
+  }
+  async escribirCandado() {
     const datos = { quien: QUIEN, aparato: navigator.platform || '', desde: new Date().toISOString(), hasta: new Date(Date.now() + MINUTOS * 60000).toISOString() };
     const w = await (await this.dir.getFileHandle(this.nombre + '.lock', { create: true })).createWritable();
     await w.write(JSON.stringify(datos, null, 1)); await w.close();
   }
   async quitarCandado() {
+    clearInterval(this.renovando); this.renovando = null; this.tengo = false;
     const c = await this.leerCandado();
     if (c && c.quien === QUIEN) try { await this.dir.removeEntry(this.nombre + '.lock'); } catch {}
   }
@@ -81,8 +92,14 @@ export class Guardado {
   }
 
   // ---------- Guardar ----------
+  // Si el candado no estaba puesto (por una operación más larga que lo abarca), se suelta al terminar.
   async guardar(nuevos, personasEsperadas) {
+    const yaTenia = this.tengo;
     await this.ponerCandado();
+    try { return await this.guardarDentro(nuevos, personasEsperadas); }
+    finally { if (!yaTenia) await this.quitarCandado(); }
+  }
+  async guardarDentro(nuevos, personasEsperadas) {
     const fh = await this.dir.getFileHandle(this.nombre);
     const disco = new Uint8Array(await (await fh.getFile()).arrayBuffer());
     if (!iguales(disco, this.base)) {
