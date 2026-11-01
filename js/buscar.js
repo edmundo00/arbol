@@ -32,15 +32,20 @@ function alternativas(t, variantes) {
 }
 
 // Devuelve las personas que cumplen: cada palabra escrita debe aparecer en el nombre (en cualquier orden).
-export function buscar(arbol, texto, { lugar = '', desde = null, hasta = null, linea = null, variantes = [], limite = 300 } = {}) {
+export function buscar(arbol, texto, { lugar = '', desde = null, hasta = null, linea = null, nombre = '', apellidos = '', variantes = [], limite = 300 } = {}) {
   const tokens = clave(texto).split(' ').filter(t => t && !VACIAS.has(t));
   const alts = tokens.map(t => alternativas(t, variantes));
+  // Nombre y apellidos por separado: cada palabra tiene que empezar una palabra del nombre (o de los apellidos).
+  const tN = clave(nombre).split(' ').filter(t => t && !VACIAS.has(t));
+  const tA = clave(apellidos).split(' ').filter(t => t && !VACIAS.has(t)).map(t => alternativas(t, variantes));
   const cLugar = clave(lugar);
   const anc = linea ? arbol.ahnentafel(linea) : null;
-  if (!tokens.length && !cLugar && desde == null && hasta == null && !anc) return { total: 0, lista: [] };
+  if (!tokens.length && !tN.length && !tA.length && !cLugar && desde == null && hasta == null && !anc) return { total: 0, lista: [] };
   const res = [];
   for (const p of arbol.personas.values()) {
     if (anc && !anc.has(p.id)) continue;
+    if (tN.length) { const w = p.claveN.split(' '); if (!tN.every(t => w.some(x => x.startsWith(t)))) continue; }
+    if (tA.length) { const w = p.claveA.split(' '); if (!tA.every(a => a.some(t => w.some(x => x.startsWith(t))))) continue; }
     if (cLugar && !p.claveLugar.includes(cLugar)) continue;
     if (desde != null && (p.ymax == null || p.ymax < desde)) continue;
     if (hasta != null && (p.ymin == null || p.ymin > hasta)) continue;

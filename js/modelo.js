@@ -1,6 +1,6 @@
 // Personas y familias sacadas del GEDCOM, listas para buscar y mostrar.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611010926';
-import { clave } from './buscar.js?v=202611010926';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611010938';
+import { clave } from './buscar.js?v=202611010938';
 
 export const EVENTOS = {
   BIRT: 'Nacimiento', CHR: 'Bautismo', BAPM: 'Bautismo', CONF: 'Confirmación', DEAT: 'Defunción', BURI: 'Entierro',
@@ -79,6 +79,7 @@ export class Arbol {
       ymin: ys.length ? Math.min(...ys) : null, ymax: ys.length ? Math.max(...ys) : null,
       famc: hijos(a, 'FAMC').map(x => x.valor), fams: hijos(a, 'FAMS').map(x => x.valor),
       clave: clave([nombre, apellidos, sufijo, ...otros].join(' ')),
+      claveN: clave(nombre), claveA: clave(apellidos),
       claveLugar: clave(lugares.join(' | ')),
     };
   }

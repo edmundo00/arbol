@@ -1,8 +1,8 @@
 // Árboles para imprimir, como dibujos SVG en milímetros: cuadro de ascendientes y abanico.
 // Se guardan como PDF con el «Guardar como PDF» del navegador o se descargan en SVG para la imprenta.
-import { antepasados } from './arboles.js?v=202611010926';
-import { anios, nombreCompleto } from './modelo.js?v=202611010926';
-import { esc } from './md.js?v=202611010926';
+import { antepasados } from './arboles.js?v=202611010938';
+import { anios, nombreCompleto } from './modelo.js?v=202611010938';
+import { esc } from './md.js?v=202611010938';
 
 export const PAPELES = { A4: [297, 210], A3: [420, 297], A2: [594, 420], A1: [841, 594], A0: [1189, 841] };
 const LETRA = "Georgia, 'Times New Roman', serif";

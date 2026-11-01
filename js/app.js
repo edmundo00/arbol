@@ -1,19 +1,19 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611010926';
-import { Arbol, nombreCompleto } from './modelo.js?v=202611010926';
-import { buscar, prepararVariantes } from './buscar.js?v=202611010926';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611010926';
-import { BaseNombres } from './nombresdb.js?v=202611010926';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611010926';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611010926';
-import { md, esc } from './md.js?v=202611010926';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010926';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010926';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010926';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010926';
-import { Guardado } from './guardar.js?v=202611010926';
-import { formularioPersona } from './formularios.js?v=202611010926';
-import { hijo as nodoHijo, valor as valorNodo } from './gedcom.js?v=202611010926';
+import { Gedcom } from './gedcom.js?v=202611010938';
+import { Arbol, nombreCompleto } from './modelo.js?v=202611010938';
+import { buscar, prepararVariantes } from './buscar.js?v=202611010938';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611010938';
+import { BaseNombres } from './nombresdb.js?v=202611010938';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611010938';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611010938';
+import { md, esc } from './md.js?v=202611010938';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611010938';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611010938';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611010938';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010938';
+import { Guardado } from './guardar.js?v=202611010938';
+import { formularioPersona } from './formularios.js?v=202611010938';
+import { hijo as nodoHijo, valor as valorNodo } from './gedcom.js?v=202611010938';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -103,7 +103,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010926')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010938')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -158,7 +158,9 @@ function verBuscar() {
   if (e.linea && !arbol.raices.some(r => r.id === e.linea)) e.linea = null;
   pantalla(`<div class="buscador">
     <nav class="pestanas donde"><a class="pest activa" href="#/buscar">En el árbol</a><a class="pest" href="#/nombres">En los documentos (base de nombres)</a></nav>
-    <div class="filtros">
+    <div class="filtros arbol">
+      <label>Nombre<input id="f-nombre" value="${esc(e.nombre || '')}" placeholder="Juan, Mª Josefa…"></label>
+      <label>Apellidos<input id="f-apellidos" value="${esc(e.apellidos || '')}" placeholder="Fraga, Pardo Osorio…"></label>
       <label>Lugar<input id="f-lugar" value="${esc(e.lugar || '')}" placeholder="Ferrol, Corrubedo…"></label>
       <label>Desde<input id="f-desde" inputmode="numeric" value="${esc(e.desde ?? '')}" placeholder="1600"></label>
       <label>Hasta<input id="f-hasta" inputmode="numeric" value="${esc(e.hasta ?? '')}" placeholder="1800"></label>
@@ -166,12 +168,12 @@ function verBuscar() {
         ${arbol.raices.map(r => `<option value="${esc(r.id)}"${e.linea === r.id ? ' selected' : ''}>Antepasados de ${esc(r.nombre)}</option>`).join('')}</select></label>
     </div>
     <div id="res"></div>
-    ${!e.q && !e.lugar && !e.linea ? `<div class="inicio"><p>Escribe arriba cualquier trozo de nombre o apellido. No importan las tildes ni la ortografía (b/v, y/i, h…).</p>
+    ${!e.q && !e.nombre && !e.apellidos && !e.lugar && !e.linea ? `<div class="inicio"><p>Escribe arriba cualquier trozo de nombre o apellido. No importan las tildes ni la ortografía (b/v, y/i, h…).</p>
       <p>${arbol.raices.map(r => `<a class="tarjeta-enlace" href="#/p/${esc(r.id.slice(1, -1))}">${esc(r.nombre)}</a>`).join(' ')}</p>
       <p class="peq">«${esc(info.nombre)}» · ${arbol.personas.size.toLocaleString('es')} personas · ${arbol.familias.size.toLocaleString('es')} familias
         ${info.copia ? `<br>Copia guardada en este aparato, del archivo del ${esc(new Date(info.fecha).toLocaleString('es'))}` : ''}</p></div>` : ''}
   </div>`);
-  for (const id of ['f-lugar', 'f-desde', 'f-hasta', 'f-linea']) $('#' + id).addEventListener('input', lanzar);
+  for (const id of ['f-nombre', 'f-apellidos', 'f-lugar', 'f-desde', 'f-hasta', 'f-linea']) $('#' + id).addEventListener('input', lanzar);
   lanzar();
 }
 
@@ -182,12 +184,12 @@ function lanzar() {
     const num = v => /^\d{3,4}$/.test(v.trim()) ? +v.trim() : null;
     const e = estadoBusqueda;
     e.q = $('#q').value;
-    if ($('#f-lugar')) { e.lugar = $('#f-lugar').value; e.desde = num($('#f-desde').value); e.hasta = num($('#f-hasta').value); e.linea = $('#f-linea').value || null; }
+    if ($('#f-lugar')) { e.nombre = $('#f-nombre').value; e.apellidos = $('#f-apellidos').value; e.lugar = $('#f-lugar').value; e.desde = num($('#f-desde').value); e.hasta = num($('#f-hasta').value); e.linea = $('#f-linea').value || null; }
     sessionStorage.setItem('arbol.busqueda', JSON.stringify(e));
     if (!$('#res')) { location.hash = '#/buscar'; return; }
-    const r = buscar(arbol, e.q, { lugar: e.lugar, desde: e.desde, hasta: e.hasta, linea: e.linea, variantes });
-    $('#res').innerHTML = r.total || e.q || e.lugar || e.linea || e.desde || e.hasta ? resultados(arbol, r) : '';
-    const ini = document.querySelector('.inicio'); if (ini) ini.hidden = !!(e.q || e.lugar || e.linea);
+    const r = buscar(arbol, e.q, { nombre: e.nombre, apellidos: e.apellidos, lugar: e.lugar, desde: e.desde, hasta: e.hasta, linea: e.linea, variantes });
+    $('#res').innerHTML = r.total || e.q || e.nombre || e.apellidos || e.lugar || e.linea || e.desde || e.hasta ? resultados(arbol, r) : '';
+    const ini = document.querySelector('.inicio'); if (ini) ini.hidden = !!(e.q || e.nombre || e.apellidos || e.lugar || e.linea);
   }, 120);
 }
 
@@ -521,14 +523,14 @@ const IMG = /^(jpe?g|png|gif|tiff?|bmp|webp|heic)$/;
 function hayCarpeta(caja, falta) {
   if (carpeta && !falta) return true;
   caja.innerHTML = hayDisco
-    ? `<p class="peq">${falta ? esc(falta) + '<br>Si las fotos están en otra carpeta (por ejemplo «Genealogia» y «Genealogia_2», o toda la de Dropbox), añádela:'
+    ? `<p class="peq">${falta ? esc(falta) + '<br>Si está en otra carpeta, añádela. Lo más sencillo: «Genealogia» (fotos originales) y «Genealogia_2» (transcripciones y descargas), o toda la de Dropbox:'
                               : 'Para ver fotos y transcripciones, elige la carpeta donde están (por ejemplo «Genealogia», o toda la de Dropbox). Puedes añadir varias.'}
        ${carpetaPendiente.length ? `<button data-c="re">Volver a usar ${carpetaPendiente.map(h => '«' + esc(h.name) + '»').join(', ')}</button>` : ''} <button data-c="elegir">${carpeta ? 'Añadir otra carpeta…' : 'Elegir carpeta…'}</button></p>`
     : '<p class="peq">En este aparato no se pueden ver fotos ni transcripciones: solo el árbol. Se ven en el ordenador, con Chrome o Edge.</p>';
   caja.querySelectorAll('[data-c]').forEach(b => b.onclick = async () => {
     try {
       await anadirCarpeta(b.dataset.c === 'elegir');
-      caja.innerHTML = `<p class="peq">Carpetas: ${esc(carpeta?.nombre || 'ninguna')}. Vuelve a abrir la foto.</p>`;
+      caja.innerHTML = `<p class="peq">Carpetas: ${esc(carpeta?.nombre || 'ninguna')}. Cierra y vuelve a abrirlo.</p>`;
     } catch (e) { if (e.name !== 'AbortError') caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
   });
   return false;
@@ -613,7 +615,7 @@ async function verTexto(ruta, titulo) {
   const caja = capa.querySelector('.transc');
   if (!hayCarpeta(caja)) return;
   try { const t = await carpeta.texto(ruta); caja.innerHTML = `<p class="peq">${esc(t.rel)}</p><div class="md">${md(t.texto)}</div>`; }
-  catch (e) { caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
+  catch (e) { if (e.noExiste) hayCarpeta(caja, e.message); else caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
 }
 
 // ---------- Base de nombres y lugares (00_control/nombres_lugares.db) ----------
@@ -690,7 +692,8 @@ function verNombres() {
   pantalla(`<div class="buscador">
     <nav class="pestanas donde"><a class="pest" href="#/buscar">En el árbol</a><a class="pest activa" href="#/nombres">En los documentos (base de nombres)</a></nav>
     <div class="filtros nombres">
-      <label>¿Dónde aparece…?<input id="n-quien" value="${esc(e.quien || '')}" placeholder="Ysabel Fraga · Pardo Osorio · Ferr*"></label>
+      <label>Nombre<input id="n-nombre" value="${esc(e.nombre || '')}" placeholder="Ysabel · Joseph · Mª Josefa"></label>
+      <label>Apellidos<input id="n-apellidos" value="${esc(e.apellidos || '')}" placeholder="Fraga · Pardo Osorio · Ferr*"></label>
       <label>¿Quién hay en el lugar…?<input id="n-lugar" value="${esc(e.lugar || '')}" placeholder="Corrubedo · Valdoviño"></label>
       <label>Desde<input id="n-desde" inputmode="numeric" value="${esc(e.desde ?? '')}" placeholder="1600"></label>
       <label>Hasta<input id="n-hasta" inputmode="numeric" value="${esc(e.hasta ?? '')}" placeholder="1800"></label>
@@ -702,14 +705,15 @@ function verNombres() {
   const caja = $('#n-res');
   const lanzarN = () => {
     const num = v => /^\d{3,4}$/.test(v.trim()) ? +v.trim() : null;
-    Object.assign(e, { quien: $('#n-quien').value, lugar: $('#n-lugar').value, desde: num($('#n-desde').value), hasta: num($('#n-hasta').value) });
+    Object.assign(e, { nombre: $('#n-nombre').value, apellidos: $('#n-apellidos').value, lugar: $('#n-lugar').value, desde: num($('#n-desde').value), hasta: num($('#n-hasta').value) });
     sessionStorage.setItem('arbol.nombres', JSON.stringify(e));
-    if (!e.quien.trim() && !e.lugar.trim()) { caja.innerHTML = ''; return; }
+    const quien = (e.nombre + e.apellidos).trim();
+    if (!quien && !e.lugar.trim()) { caja.innerHTML = ''; return; }
     caja.innerHTML = '<p class="cargando">Buscando…</p>';
     setTimeout(() => {
       try {
-        if (e.lugar.trim() && (!e.quien.trim() || document.activeElement === $('#n-lugar'))) pintarLugar(caja, baseNombres.enLugar(e.lugar, e), accionesDoc);
-        else pintarDonde(caja, baseNombres.donde(e.quien, e), accionesDoc);
+        if (e.lugar.trim() && (!quien || document.activeElement === $('#n-lugar'))) pintarLugar(caja, baseNombres.enLugar(e.lugar, e), accionesDoc);
+        else pintarDonde(caja, baseNombres.donde('', { ...e, nombre: e.nombre, apellidos: e.apellidos }), accionesDoc);
       } catch (err) { caja.innerHTML = `<p class="aviso">${esc(err.message)}</p>`; }
     }, 20);
   };

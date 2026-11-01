@@ -52,6 +52,31 @@ function condiciones(texto, columna) {
   return { sql: conds.join(' AND '), params };
 }
 
+// Nombre de pila y apellidos por separado. En la clave, el nombre de pila va delante (los tratamientos ya se quitaron):
+// la 1.ª palabra del nombre tiene que ser la 1.ª de la clave; los apellidos, cualquier palabra salvo la 1.ª.
+function palabras(texto) {
+  const out = [];
+  for (const m of (texto || '').match(/\p{L}+\*?/gu) || []) {
+    const pref = m.endsWith('*'), w = m.replace(/\*$/, '');
+    if (PARTICULAS.has(plano(w)) || TRATAMIENTOS.has(plano(w))) continue;
+    const k = clavePalabra(w);
+    if (k) out.push({ k, pref });
+  }
+  return out;
+}
+function condicionesNA(nombre, apellidos, col) {
+  const conds = [], params = [];
+  palabras(nombre).forEach(({ k, pref }, i) => {
+    if (i === 0) { conds.push(`(${col} || ' ') LIKE ?`); params.push(pref ? `${k}%` : `${k} %`); }
+    else { conds.push(`(' ' || ${col} || ' ') LIKE ?`); params.push(pref ? `% ${k}%` : `% ${k} %`); }
+  });
+  for (const { k, pref } of palabras(apellidos)) {
+    conds.push(`(' ' || ${col} || ' ') LIKE ? AND (${col} || ' ') NOT LIKE ?`);
+    params.push(pref ? `% ${k}%` : `% ${k} %`, pref ? `${k}%` : `${k} %`);
+  }
+  return { sql: conds.join(' AND '), params };
+}
+
 // Fiabilidad del enlace de una mención con una persona del árbol (columna «enlace»).
 export function fiabilidad(enlace) {
   if (!enlace) return 'ninguno';
@@ -108,8 +133,10 @@ export class BaseNombres {
   }
 
   // ¿Dónde aparece…? (como donde() de buscar_nombres.py)
-  donde(texto, { desde = null, hasta = null, limite = 300 } = {}) {
-    const cp = condiciones(texto, 'clave'), cm = condiciones(texto, 'm.clave');
+  donde(texto, { desde = null, hasta = null, limite = 300, nombre = '', apellidos = '' } = {}) {
+    const na = (nombre || apellidos) && !texto;
+    const cp = na ? condicionesNA(nombre, apellidos, 'clave') : condiciones(texto, 'clave');
+    const cm = na ? condicionesNA(nombre, apellidos, 'm.clave') : condiciones(texto, 'm.clave');
     if (!cp.sql) return { personas: [], menciones: [] };
     const personas = this.filas(`SELECT * FROM personas_gedcom WHERE ${cp.sql}
       AND (? IS NULL OR COALESCE(anio_def, anio_nac + 90, 9999) >= ?) AND (? IS NULL OR COALESCE(anio_nac, anio_def - 90, 0) <= ?)

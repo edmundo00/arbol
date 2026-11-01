@@ -1,10 +1,10 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611010926';
-import { Arbol } from './modelo.js?v=202611010926';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611010926';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611010938';
+import { Arbol } from './modelo.js?v=202611010938';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611010938';
 const RUTAS = { gedcom: '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged' };
-import { Servidor, Carpetas } from './almacen.js?v=202611010926';
-import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611010926';
+import { Servidor, Carpetas } from './almacen.js?v=202611010938';
+import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611010938';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -45,7 +45,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010926')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611010938')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);
@@ -58,6 +58,11 @@ async function main() {
   ok(anc.get('@I1@')[0] === 1 && anc.get('@I47@')[0] === 2, `Ahnentafel de Edmundo: ${anc.size} antepasados; I47 es el n.º 2`);
   ok(arbol.ahnentafel('@I2528@').size > 1, `Ahnentafel de Diana: ${arbol.ahnentafel('@I2528@').size} antepasados`);
   const ferrol = buscar(arbol, '', { lugar: 'ferrol', desde: 1800, hasta: 1850, variantes });
+  const porNA = (n, ap) => buscar(arbol, '', { nombre: n, apellidos: ap, variantes, limite: 99999 }).lista;
+  ok(porNA('', 'fraga').some(p => p.id === '@I1@') && !porNA('fraga', '').some(p => p.id === '@I1@'), 'Apellidos «fraga» encuentra a Edmundo Fraga; Nombre «fraga» no');
+  ok(porNA('edmundo', 'fraga lopez')[0]?.id === '@I1@', 'Nombre «edmundo» + Apellidos «fraga lopez» → I1');
+  ok(porNA('', 'abelinguen').length === 6, `Apellidos con variantes: «abelinguen» → ${porNA('', 'abelinguen').length} Houwelingen`);
+  ok(porNA('juan', '').every(p => p.claveN.split(' ').some(w => w.startsWith('juan'))), `Nombre «juan»: ${porNA('juan', '').length} personas, todas con Juan en el nombre`);
   ok(ferrol.total > 0, `Filtro lugar «ferrol» y años 1800–1850: ${ferrol.total}`);
 
   arbol.ponerRaices([]);
@@ -103,6 +108,10 @@ async function main() {
   comp('Ysabel Fraga', 1, 31); comp('Pardo Osorio', 61, 300); comp('Ferr* Romero', 3, 156); comp('Houwelingen', 6, 69);
   const lv = base.enLugar('Valdoviño', { desde: 1700, hasta: 1750 });
   ok(lv.lugares.length === 18 && lv.eventos.length === 143 && lv.menciones.length === 400, `Lugar «Valdoviño» 1700–1750: ${lv.lugares.length} lugares, ${lv.eventos.length} hechos, ${lv.menciones.length} menciones (Python: 18, 143, 400)`);
+  const na = base.donde('', { nombre: 'Ysabel', apellidos: 'Fraga' }), libre = base.donde('Ysabel Fraga');
+  ok(na.menciones.length > 0 && na.menciones.every(m => libre.menciones.some(x => x.id === m.id)), `Nombre «Ysabel» + Apellidos «Fraga»: ${na.menciones.length} menciones (de ${libre.menciones.length} en búsqueda libre)`);
+  const soloAp = base.donde('', { apellidos: 'Fraga' }), soloN = base.donde('', { nombre: 'Fraga' });
+  ok(soloAp.personas.length > soloN.personas.length && soloN.personas.every(p => p.clave.startsWith('fraga')), `Apellidos «Fraga»: ${soloAp.personas.length} personas del árbol; Nombre «Fraga»: ${soloN.personas.length}`);
   const me = base.menciones('@I1@');
   ok(me.enlazadas.length > 0, `Menciones de Edmundo (I1): ${me.enlazadas.length} enlazadas y ${me.posibles.length} posibles`);
   base.cerrar();

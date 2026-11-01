@@ -46,7 +46,7 @@ Cada aparato y cada archivo guardan su propia lista.
 - **Buscar** por cualquier trozo de nombre o apellido, en cualquier orden.
   - No importan las tildes ni las grafías parecidas: b/v/w, y/i/ll, h muda, ce/ci/z/s, ge/gi/j/x y letras dobles.
   - Variantes de apellidos en `variantes.json` (Houwelingen / Abelinguen / Bezlinge…); se pueden añadir más.
-  - Filtros por lugar, años y línea.
+  - Filtros por **nombre** y **apellidos** por separado, lugar, años y línea.
 - **Vista de familia**: la persona con sus cónyuges e hijos, sus padres y sus hermanos. Con un clic se pone en el centro a cualquiera de ellos.
 - **Dos modos, Familia y Árbol**, con los dos botones de la barra de arriba (en el móvil, solo los iconos). El programa recuerda el modo:
   si estás en Árbol y pulsas a alguien, el árbol se centra en esa persona; para ver su ficha, pulsas **Familia**.
@@ -82,7 +82,7 @@ Se lee del disco con **sql.js**, que va dentro del programa (`vendor/sqljs`, lic
   - **pistas** (enlazadas solo por el nombre: hay que comprobarlas);
   - **posibles por el nombre** (mismo nombre en documentos sin enlace: pueden ser otra persona).
   Cada una con su documento, papel, fecha y contexto, y botones **📜 Texto** y **📷 Imagen** que abren la transcripción o la foto con las carpetas elegidas.
-- **Buscador → «En los documentos»**: **¿Dónde aparece…?** y **¿Quién hay en el lugar…?**, con años desde y hasta. Da lo mismo que `python -I 00_control/scripts/buscar_nombres.py` (comprobado en las pruebas).
+- **Buscador → «En los documentos»**: **Nombre** y **Apellidos** (por separado: «Juan» en Nombre no encuentra a los apellidados Juan) y **¿Quién hay en el lugar…?**, con años desde y hasta. Da lo mismo que `python -I 00_control/scripts/buscar_nombres.py` (comprobado en las pruebas).
 - La primera vez pide **Elegir base de nombres (.db)…**; después se recuerda, como el GEDCOM, y se lee siempre del disco.
 - Pesa unos 180 MB: en el ordenador abre en un par de segundos; en el móvil puede ir muy lento.
 
