@@ -72,6 +72,13 @@ Cada aparato y cada archivo guardan su propia lista.
   - hechos ordenados por fecha, notas y el registro GEDCOM tal cual;
   - **documentos** con lo que prueba cada uno (grado A/B/C), sus fotos y la transcripción al lado.
 
+## Revisar el árbol
+
+En el buscador, pestaña **Revisar el árbol**:
+- **Dónde se corta la línea**: los antepasados de la persona de referencia a los que les falta el padre, la madre o los dos, por generaciones y con su número. Es la lista de lo que queda por investigar.
+- **Incoherencias**: muere antes de nacer, madre o padre demasiado jóvenes o mayores, hijos nacidos tras morir la madre o el padre, bodas con menos de 14 años… Primero la línea directa. Son las reglas de `auditar_gedcom.py` y salen las mismas cifras.
+- **Posibles duplicados**: mismo nombre y nacidos con 2 años o menos de diferencia, con sus padres para comparar. En modo edición, **⇆ Fusionar** abre la comparación.
+
 ## Base de nombres y lugares
 
 La base `00_control/nombres_lugares.db` (la hace `00_control/scripts/nombres_lugares.py`) dice en qué documentos sale cada persona y quién hay en cada lugar.
@@ -99,7 +106,11 @@ Se lee del disco con **sql.js**, que va dentro del programa (`vendor/sqljs`, lic
 5. **Apellidos a la española**: el hijo recibe el 1.º del padre y el 1.º de la madre; el padre, el 1.º de la persona; la madre, el 2.º. Se pueden cambiar.
 6. **Fechas en español**: `1750`, `6 mar 1974`, `6/3/1974`, `h. 1750`, `antes de 1733`, `después de 1801`, `entre 1700 y 1710`. Debajo se ve cómo queda en el GEDCOM. Con la **edad al morir** calcula el año de nacimiento.
 7. **Avisos de imposibles** (las reglas de `auditar_gedcom.py`): madre de menos de 14 o más de 52 años, padre de más de 75, nacido tras morir la madre, muere antes de nacer…
-8. **↶ Deshacer** deshace el último cambio (y lo guarda). **Terminar** quita el candado.
+8. **Quitar enlaces y borrar**: ✕ en el cónyuge o en un hijo, «✕ No son sus padres» bajo los padres y **🗑 Borrar** la persona (con sus enlaces). No se borra a nadie más.
+9. **Hechos**: en «Datos», ✎ y ✕ en cada hecho y **+ Añadir hecho** (bautismo, entierro, oficio, residencia, testamento, título…), con fecha, lugar, descripción y nota. **✎ Boda** en cada matrimonio.
+10. **Notas**: en «Notas», ✎ Cambiar, ✕ Quitar y **+ Añadir nota**.
+11. **⇆ Fusionar con otra ficha**: se elige la otra ficha de la misma persona y se ven las dos lado a lado. Lo que no se elige no se pierde: el otro nombre queda como alternativo y la otra fecha como segundo nacimiento o defunción; padres, cónyuges, hijos, hechos, notas, fuentes y fotos pasan a la ficha que se queda.
+12. **↶ Deshacer** deshace el último cambio (y lo guarda). **Terminar** quita el candado.
 
 **Seguridad** (cada cambio se guarda al momento):
 - antes de escribir se relee el archivo: si cambió en el disco (Family Historian, un script, otro aparato), **no se guarda nada** y avisa;

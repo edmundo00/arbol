@@ -1,6 +1,6 @@
 // Cambios en el GEDCOM: personas, familias y enlaces. Cada cambio es una «operación» que se puede deshacer.
 // Solo se tocan las líneas necesarias: el resto de cada registro se conserva tal cual (con sus etiquetas propias).
-import { Registro, hijo, hijos } from './gedcom.js?v=202611010938';
+import { Registro, hijo, hijos } from './gedcom.js?v=202611011024';
 
 const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'do', 'das', 'dos', 'van', 'von', 'der', 'den', 'di']);
 
@@ -35,7 +35,7 @@ export class Editor {
   }
 
   // ---------- Operaciones ----------
-  empezar(desc) { if (this.tx) throw new Error('Ya hay un cambio a medias.'); this.tx = { desc, antes: new Map(), cabecera: null }; }
+  empezar(desc) { if (this.tx) throw new Error('Ya hay un cambio a medias.'); this.tx = { desc, antes: new Map(), cabecera: null, log: [] }; }
   cancelar() { if (this.tx) { this.restaurar(this.tx); this.tx = null; } }
   terminar() {
     const tx = this.tx; this.tx = null;
@@ -61,10 +61,20 @@ export class Editor {
     return tx;
   }
   restaurar(tx) {
+    const idx = x => this.ged.registros.findIndex(r => r.xref === x);
+    // Altas y bajas, al revés de como se hicieron
+    for (const op of [...(tx.log || [])].reverse()) {
+      if (op.tipo === 'crear') { const i = idx(op.xref); if (i >= 0) this.ged.registros.splice(i, 1); this.ged.porXref.delete(op.xref); }
+      else if (op.tipo === 'borrar' && tx.antes.get(op.xref) != null) {
+        const r = new Registro(tx.antes.get(op.xref), this.ged.nl);
+        this.ged.registros.splice(op.indice, 0, r); this.ged.porXref.set(op.xref, r);
+      }
+    }
+    // Y el texto de antes de los registros tocados
     for (const [x, texto] of tx.antes) {
-      const i = this.ged.registros.findIndex(r => r.xref === x);
-      if (texto === null) { if (i >= 0) this.ged.registros.splice(i, 1); this.ged.porXref.delete(x); }
-      else { const r = new Registro(texto, this.ged.nl); this.ged.registros[i] = r; this.ged.porXref.set(x, r); }
+      if (texto === null) continue;
+      const i = idx(x);
+      if (i >= 0) { const r = new Registro(texto, this.ged.nl); this.ged.registros[i] = r; this.ged.porXref.set(x, r); }
     }
     if (tx.cabecera !== null && tx.cabecera !== undefined) {
       const i = this.ged.registros.findIndex(r => r.tipo === 'HEAD');
@@ -123,8 +133,34 @@ export class Editor {
     this.ged.registros.splice(i + 1, 0, r);
     this.ged.porXref.set(xref, r);
     this.tx.antes.set(xref, null);
+    this.tx.log.push({ tipo: 'crear', xref });
     r.arbol; r.modificado = true;
     return xref;
+  }
+
+  // Quita un registro entero (se puede deshacer).
+  eliminar(xref) {
+    this.tocar(xref);
+    const i = this.ged.registros.findIndex(r => r.xref === xref);
+    if (i < 0) return;
+    this.ged.registros.splice(i, 1); this.ged.porXref.delete(xref);
+    this.tx.log.push({ tipo: 'borrar', xref, indice: i });
+  }
+
+  // Todas las líneas del archivo que apuntan a un registro: [{ r, nodo, padre }]
+  referencias(xref) {
+    const out = [];
+    for (const r of this.ged.registros) {
+      if (r.xref === xref || (!r.modificado && !r.raw.includes(xref))) continue;
+      const ver = (n, padre) => { if (n.valor === xref) out.push({ r, nodo: n, padre }); n.hijos.forEach(h => ver(h, n)); };
+      ver(r.arbol, null);
+    }
+    return out;
+  }
+
+  quitarLinea(xref, tag, valor) {
+    const r = this.tocar(xref), h = r.arbol.hijos;
+    for (let i = h.length - 1; i >= 0; i--) if (h[i].tag === tag && h[i].valor === valor) h.splice(i, 1);
   }
 
   // Inserta una línea de nivel 1 en el sitio de costumbre: detrás de las de su clase o delante de las que van después.
@@ -165,6 +201,44 @@ export class Editor {
       else if (x) { e.hijos.splice(e.hijos.indexOf(x), 1); e.cambiado = true; }
     }
     if (!e.hijos.length && !e.valor) a.hijos.splice(a.hijos.indexOf(e), 1);
+  }
+
+  // Fecha y lugar de un hecho ya localizado (nodo de nivel 1).
+  fechaLugar(e, fecha, lugar) {
+    for (const [t, v] of [['DATE', fecha], ['PLAC', lugar]]) {
+      const x = hijo(e, t);
+      if (v) {
+        if (x) { if (x.valor !== v) { x.valor = v; x.cambiado = true; } }
+        else { const k = t === 'DATE' ? 0 : (e.hijos.findIndex(z => z.tag !== 'DATE') + 1 || e.hijos.length + 1) - 1; e.hijos.splice(k, 0, nodo(2, t, v)); }
+      } else if (x) e.hijos.splice(e.hijos.indexOf(x), 1);
+    }
+  }
+
+  // Texto largo → valor de la línea y líneas CONT/CONC (sin partir nunca junto a un espacio).
+  static texto(nivel, texto) {
+    const lineas = String(texto || '').replace(/\r\n?/g, '\n').split('\n'), hijosN = [];
+    let primero = null;
+    const trozos = l => {
+      const out = [];
+      while (l.length > 200) {
+        let k = 200;
+        while (k > 20 && (l[k - 1] === ' ' || l[k] === ' ')) k--;
+        out.push(l.slice(0, k)); l = l.slice(k);
+      }
+      out.push(l); return out;
+    };
+    lineas.forEach((l, i) => {
+      const t = trozos(l);
+      if (i === 0) primero = t[0]; else hijosN.push(nodo(nivel + 1, 'CONT', t[0]));
+      t.slice(1).forEach(x => hijosN.push(nodo(nivel + 1, 'CONC', x)));
+    });
+    return { valor: primero ?? '', hijos: hijosN };
+  }
+  // Pone un texto en un nodo (nota): cambia su valor y sus CONT/CONC, sin tocar lo demás (fuentes de la nota…).
+  ponerTexto(n, texto) {
+    const t = Editor.texto(n.nivel, texto);
+    n.valor = t.valor; n.cambiado = true;
+    n.hijos = [...t.hijos, ...n.hijos.filter(h => h.tag !== 'CONT' && h.tag !== 'CONC')];
   }
 
   // ---------- Lo que hace el usuario ----------
@@ -231,6 +305,151 @@ export class Editor {
     this.enlazar(f, 'CHIL', personaId);
     this.enlazar(personaId, 'FAMC', f);
     return f;
+  }
+
+  // ---------- Quitar enlaces y borrar ----------
+  // Una familia que se queda sin nadie (o con una sola persona y sin datos propios) se quita.
+  limpiarFamilia(famId) {
+    const r = this.ged.porXref.get(famId);
+    if (!r) return;
+    const h = r.arbol.hijos;
+    const miembros = h.filter(x => ['HUSB', 'WIFE', 'CHIL'].includes(x.tag));
+    const otros = h.filter(x => !['HUSB', 'WIFE', 'CHIL', 'CHAN', 'RIN'].includes(x.tag) && !(x.tag || '').startsWith('_'));
+    if (miembros.length > 1 || (miembros.length === 1 && otros.length)) return;
+    for (const m of miembros) this.quitarLinea(m.valor, m.tag === 'CHIL' ? 'FAMC' : 'FAMS', famId);
+    if (!this.referencias(famId).length) this.eliminar(famId);
+  }
+  quitarHijo(famId, hijoId) {
+    this.quitarLinea(famId, 'CHIL', hijoId);
+    this.quitarLinea(hijoId, 'FAMC', famId);
+    this.limpiarFamilia(famId);
+  }
+  quitarConyuge(famId, personaId) {
+    this.quitarLinea(famId, 'HUSB', personaId);
+    this.quitarLinea(famId, 'WIFE', personaId);
+    this.quitarLinea(personaId, 'FAMS', famId);
+    this.limpiarFamilia(famId);
+  }
+  borrarPersona(id) {
+    const p = this.arbol.p(id);
+    for (const f of [...p.famc]) this.quitarHijo(f, id);
+    for (const f of [...p.fams]) this.quitarConyuge(f, id);
+    const quedan = this.referencias(id);
+    if (quedan.length) throw new Error(`No se puede borrar: la nombran otras líneas del archivo (${quedan.slice(0, 3).map(x => (x.r.xref || x.r.tipo) + ' ' + x.nodo.tag).join(', ')}).`);
+    // Sus notas propias (registros NOTE que solo usa ella) se van con ella.
+    const notas = hijos(this.ged.porXref.get(id).arbol, 'NOTE').map(n => n.valor).filter(v => /^@[^@]+@$/.test(v));
+    this.eliminar(id);
+    for (const n of notas) if (!this.referencias(n).length) this.eliminar(n);
+  }
+
+  // ---------- Hechos (nacimiento, bautismo, boda, oficio…) ----------
+  // nodo: el hecho que se cambia (null = nuevo). datos: { tag, tipo, fecha, lugar, valor, nota }
+  hecho(xref, nodoHecho, d) {
+    const r = this.tocar(xref), a = r.arbol;
+    let e = nodoHecho;
+    if (!e) {
+      e = nodo(1, d.tag, d.valor || '');
+      if (r.tipo === 'INDI') this.insertar(r, e, [], ['FAMC', 'FAMS', 'NOTE', 'SOUR', 'OBJE', 'CHAN', 'REFN', 'RIN']);
+      else this.insertar(r, e, [], ['HUSB', 'WIFE', 'CHIL', 'NOTE', 'SOUR', 'OBJE', 'CHAN']);
+    } else if (!a.hijos.includes(e)) throw new Error('Ese hecho ya no está en la ficha. Vuelve a abrirla.');
+    if (e.tag !== d.tag) { e.tag = d.tag; e.cambiado = true; }
+    if ((e.valor || '') !== (d.valor || '')) { e.valor = d.valor || ''; e.cambiado = true; }
+    const t = hijo(e, 'TYPE');
+    if (d.tipo) { if (t) { if (t.valor !== d.tipo) { t.valor = d.tipo; t.cambiado = true; } } else e.hijos.unshift(nodo(2, 'TYPE', d.tipo)); }
+    else if (t && d.tipo !== undefined) e.hijos.splice(e.hijos.indexOf(t), 1);
+    this.fechaLugar(e, d.fecha, d.lugar);
+    // Nota del hecho: la primera nota escrita dentro (no las que apuntan a un registro NOTE)
+    const n = e.hijos.find(x => x.tag === 'NOTE' && !/^@[^@]+@$/.test(x.valor));
+    if (d.nota && d.nota.trim()) { if (n) this.ponerTexto(n, d.nota.trim()); else { const t2 = Editor.texto(2, d.nota.trim()); e.hijos.push(nodo(2, 'NOTE', t2.valor, t2.hijos)); } }
+    else if (n && d.nota !== undefined) e.hijos.splice(e.hijos.indexOf(n), 1);
+  }
+  borrarHecho(xref, nodoHecho) {
+    const a = this.tocar(xref).arbol, i = a.hijos.indexOf(nodoHecho);
+    if (i < 0) throw new Error('Ese hecho ya no está en la ficha.');
+    a.hijos.splice(i, 1);
+  }
+
+  // ---------- Notas de la persona ----------
+  // nodoNota: línea «1 NOTE» de la persona (null = nueva). Si apunta a un registro NOTE, se cambia el registro.
+  nota(xref, nodoNota, texto) {
+    const r = this.tocar(xref), a = r.arbol;
+    if (!nodoNota) {
+      const t = Editor.texto(1, texto.trim());
+      this.insertar(r, nodo(1, 'NOTE', t.valor, t.hijos), ['NOTE', 'FAMS', 'FAMC'], ['SOUR', 'OBJE', 'CHAN', 'REFN', 'RIN']);
+      return;
+    }
+    if (!a.hijos.includes(nodoNota)) throw new Error('Esa nota ya no está en la ficha. Vuelve a abrirla.');
+    if (/^@[^@]+@$/.test(nodoNota.valor)) { const rn = this.tocar(nodoNota.valor); this.ponerTexto(rn.arbol, texto.trim()); }
+    else this.ponerTexto(nodoNota, texto.trim());
+  }
+  borrarNota(xref, nodoNota) {
+    const a = this.tocar(xref).arbol, i = a.hijos.indexOf(nodoNota);
+    if (i < 0) throw new Error('Esa nota ya no está en la ficha.');
+    a.hijos.splice(i, 1);
+    if (/^@[^@]+@$/.test(nodoNota.valor) && !this.referencias(nodoNota.valor).length) this.eliminar(nodoNota.valor);
+  }
+
+  // ---------- Fusionar dos fichas de la misma persona ----------
+  // Se queda «a»; lo de «b» pasa a «a» sin perder nada: el nombre y los hechos que no se eligen quedan como alternativos.
+  // usar: { nombre: 'a'|'b', sexo: 'a'|'b', nac: 'a'|'b', def: 'a'|'b' }
+  fusionar(aId, bId, usar = {}) {
+    if (aId === bId) throw new Error('Es la misma ficha.');
+    const A = this.tocar(aId), B = this.tocar(bId), pa = this.arbol.p(aId), pb = this.arbol.p(bId);
+    for (const f of pa.fams) { const x = this.arbol.f(f); if (x && (x.marido === bId || x.mujer === bId)) throw new Error('Están casados entre sí en el árbol: no pueden ser la misma persona.'); }
+    if (pa.famc.some(f => this.arbol.f(f)?.marido === bId || this.arbol.f(f)?.mujer === bId) || pb.famc.some(f => this.arbol.f(f)?.marido === aId || this.arbol.f(f)?.mujer === aId))
+      throw new Error('Una es madre o padre de la otra: no pueden ser la misma persona.');
+    const a = A.arbol, b = B.arbol;
+    const mover = n => { b.hijos.splice(b.hijos.indexOf(n), 1); return n; };
+    // Nombre: el elegido primero; el otro queda como segundo nombre (no se pierde la grafía)
+    const nA = hijo(a, 'NAME'), nB = hijo(b, 'NAME');
+    if (nB) {
+      mover(nB);
+      if (usar.nombre === 'b' && nA) { a.hijos.splice(a.hijos.indexOf(nA), 1, nB); if (nA.valor !== nB.valor) a.hijos.splice(a.hijos.indexOf(nB) + 1, 0, nA); }
+      else if (!nA) a.hijos.unshift(nB);
+      else if (nA.valor !== nB.valor) a.hijos.splice(a.hijos.indexOf(nA) + 1, 0, nB);
+    }
+    for (const n of hijos(b, 'NAME')) { mover(n); a.hijos.splice(a.hijos.indexOf(hijo(a, 'NAME')) + 1, 0, n); }
+    // Sexo
+    const sA = hijo(a, 'SEX'), sB = hijo(b, 'SEX');
+    if (sB) { mover(sB); if (!sA) this.insertar(A, sB, ['NAME'], []); else if (usar.sexo === 'b') a.hijos.splice(a.hijos.indexOf(sA), 1, sB); }
+    // Nacimiento y defunción: el elegido primero, el otro detrás (GEDCOM admite varios)
+    for (const [tag, cual] of [['BIRT', usar.nac], ['DEAT', usar.def]]) {
+      const eA = hijo(a, tag), lista = hijos(b, tag);
+      for (const eB of lista) {
+        mover(eB);
+        if (!eA) this.insertar(A, eB, tag === 'BIRT' ? ['SEX', 'NAME'] : ['BURI', 'DEAT', 'CHR', 'BAPM', 'BIRT', 'SEX', 'NAME'], ['FAMC', 'FAMS', 'NOTE', 'SOUR', 'OBJE', 'CHAN']);
+        else if (cual === 'b' && eB === lista[0]) a.hijos.splice(a.hijos.indexOf(eA), 0, eB);
+        else a.hijos.splice(a.hijos.lastIndexOf(hijos(a, tag).slice(-1)[0]) + 1, 0, eB);
+      }
+    }
+    // Familias: «b» se sustituye por «a»
+    for (const n of hijos(b, 'FAMC')) {
+      mover(n);
+      const f = this.tocar(n.valor);
+      const ya = hijos(f.arbol, 'CHIL').some(x => x.valor === aId);
+      for (const c of hijos(f.arbol, 'CHIL')) if (c.valor === bId) { if (ya) f.arbol.hijos.splice(f.arbol.hijos.indexOf(c), 1); else { c.valor = aId; c.cambiado = true; } }
+      this.enlazar(aId, 'FAMC', n.valor);
+    }
+    for (const n of hijos(b, 'FAMS')) {
+      mover(n);
+      const f = this.tocar(n.valor);
+      for (const c of f.arbol.hijos) if ((c.tag === 'HUSB' || c.tag === 'WIFE') && c.valor === bId) { c.valor = aId; c.cambiado = true; }
+      this.enlazar(aId, 'FAMS', n.valor);
+    }
+    // El resto de lo de «b» (bautismo, notas, fuentes, fotos…) pasa a «a», salvo sus datos internos
+    for (const n of [...b.hijos]) {
+      if (['CHAN', 'RIN', '_UID'].includes(n.tag)) continue;
+      mover(n);
+      this.insertar(A, n, [], ['CHAN']);
+    }
+    // Cualquier otra línea que nombre a «b» pasa a nombrar a «a»
+    for (const { r, nodo: n } of this.referencias(bId)) {
+      if (r.xref) this.tocar(r.xref);
+      else { if (this.tx.cabecera == null && r.tipo === 'HEAD') this.tx.cabecera = r.texto(); r.arbol; r.modificado = true; }
+      n.valor = aId; n.cambiado = true;
+    }
+    this.eliminar(bId);
+    return { dosFamiliasDePadres: hijos(a, 'FAMC').length > 1 };
   }
 
   conyuge(personaId, otroId, boda) {

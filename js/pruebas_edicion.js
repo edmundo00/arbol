@@ -1,10 +1,10 @@
 // Pruebas de la edición sobre una COPIA del GEDCOM en el disco privado del navegador (OPFS): nunca toca el archivo bueno.
-import { Gedcom, decodificar } from './gedcom.js?v=202611010938';
-import { Arbol } from './modelo.js?v=202611010938';
-import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611010938';
-import { Guardado, comprobar } from './guardar.js?v=202611010938';
-import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611010938';
-import { clave } from './buscar.js?v=202611010938';
+import { Gedcom, decodificar, textoLargo } from './gedcom.js?v=202611011024';
+import { Arbol } from './modelo.js?v=202611011024';
+import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011024';
+import { Guardado, comprobar } from './guardar.js?v=202611011024';
+import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611011024';
+import { clave } from './buscar.js?v=202611011024';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -100,6 +100,52 @@ async function main() {
   ok(!!(await lanza(() => comprobar(roto, 1))), 'Un archivo con enlaces rotos no pasa la comprobación');
 
   ok(posiblesDuplicados(arbol, clave('Edmundo Fraga Lopez'), '1974').some(p => p.id === '@I1@'), 'Posible duplicado: avisa si se añade otro Edmundo Fraga López de 1974');
+
+  // 7. Quitar enlaces, borrar, hechos, notas y fusionar; al deshacer todo, idéntico byte a byte
+  {
+    const gx = Gedcom.desdeBytes(original), ax = new Arbol(gx), ex = new Editor(gx, ax), n0 = ax.personas.size;
+    const paso = (desc, f) => { ex.empezar(desc); try { f(); } catch (e) { ex.cancelar(); throw e; } ex.terminar(); return comprobar(gx.bytes(), ax.personas.size); };
+    paso('quitar hijo', () => ex.quitarHijo('@F3@', '@I1@'));
+    ok(!ax.p('@I1@').famc.length && ax.f('@F3@').hijos.includes('@I43@') && !ax.f('@F3@').hijos.includes('@I1@'), 'Quitar a Edmundo de la familia de sus padres (la hermana sigue)');
+    const solo = ax.f('@F3@'); ex.historial.length && ex.deshacer();
+    ok(ax.p('@I1@').famc[0] === '@F3@', 'Deshacer: vuelve a ser hijo de F3');
+    // borrar una persona con familias
+    const victima = [...ax.personas.values()].find(p => p.famc.length && p.fams.length && p.id !== '@I1@');
+    paso('borrar', () => ex.borrarPersona(victima.id));
+    ok(!ax.p(victima.id) && !ex.referencias(victima.id).length, `Borrar a ${victima.id} sin dejar enlaces rotos (${ax.personas.size} personas)`);
+    // hechos
+    const largo = 'Bautizado en San Julián. ' + 'Texto largo de prueba con acentos áéíóú y ñ. '.repeat(12) + '\nSegundo párrafo.';
+    paso('hecho nuevo', () => ex.hecho('@I1@', null, { tag: 'BAPM', fecha: '10 MAR 1974', lugar: 'Ferrol', nota: largo }));
+    const bap = ax.p('@I1@').eventos.find(e => e.tag === 'BAPM');
+    ok(bap && bap.fecha === '10 MAR 1974' && ax.notaTexto(bap.nodo.hijos.find(h => h.tag === 'NOTE')) === largo.trim(), 'Hecho nuevo (bautismo) con nota larga partida en CONT/CONC y leída igual');
+    paso('editar hecho', () => ex.hecho('@I1@', ax.p('@I1@').eventos.find(e => e.tag === 'BAPM').nodo, { tag: 'CHR', fecha: '11 MAR 1974', lugar: 'Ferrol', nota: '' }));
+    const chr = ax.p('@I1@').eventos.find(e => e.tag === 'CHR');
+    ok(chr && chr.fecha === '11 MAR 1974' && !chr.nodo.hijos.some(h => h.tag === 'NOTE'), 'Editar el hecho: cambia tipo y fecha, y se quita la nota vaciada');
+    paso('boda', () => ex.hecho('@F998@', ax.f('@F998@').eventos.find(e => e.tag === 'MARR').nodo, { tag: 'MARR', fecha: '16 JUL 2006', lugar: 'Sotomayor (Pontevedra)' }));
+    ok(ax.f('@F998@').eventos.find(e => e.tag === 'MARR').lugar === 'Sotomayor (Pontevedra)', 'Editar la boda de la familia F998');
+    paso('borrar hecho', () => ex.borrarHecho('@I1@', ax.p('@I1@').eventos.find(e => e.tag === 'CHR').nodo));
+    ok(!ax.p('@I1@').eventos.some(e => e.tag === 'CHR'), 'Borrar un hecho');
+    // notas
+    const notaN = ax.registro('@I1@').arbol.hijos.find(h => h.tag === 'NOTE');
+    paso('nota registro', () => ex.nota('@I1@', notaN, 'Nota cambiada\ncon dos líneas'));
+    ok(textoLargo(gx.porXref.get(notaN.valor).arbol) === 'Nota cambiada\ncon dos líneas', `Cambiar la nota ${notaN.valor} (registro NOTE)`);
+    paso('nota nueva', () => ex.nota('@I1@', null, 'Nota nueva de prueba'));
+    const nueva = ax.registro('@I1@').arbol.hijos.filter(h => h.tag === 'NOTE').pop();
+    ok(nueva.valor === 'Nota nueva de prueba', 'Nota nueva escrita en la ficha');
+    paso('borrar nota', () => ex.borrarNota('@I1@', nueva));
+    // fusionar: un duplicado de Edmundo José (I47) como hijo de sus mismos padres
+    let dup;
+    paso('duplicado', () => { dup = ex.nuevaPersona({ nombre: 'Edmundo José', apellidos: 'Fraga Romero', sexo: 'M', nac: { fecha: '1947', lugar: 'Ferrol' } }); ex.hijo(ax.f(ax.p('@I47@').famc[0]).marido, ax.p('@I47@').famc[0], dup); ex.hecho(dup, null, { tag: 'OCCU', valor: 'Marino mercante' }); });
+    const r = (() => { let x; paso('fusionar', () => { x = ex.fusionar('@I47@', dup, { nombre: 'a', nac: 'b' }); }); return x; })();
+    const p47 = ax.p('@I47@'), f47 = ax.f(p47.famc[0]);
+    ok(!ax.p(dup) && f47.hijos.filter(h => h === '@I47@').length === 1 && !f47.hijos.includes(dup) && !r.dosFamiliasDePadres, 'Fusionar: el duplicado desaparece y los padres no quedan con el hijo repetido');
+    ok(p47.eventos.some(e => e.tag === 'OCCU' && e.valor === 'Marino mercante') && p47.otros.includes('Edmundo José Fraga Romero') && p47.nac.fecha === '1947',
+      'Fusionar: pasa su oficio, su grafía del nombre queda como alternativa y su nacimiento (elegido) va primero');
+    ok(!!(await lanza(() => { ex.empezar('x'); try { ex.fusionar('@I1@', '@I2528@'); } finally { ex.cancelar(); } })), 'No deja fusionar a dos casados entre sí');
+    // Deshacer todo
+    while (ex.deshacer());
+    ok(ax.personas.size === n0 && iguales(gx.bytes(), original), 'Deshacer todo (quitar, borrar, hechos, notas, fusionar): idéntico al original byte a byte');
+  }
   await raizOPFS.removeEntry('prueba', { recursive: true });
   document.title = fallos ? `FALLAN ${fallos}` : 'TODO BIEN';
   out.insertAdjacentHTML('beforeend', `<li><b>${fallos ? fallos + ' pruebas fallan' : 'Todas las pruebas de edición pasan'}</b></li>`);
