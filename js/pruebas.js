@@ -1,10 +1,10 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611011432';
-import { Arbol } from './modelo.js?v=202611011432';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611011432';
-const RUTAS = { gedcom: '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged' };
-import { Servidor, Carpetas } from './almacen.js?v=202611011432';
-import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611011432';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611011706';
+import { Arbol } from './modelo.js?v=202611011706';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611011706';
+const RUTAS = { gedcom: '/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged' };
+import { Servidor, Carpetas } from './almacen.js?v=202611011706';
+import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611011706';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -45,7 +45,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011432')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011706')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);
@@ -72,30 +72,33 @@ async function main() {
 
   // Fotos y transcripciones buscadas dentro de una carpeta cualquiera (aquí, la de Dropbox servida por el servidor local)
   const srv = new Servidor();
-  const foto = String.raw`D:\Dropbox\Genealogia\Documentos\Memorias_Edmundo_Fraga_Ferreiro_04.jpg`;
-  ok((await srv.buscar(foto)).rel.join('/') === 'Genealogia/Documentos/Memorias_Edmundo_Fraga_Ferreiro_04.jpg', 'Foto encontrada quitando «D:/Dropbox» de delante');
-  ok((await srv.buscar(String.raw`E:\Otro\Sitio\Genealogia\Documentos\Memorias_Edmundo_Fraga_Ferreiro_05.jpg`)).rel[0] === 'Genealogia', 'Foto encontrada aunque el GEDCOM traiga otra ruta delante');
+  const MEM = '2 Documentos/Particulares/Papeles de familia/memorias_fraga_ferreiro/Memorias_Edmundo_Fraga_Ferreiro_0';
+  const foto = String.raw`D:\Dropbox\Genealogia\\` + MEM.replace(/\//g, '\\') + '4.jpg';
+  ok((await srv.buscar(foto)).rel.join('/') === 'Genealogia/' + MEM + '4.jpg', 'Foto encontrada quitando «D:/Dropbox» de delante');
+  ok((await srv.buscar(String.raw`E:\Otro\Sitio\Genealogia\\` + MEM + '5.jpg')).rel[0] === 'Genealogia', 'Foto encontrada aunque el GEDCOM traiga otra ruta delante');
   const tr = await srv.transcripcion(foto);
-  ok(tr && /03_transcripciones\/Documentos\/Memorias_Edmundo_Fraga_Ferreiro_04\.md$/.test(tr.rel), `Transcripción de la foto: ${tr?.rel}`);
-  ok(/Fraga/.test((await srv.texto('03_transcripciones/Documentos/Fraga_Ferreiro_Edmundo_familia_numerosa.md')).texto), 'Archivo citado por ruta relativa encontrado en una subcarpeta');
+  ok(tr && tr.rel === 'Genealogia/' + MEM + '4.md', `Transcripción al lado de la foto: ${tr?.rel}`);
+  ok(/Fraga/.test((await srv.texto('2 Documentos/Sin archivo/Familia/familia_numerosa_1953/Fraga_Ferreiro_Edmundo_familia_numerosa.md')).texto), 'Archivo citado por ruta relativa encontrado en una subcarpeta');
 
-  // Dos carpetas elegidas por separado: fotos en «Genealogia», transcripciones en «Genealogia_2»
+  // Rutas de antes de la mudanza (1-XI-2026), traducidas con «9 Sistema/Control/mudanza/mapa_rutas.csv»
   class Sub extends Servidor {
     constructor(base) { super(); this.base = base; this.nombre = base; }
     exacto(p) { return p.length ? super.exacto([this.base, ...p]) : null; }
     subcarpetas(p) { return super.subcarpetas([this.base, ...p]); }
   }
-  const dos = new Carpetas([new Sub('Genealogia_2'), new Sub('Genealogia')]);
+  const una = new Carpetas([new Sub('Genealogia')]), toda = new Carpetas([new Servidor()]);
   const padron = String.raw`D:\Dropbox\Genealogia\PADRONES\As Pontes\Puentes_1827_padron_14.jpg`;
-  ok((await dos.buscar(padron)).c.nombre === 'Genealogia', 'Con dos carpetas: la foto del padrón de As Pontes aparece en «Genealogia»');
-  const tr2 = await dos.transcripcion(foto);
-  ok(tr2 && /^03_transcripciones\/Documentos\/Memorias_Edmundo_Fraga_Ferreiro_04\.md$/.test(tr2.rel), `Foto en «Genealogia», transcripción en «Genealogia_2»: ${tr2?.rel}`);
-  const sola = new Carpetas([new Sub('Genealogia_2')]);
-  let e2 = null; try { await sola.buscar(padron); } catch (e) { e2 = e; }
-  ok(e2?.noExiste && /No está en «Genealogia_2»/.test(e2.message), `Solo con «Genealogia_2» lo explica: ${e2?.message}`);
+  ok((await una.buscar(padron)).rel.join('/') === '2 Documentos/Libros completos/As Pontes/Puentes_1827_padron_14.jpg', 'Ruta antigua de PADRONES traducida (por la carpeta) con «Genealogia» elegida');
+  ok((await toda.buscar('Genealogia/Documentos/Memorias_Edmundo_Fraga_Ferreiro_04.jpg')).rel.join('/') === 'Genealogia/' + MEM + '4.jpg', 'Ruta antigua de Documentos traducida con toda la de Dropbox elegida');
+  ok(/Fraga/.test((await una.texto('03_transcripciones/Documentos/Fraga_Ferreiro_Edmundo_familia_numerosa.md')).texto), 'Transcripción citada con la ruta antigua de Genealogia_2 encontrada');
+  const tr2 = await una.transcripcion(String.raw`D:\Dropbox\Genealogia\Documentos\Memorias_Edmundo_Fraga_Ferreiro_04.jpg`);
+  ok(tr2 && tr2.rel.endsWith(MEM + '4.md'), `Transcripción de una foto con ruta antigua: ${tr2?.rel}`);
+  const nada = new Carpetas([new Sub('Genealogia')]);
+  let e2 = null; try { await nada.buscar('Genealogia/Documentos/no_existe_nunca.jpg'); } catch (e) { e2 = e; }
+  ok(e2?.noExiste && /No está en «Genealogia»/.test(e2.message), `Lo que no está lo explica: ${e2?.message}`);
 
   // Base de nombres y lugares, con sql.js (sin internet)
-  const bdb = new Uint8Array(await (await fetch('/Genealogia_2/00_control/nombres_lugares.db', { cache: 'no-store' })).arrayBuffer());
+  const bdb = new Uint8Array(await (await fetch(encodeURI('/Genealogia/9 Sistema/Control/nombres_lugares.db'), { cache: 'no-store' })).arrayBuffer());
   const base = await BaseNombres.abrir(bdb, 'nombres_lugares.db', Date.now());
   const claveNombre = n => tokensClave(n).filter(k => !TRATAMIENTOS.has(k)).join(' ');
   const pg = base.filas('SELECT nombre, clave FROM personas_gedcom');

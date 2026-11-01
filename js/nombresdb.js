@@ -1,7 +1,7 @@
-// Base de nombres y lugares (00_control/nombres_lugares.db, la genera 00_control/scripts/nombres_lugares.py).
+// Base de nombres y lugares (9 Sistema/Control/nombres_lugares.db, la genera 9 Sistema/Control/scripts/nombres_lugares.py).
 // Se lee del disco con sql.js, que va dentro del programa (vendor/sqljs): no hace falta internet.
 // sql.js no trae FTS5, así que en vez de la tabla «buscar» se consulta la columna «clave» de cada tabla:
-// da lo mismo que 00_control/scripts/buscar_nombres.py.
+// da lo mismo que 9 Sistema/Control/scripts/buscar_nombres.py.
 
 // ---------- Clave fonética: la misma que clave_palabra() de nombres_lugares.py ----------
 export const PARTICULAS = new Set(['de', 'da', 'do', 'das', 'dos', 'del', 'la', 'las', 'los', 'y', 'e', 'i', 'd', 'lo', 'a', 'o', 'as', 'os']);

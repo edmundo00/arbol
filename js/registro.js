@@ -1,7 +1,7 @@
-// Registro de documentos (00_control/registro): la aplicación añade filas a citas_app.csv y documentos_app.csv.
+// Registro de documentos (9 Sistema/Control/registro): la aplicación añade filas a citas_app.csv y documentos_app.csv.
 // generar.py (de las sesiones de Claude) las lee y pone las fuentes y fotos en el GEDCOM.
 // Mismo formato que citas.csv y documentos.csv: UTF-8, «;» como separador, sin «;» dentro del texto.
-import { bdLeer, bdGuardar } from './almacen.js?v=202611011432';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611011706';
 
 export const CAB_CITAS = 'doc;xref;papel;que_prueba;imagenes;grado;fecha_alta';
 export const CAB_DOCS = 'id;titulo;fecha;tipo;archivo;imagenes;otros_archivos;transcripcion;ficha;estado;sour;notas';
@@ -39,19 +39,19 @@ export function paginas(imagenes) {
 export class Registro {
   constructor(dir) { this.dir = dir; }
 
-  // Carpeta 00_control/registro con permiso de escritura (se recuerda). Tiene que llamarse desde un clic.
+  // Carpeta «9 Sistema/Control/registro» con permiso de escritura (se recuerda). Tiene que llamarse desde un clic.
   static async preparar() {
     let dir = await bdLeer('carpetaRegistro');
     if (dir && (await dir.requestPermission({ mode: 'readwrite' })) !== 'granted') { await bdGuardar('carpetaRegistro', null); dir = null; }
     if (!dir) dir = await window.showDirectoryPicker({ id: 'arbol-registro', mode: 'readwrite' });
     try { await dir.getFileHandle('documentos.csv'); }
     catch {
-      // Si eligió Genealogia_2 o 00_control, se baja hasta registro
-      for (const ruta of [['00_control', 'registro'], ['registro']]) {
+      // Si eligió «Genealogia», «9 Sistema» o «Control», se baja hasta registro
+      for (const ruta of [['9 Sistema', 'Control', 'registro'], ['Control', 'registro'], ['registro']]) {
         try { let d = dir; for (const x of ruta) d = await d.getDirectoryHandle(x); await d.getFileHandle('documentos.csv'); dir = d; break; } catch {}
       }
       try { await dir.getFileHandle('documentos.csv'); }
-      catch { throw new Error('Esa carpeta no es el registro de documentos. Elige «Genealogia_2\\00_control\\registro».'); }
+      catch { throw new Error('Esa carpeta no es el registro de documentos. Elige la carpeta «Genealogia» (o «Genealogia\\9 Sistema\\Control\\registro»).'); }
     }
     await bdGuardar('carpetaRegistro', dir);
     return new Registro(dir);
@@ -111,18 +111,19 @@ export async function sha1(t) {
   const b = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(t));
   return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
 }
-// Carpetas «Genealogia» (original) y «Genealogia_2» (proyecto), sacadas de las rutas de fotos que ya hay en el GEDCOM.
+// Carpeta «Genealogia», sacada de las rutas de fotos que ya hay en el GEDCOM. Desde el 1-XI-2026 hay una sola
+// (antes «Genealogia» y «Genealogia_2»): las rutas del registro son relativas a ella, como en generar.py.
 export function bases(ged) {
   for (const r of ged.registros) {
     if (r.tipo !== 'OBJE') continue;
     const m = /\n1 _FILE (.*\\)Genealogia\\/i.exec(r.raw);
-    if (m) return { orig: m[1] + 'Genealogia', proy: m[1] + 'Genealogia_2' };
+    if (m) return { orig: m[1] + 'Genealogia', proy: m[1] + 'Genealogia' };
   }
-  return { orig: 'D:\\Dropbox\\Genealogia', proy: 'D:\\Dropbox\\Genealogia_2' };
+  return { orig: 'D:\\Dropbox\\Genealogia', proy: 'D:\\Dropbox\\Genealogia' };
 }
 const barra = t => t.replace(/\\/g, '/');
-// Ruta absoluta (con «/») de una foto del registro: del proyecto si empieza por una de sus carpetas (09_descargas…), si no del original.
-export function rutaFoto(rel, b) { return barra(/^\d\d_/.test(rel) ? b.proy : b.orig) + '/' + rel; }
+// Ruta absoluta (con «/») de una foto del registro: la carpeta «Genealogia» más su ruta relativa.
+export function rutaFoto(rel, b) { return barra(b.orig) + '/' + rel; }
 export function relFoto(f, b) {
   const g = barra(f);
   for (const base of [b.orig, b.proy]) { const x = barra(base).replace(/\/$/, '') + '/'; if (g.toLowerCase().startsWith(x.toLowerCase())) return g.slice(x.length).toLowerCase(); }

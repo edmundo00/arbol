@@ -1,10 +1,10 @@
 // Pruebas de la edición sobre una COPIA del GEDCOM en el disco privado del navegador (OPFS): nunca toca el archivo bueno.
-import { Gedcom, decodificar, textoLargo } from './gedcom.js?v=202611011432';
-import { Arbol } from './modelo.js?v=202611011432';
-import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011432';
-import { Guardado, comprobar } from './guardar.js?v=202611011432';
-import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611011432';
-import { clave } from './buscar.js?v=202611011432';
+import { Gedcom, decodificar, textoLargo } from './gedcom.js?v=202611011706';
+import { Arbol } from './modelo.js?v=202611011706';
+import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011706';
+import { Guardado, comprobar } from './guardar.js?v=202611011706';
+import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611011706';
+import { clave } from './buscar.js?v=202611011706';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -26,7 +26,7 @@ async function main() {
   ok(avisos(null, { nac: '1760', padres: [{ nombre: 'P', sexo: 'M', def: { fecha: '1750' } }] }).length === 1, 'Aviso: nacido tras morir el padre');
 
   // Copia del GEDCOM en el disco privado del navegador
-  const original = new Uint8Array(await (await fetch(encodeURI('/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged'), { cache: 'no-store' })).arrayBuffer());
+  const original = new Uint8Array(await (await fetch(encodeURI('/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged'), { cache: 'no-store' })).arrayBuffer());
   const raizOPFS = await navigator.storage.getDirectory();
   try { await raizOPFS.removeEntry('prueba', { recursive: true }); } catch {}
   const dir = await raizOPFS.getDirectoryHandle('prueba', { create: true });

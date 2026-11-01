@@ -1,6 +1,6 @@
 // Pantallas de la base de nombres y lugares: menciones de una persona y buscadores «¿dónde aparece…?» y «¿quién hay en…?».
-import { esc } from './md.js?v=202611011432';
-import { fiabilidad } from './nombresdb.js?v=202611011432';
+import { esc } from './md.js?v=202611011706';
+import { fiabilidad } from './nombresdb.js?v=202611011706';
 
 const TEXTO = /\.(md|txt|csv|html?)$/i, IMAGEN = /\.(jpe?g|png|gif|tiff?|bmp|webp)$/i;
 const ORIGEN = { registro: 'registro', transcripcion: 'transcripción', pdf_texto: 'texto de PDF', copia_ligera: 'copia ligera', ficha: 'ficha',
@@ -16,7 +16,7 @@ function abribles(m) {
   const texto = candidatas.find(r => r && TEXTO.test(r) && !r.includes('*'));
   if (texto) out.push({ tipo: 'texto', ruta: sinOriginal(texto) });
   else if (m.origen !== 'registro' && m.ruta && !m.ruta.includes('*') && !/\.ged$/i.test(m.ruta)) out.push({ tipo: 'archivo', ruta: sinOriginal(m.ruta) });
-  // La imagen: relativa al original (Genealogia) salvo las descargas, que están en Genealogia_2.
+  // La imagen: relativa a «Genealogia»; las rutas de antes de la mudanza (descargas: Genealogia_2) las traduce almacen.js.
   if (m.ruta_original && IMAGEN.test(m.ruta_original) && !m.ruta_original.includes('*'))
     out.push({ tipo: 'imagen', ruta: (/^(0\d|1\d)_/.test(m.ruta_original) ? 'Genealogia_2/' : 'Genealogia/') + m.ruta_original });
   return out;

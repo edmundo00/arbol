@@ -1,6 +1,6 @@
 # Publica la aplicación en GitHub Pages con un número de versión nuevo en todos los archivos,
 # para que los navegadores (sobre todo el del móvil) no se queden con una mezcla de versiones guardadas.
-#   python -I 11_aplicacion/publicar.py "qué cambia"
+#   python -I "9 Sistema/Aplicación/publicar.py" "qué cambia"
 import re, subprocess, sys, time
 from pathlib import Path
 

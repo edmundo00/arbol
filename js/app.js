@@ -1,32 +1,32 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611011432';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611011432';
-import { buscar, prepararVariantes } from './buscar.js?v=202611011432';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011432';
-import { BaseNombres } from './nombresdb.js?v=202611011432';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011432';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011432';
-import { revisarSalud, repararSalud } from './salud.js?v=202611011432';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011432';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011432';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011432';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611011432';
-import { md, esc } from './md.js?v=202611011432';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011432';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011432';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011432';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011432';
-import { Guardado } from './guardar.js?v=202611011432';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011432';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611011432';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011432';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011432';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611011432';
+import { Gedcom } from './gedcom.js?v=202611011706';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611011706';
+import { buscar, prepararVariantes } from './buscar.js?v=202611011706';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011706';
+import { BaseNombres } from './nombresdb.js?v=202611011706';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011706';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011706';
+import { revisarSalud, repararSalud } from './salud.js?v=202611011706';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011706';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011706';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011706';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611011706';
+import { md, esc } from './md.js?v=202611011706';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011706';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011706';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011706';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011706';
+import { Guardado } from './guardar.js?v=202611011706';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011706';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611011706';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011706';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011706';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611011706';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
 const esLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
-const PRUEBA = '/Genealogia_2/01_arboles/edmundo_actualizado/edmundo.ged';   // solo para el servidor de pruebas
+const PRUEBA = '/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged';   // solo para el servidor de pruebas
 let fuente = null, carpeta = null, carpetaPendiente = [], arbol, variantes = [], info = {};
 let editor = null, guardado = null, guardando = false, bytesAbiertos = null;
 const estadoBusqueda = JSON.parse(sessionStorage.getItem('arbol.busqueda') || '{}');
@@ -116,7 +116,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011432')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011706')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -410,7 +410,7 @@ async function asegurarRegistro() {
     const raizP = await navigator.storage.getDirectory(), dir = await raizP.getDirectoryHandle('prueba-registro', { create: true });
     for (const n of ['documentos.csv', 'documentos_auto.csv', 'citas_app.csv', 'documentos_app.csv']) {
       try { await dir.getFileHandle(n); } catch {
-        const r = await fetch('/Genealogia_2/00_control/registro/' + n, { cache: 'no-store' });
+        const r = await fetch(encodeURI('/Genealogia/9 Sistema/Control/registro/' + n), { cache: 'no-store' });
         if (r.ok) { const w = await (await dir.getFileHandle(n, { create: true })).createWritable(); await w.write(await r.text()); await w.close(); }
       }
     }
@@ -921,7 +921,7 @@ const IMG = /^(jpe?g|png|gif|tiff?|bmp|webp|heic)$/;
 function hayCarpeta(caja, falta) {
   if (carpeta && !falta) return true;
   caja.innerHTML = hayDisco
-    ? `<p class="peq">${falta ? esc(falta) + '<br>Si está en otra carpeta, añádela. Lo más sencillo: «Genealogia» (fotos originales) y «Genealogia_2» (transcripciones y descargas), o toda la de Dropbox:'
+    ? `<p class="peq">${falta ? esc(falta) + '<br>Si está en otra carpeta, añádela. Lo más sencillo: elegir la carpeta «Genealogia» entera (o toda la de Dropbox):'
                               : 'Para ver fotos y transcripciones, elige la carpeta donde están (por ejemplo «Genealogia», o toda la de Dropbox). Puedes añadir varias.'}
        ${carpetaPendiente.length ? `<button data-c="re">Volver a usar ${carpetaPendiente.map(h => '«' + esc(h.name) + '»').join(', ')}</button>` : ''} <button data-c="elegir">${carpeta ? 'Añadir otra carpeta…' : 'Elegir carpeta…'}</button></p>`
     : '<p class="peq">En este aparato no se pueden ver fotos ni transcripciones: solo el árbol. Se ven en el ordenador, con Chrome o Edge.</p>';
@@ -1016,7 +1016,7 @@ async function verTexto(ruta, titulo) {
   catch (e) { if (e.noExiste) hayCarpeta(caja, e.message); else caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
 }
 
-// ---------- Base de nombres y lugares (00_control/nombres_lugares.db) ----------
+// ---------- Base de nombres y lugares (9 Sistema/Control/nombres_lugares.db) ----------
 
 let baseNombres = null;
 const accionesDoc = {
@@ -1041,7 +1041,7 @@ async function necesitaBase(caja, listo) {
   if (baseNombres) return true;
   if (pruebas()) {   // servidor de pruebas: la base del proyecto, sin elegir archivo
     caja.innerHTML = '<p class="cargando">Abriendo la base de nombres…</p>';
-    const r = await fetch('/Genealogia_2/00_control/nombres_lugares.db', { cache: 'no-store' });
+    const r = await fetch(encodeURI('/Genealogia/9 Sistema/Control/nombres_lugares.db'), { cache: 'no-store' });
     baseNombres = await BaseNombres.abrir(new Uint8Array(await r.arrayBuffer()), 'nombres_lugares.db', Date.parse(r.headers.get('Last-Modified')));
     listo(); return false;
   }
@@ -1051,7 +1051,7 @@ async function necesitaBase(caja, listo) {
     try { await leerBase(guardada); listo(); return false; } catch (e) { caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
   }
   caja.innerHTML = `<div class="caja-base"><p>Para ver dónde sale cada persona en los documentos, abre la <b>base de nombres y lugares</b>
-      (<code>00_control/nombres_lugares.db</code>). Se lee aquí mismo, sin internet.</p>
+      (<code>9 Sistema/Control/nombres_lugares.db</code>). Se lee aquí mismo, sin internet.</p>
     ${!hayDisco ? '<p class="aviso">Pesa unos 180 MB: en el móvil puede ir muy lento o no abrir.</p>' : ''}
     <p class="botones">${guardada ? `<button data-b="re" class="principal">Abrir «${esc(guardada.name)}»</button>` : ''}
       ${hayDisco ? `<button data-b="elegir"${guardada ? '' : ' class="principal"'}>Elegir base de nombres (.db)…</button>`
@@ -1354,7 +1354,7 @@ function ajustes() {
     <h3>Carpeta de fotos y transcripciones</h3>
     ${hayDisco ? `<p>${carpeta ? carpeta.lista.map(c => `<b>${esc(c.nombre)}</b>`).join(' + ') : 'Ninguna'}${carpetaPendiente.length ? ` · pendientes de permiso: ${carpetaPendiente.map(h => esc(h.name)).join(', ')}` : ''}</p>
       <p><button id="carpeta">Añadir carpeta…</button> ${carpeta || carpetaPendiente.length ? '<button id="sincarpeta">Quitar todas</button>' : ''}</p>
-      <p class="peq">Elige las carpetas que contienen las fotos y las transcripciones (por ejemplo «Genealogia» y «Genealogia_2», o toda la de Dropbox). El programa las busca dentro aunque el GEDCOM tenga otra ruta delante (otra letra de disco, otro ordenador).</p>`
+      <p class="peq">Elige las carpetas que contienen las fotos y las transcripciones (lo más sencillo, la carpeta «Genealogia» entera, o toda la de Dropbox). El programa las busca dentro aunque el GEDCOM tenga otra ruta delante (otra letra de disco, otro ordenador).</p>`
     : '<p class="peq">En este aparato no se pueden ver fotos: solo en el ordenador, con Chrome o Edge.</p>'}
     <hr><p class="peq">Fase 1: solo lectura. El programa no cambia ningún archivo.</p>
   </div>`);

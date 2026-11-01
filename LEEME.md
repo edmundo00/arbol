@@ -13,10 +13,12 @@ Programa para buscar y ver un árbol genealógico en formato GEDCOM, en el orden
 ### En el ordenador (Chrome o Edge)
 
 1. Abre la dirección y pulsa **Elegir archivo GEDCOM…**. Elige tu `.ged` (por ejemplo,
-   `D:\Dropbox\Genealogia_2\01_arboles\edmundo_actualizado\edmundo.ged`).
+   `1 Árbol/Árbol de trabajo/edmundo.ged`).
 2. Para ver fotos y transcripciones: en una ficha, pestaña **Documentos**, pulsa un botón de fotos y luego **Elegir carpeta…**.
-   Elige la carpeta donde están las fotos: toda la de Dropbox (`D:\Dropbox`) o, mejor, **varias** por separado con **Añadir otra carpeta…**
-   (por ejemplo `Genealogia`, con las fotos originales, y `Genealogia_2`, con las transcripciones y las descargas).
+   Elige la carpeta donde están las fotos: lo más sencillo, la carpeta **`Genealogia`** entera (o toda la de Dropbox, `D:\Dropbox`).
+   Se pueden añadir varias con **Añadir otra carpeta…**.
+   - Desde el 1-XI-2026 `Genealogia` y `Genealogia_2` son una sola carpeta, `Genealogia`. Las rutas de antes (en notas del GEDCOM
+     o en la base de nombres) se traducen solas con la tabla `9 Sistema/Control/mudanza/mapa_rutas.csv`, que está dentro de la carpeta.
    - El programa encuentra las fotos dentro de esa carpeta aunque el GEDCOM las cite con otra ruta delante (otra letra de disco, otro ordenador, otra persona).
    - Las transcripciones se buscan junto a cada foto (mismo nombre, `.md` o `.txt`). También se buscan en cualquier carpeta llamada «…transcripciones» que repita las carpetas de las fotos.
 3. Las veces siguientes se abre sola. Como mucho, el navegador pregunta una vez si das permiso para leer el archivo y la carpeta.
@@ -82,7 +84,7 @@ En el buscador, pestaña **Revisar el árbol**:
 
 ## Base de nombres y lugares
 
-La base `00_control/nombres_lugares.db` (la hace `00_control/scripts/nombres_lugares.py`) dice en qué documentos sale cada persona y quién hay en cada lugar.
+La base `9 Sistema/Control/nombres_lugares.db` (la hace `9 Sistema/Control/scripts/nombres_lugares.py`) dice en qué documentos sale cada persona y quién hay en cada lugar.
 Se lee del disco con **sql.js**, que va dentro del programa (`vendor/sqljs`, licencia MIT): no hace falta internet.
 
 - **Ficha → pestaña «Menciones»**: dónde sale la persona, en tres grupos:
@@ -90,14 +92,14 @@ Se lee del disco con **sql.js**, que va dentro del programa (`vendor/sqljs`, lic
   - **pistas** (enlazadas solo por el nombre: hay que comprobarlas);
   - **posibles por el nombre** (mismo nombre en documentos sin enlace: pueden ser otra persona).
   Cada una con su documento, papel, fecha y contexto, y botones **📜 Texto** y **📷 Imagen** que abren la transcripción o la foto con las carpetas elegidas.
-- **Buscador → «En los documentos»**: **Nombre** y **Apellidos** (por separado: «Juan» en Nombre no encuentra a los apellidados Juan) y **¿Quién hay en el lugar…?**, con años desde y hasta. Da lo mismo que `python -I 00_control/scripts/buscar_nombres.py` (comprobado en las pruebas).
+- **Buscador → «En los documentos»**: **Nombre** y **Apellidos** (por separado: «Juan» en Nombre no encuentra a los apellidados Juan) y **¿Quién hay en el lugar…?**, con años desde y hasta. Da lo mismo que `python -I "9 Sistema/Control/scripts/buscar_nombres.py"` (comprobado en las pruebas).
 - La primera vez pide **Elegir base de nombres (.db)…**; después se recuerda, como el GEDCOM, y se lee siempre del disco.
 - Pesa unos 180 MB: en el ordenador abre en un par de segundos; en el móvil puede ir muy lento.
 
 ## Editar (fase 2, en el ordenador con Chrome o Edge)
 
 1. Abre el GEDCOM como siempre y pulsa **✎ Editar** en la barra.
-2. Elige la **carpeta donde está el archivo** (por ejemplo `D:\Dropbox\Genealogia_2\01_arboles\edmundo_actualizado`) y da permiso de escritura.
+2. Elige la **carpeta donde está el archivo** (por ejemplo `1 Árbol/Árbol de trabajo`) y da permiso de escritura.
 3. En la vista de **Familia** aparecen los botones:
    - **✎ Editar sus datos**: nombre, apellidos, sexo, nacimiento y defunción;
    - **+ Añadir padre / + Añadir madre** (si no los tiene);
@@ -113,8 +115,7 @@ Se lee del disco con **sql.js**, que va dentro del programa (`vendor/sqljs`, lic
 11. **⇆ Fusionar con otra ficha**: se elige la otra ficha de la misma persona y se ven las dos lado a lado. Lo que no se elige no se pierde: el otro nombre queda como alternativo y la otra fecha como segundo nacimiento o defunción; padres, cónyuges, hijos, hechos, notas, fuentes y fotos pasan a la ficha que se queda.
 12. **Citar un documento**: en «Documentos», **+ Citar un documento del registro**: se elige el documento y se dice el papel, qué prueba, las fotos («1,3-5») y el grado (A/B/C/?).
 13. **Confirmar menciones**: en «Menciones», **✓ Es esta persona** en las pistas y en las posibles. Si el documento no está en el registro, se da de alta.
-    - Las citas se apuntan en `00_control/registro/citas_app.csv` (y los documentos nuevos en `documentos_app.csv`), que lee `generar.py`. La primera vez pide la carpeta `Genealogia_2 _control
-egistro`.
+    - Las citas se apuntan en `9 Sistema/Control/registro/citas_app.csv` (y los documentos nuevos en `documentos_app.csv`), que lee `generar.py`. La primera vez pide la carpeta: vale la carpeta `Genealogia` entera (o `Genealogia\9 Sistema\Control\registro`).
     - **No hace falta Claude**: la aplicación escribe en el GEDCOM la fuente del documento (si aún no estaba), sus fotos y la cita, idénticas a las de `generar.py` (códigos estables por SHA-1; comprobado con 1.560 documentos). Solo los documentos con fotos «*» que aún no estén en el GEDCOM esperan a una pasada de `generar.py`.
 14. **↶ Deshacer** deshace el último cambio (también lo apuntado en el registro) y lo guarda. **Terminar** quita el candado.
 
@@ -151,15 +152,15 @@ En el móvil no se puede editar (el navegador no puede escribir en tus archivos)
 ## Pruebas (en este ordenador)
 
 ```
-python -I 11_aplicacion/servidor_local.py
+python -I "9 Sistema/Aplicación/servidor_local.py"
 ```
 
-- Abrir **http://localhost:8765/Genealogia_2/11_aplicacion/pruebas.html** (32 pruebas) y **pruebas_edicion.html** (28 pruebas de edición sobre una copia en el disco privado del navegador, nunca sobre el archivo bueno). Entre ellas:
+- Abrir **http://localhost:8765/Genealogia/9 Sistema/Aplicación/pruebas.html** (32 pruebas) y **pruebas_edicion.html** (28 pruebas de edición sobre una copia en el disco privado del navegador, nunca sobre el archivo bueno). Entre ellas:
   - el GEDCOM leído y vuelto a escribir sale **idéntico byte a byte**;
   - el buscador;
   - el Ahnentafel;
   - fotos y transcripciones encontradas con otras rutas delante.
-- El servidor solo atiende a este ordenador y solo a las carpetas `Genealogia` y `Genealogia_2`.
+- El servidor solo atiende a este ordenador y solo a la carpeta `Genealogia`.
   En la pantalla de inicio, en `localhost`, aparece **Usar el servidor local** para probar sin elegir archivos.
 
 ## Publicar un cambio
@@ -167,7 +168,7 @@ python -I 11_aplicacion/servidor_local.py
 Esta carpeta es el repositorio de GitHub. Se publica con:
 
 ```
-python -I 11_aplicacion/publicar.py "qué cambia"
+python -I "9 Sistema/Aplicación/publicar.py" "qué cambia"
 ```
 
 Pone un número de versión nuevo a todos los archivos (así los navegadores no se quedan con la versión vieja), guarda el cambio y lo sube.

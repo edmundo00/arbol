@@ -74,7 +74,7 @@ class Raiz {
   }
   async probar(partes) { const h = await this.exacto(partes); return h ? { h, rel: partes } : null; }
 
-  // Una ruta relativa a la carpeta o a alguna de sus subcarpetas (las que citan las notas: «03_transcripciones/x.md»).
+  // Una ruta relativa a la carpeta o a alguna de sus subcarpetas (las que citan las notas: «2 Documentos/…/x.md»).
   async relativa(ruta) {
     const p = trozos(ruta);
     let r = await this.probar(p);
@@ -83,10 +83,11 @@ class Raiz {
     return r;
   }
 
-  // Carpetas de transcripciones: las que se llaman «…transcripciones» en la carpeta o un nivel por debajo.
+  // Carpetas de transcripciones: las que se llaman «…transcripciones» en la carpeta o un nivel por debajo, y «2 Documentos»
+  // (desde el 1-XI-2026 las transcripciones están al lado de su foto, con el mismo nombre y extensión .md).
   async carpetasTranscripcion() {
     if (this._transc) return this._transc;
-    const t = [], es = n => /transcripcion/i.test(n);
+    const t = [], es = n => /transcripcion|^2 documentos$/i.test(n);
     for (const d of await this.subcarpetas([])) {
       if (es(d)) t.push([d]);
       else for (const e of await this.subcarpetas([d])) if (es(e)) t.push([d, e]);
@@ -95,7 +96,7 @@ class Raiz {
   }
 
   // Transcripción de una foto: el .md o .txt con el mismo nombre al lado, o en una carpeta de transcripciones que repita
-  // las carpetas de la foto (03_transcripciones/Documentos/x.md para Genealogia/Documentos/x.jpg).
+  // las carpetas de la foto (como era 03_transcripciones/Documentos/x.md para Genealogia/Documentos/x.jpg).
   async transcripcion(ruta) { const { rel } = await this.buscar(ruta); return this.transcripcionDe(rel, true); }
   // Transcripción de una foto que está en «rel» (en esta carpeta o en otra de las elegidas).
   async transcripcionDe(rel, aqui) {
@@ -112,7 +113,13 @@ class Raiz {
   async miniatura(ruta) { return this.enlace(ruta); }
 }
 
-// Varias carpetas de fotos (por ejemplo «Genealogia» y «Genealogia_2»): se busca en todas.
+// Mudanza del 1-XI-2026: «Genealogia» y «Genealogia_2» pasaron a ser una sola carpeta «Genealogia» con otras subcarpetas.
+// Las rutas antiguas (notas del GEDCOM, base de nombres) se traducen con esta tabla, que está dentro de la carpeta.
+const MAPA = '9 Sistema/Control/mudanza/mapa_rutas.csv';
+const trozosNFC = t => String(t).normalize('NFC').replace(/\\/g, '/').split('/').filter(Boolean);
+const clave = t => trozosNFC(t).join('/').toLowerCase();
+
+// Varias carpetas de fotos (lo normal, una sola: «Genealogia» o toda la de Dropbox): se busca en todas.
 export class Carpetas {
   constructor(lista) { this.lista = lista; }
   get nombre() { return this.lista.map(c => c.nombre).join(' + '); }
@@ -128,17 +135,54 @@ export class Carpetas {
     const e = new Error(`No está en ${this.lista.map(c => '«' + c.nombre + '»').join(' ni en ')}: ${ruta}`);
     e.noExiste = true; e.ruta = ruta; return e;
   }
-  async buscar(ruta) {
+  async buscarSin(ruta) {
     for (const c of this.lista) { try { return { ...(await c.buscar(ruta)), c }; } catch (e) { if (!e.noExiste) throw e; } }
+    return null;
+  }
+  async buscar(ruta) {
+    const r = (await this.buscarSin(ruta)) || await this.traducir(ruta).then(n => n && this.buscarSin(n));
+    if (r) return r;
     throw this.noEsta(ruta);
+  }
+  // Tabla de la mudanza (ruta antigua → ruta nueva), leída una vez de la carpeta elegida.
+  async mapa() {
+    if (this._mapa !== undefined) return this._mapa;
+    this._mapa = null;
+    for (const c of this.lista) {
+      try {
+        const { texto } = await c.texto(MAPA), m = new Map();
+        for (const l of texto.replace(/^\uFEFF/, '').split(/\r?\n/).slice(1)) { const i = l.indexOf(';'); if (i > 0) m.set(clave(l.slice(0, i)), l.slice(i + 1)); }
+        return (this._mapa = m);
+      } catch (e) { if (!e.noExiste) throw e; }
+    }
+    return null;
+  }
+  // Ruta nueva («Genealogia/…») de una ruta de antes de la mudanza, o null. Sirven la ruta entera o una carpeta que la contenga.
+  async traducir(ruta) {
+    const m = await this.mapa();
+    if (!m) return null;
+    const t = trozosNFC(ruta), s = t.map(x => x.toLowerCase());
+    const i = s.findIndex(x => x === 'genealogia' || x === 'genealogia_2');
+    // Sin «Genealogia…» delante, la ruta era relativa a una de las dos (03_transcripciones/… era de Genealogia_2)
+    const intentos = i >= 0 ? [s.slice(i)] : [['genealogia_2', ...s], ['genealogia', ...s]];
+    // Una transcripción que no esté en la tabla: ahora va al lado de su foto, que tenía la misma ruta en «Genealogia»
+    if (intentos[0][0] === 'genealogia_2' && intentos[0][1] === '03_transcripciones') intentos.push(['genealogia', ...intentos[0].slice(2)]);
+    for (const p of intentos)
+      for (let k = p.length; k >= 2; k--) {
+        const n = m.get(p.slice(0, k).join('/'));
+        if (n) return ['Genealogia', n, ...t.slice(t.length - (p.length - k))].join('/');
+      }
+    return null;
   }
   async enlace(ruta) { const r = await this.buscar(ruta); return r.c.url(r.h); }
   async miniatura(ruta) { return this.enlace(ruta); }
   async texto(ruta) {
     for (const c of this.lista) { try { return await c.texto(ruta); } catch (e) { if (!e.noExiste) throw e; } }
+    const n = await this.traducir(ruta), r = n && await this.buscarSin(n);
+    if (r) return { texto: await (await r.c.archivo(r.h)).text(), rel: r.rel.join('/') };
     throw this.noEsta(ruta);
   }
-  // La transcripción puede estar en otra carpeta que la foto (fotos en «Genealogia», transcripciones en «Genealogia_2»).
+  // La transcripción puede estar en otra de las carpetas elegidas que la foto.
   async transcripcion(ruta) {
     const r = await this.buscar(ruta);
     const propia = await r.c.transcripcionDe(r.rel, true);
@@ -193,7 +237,7 @@ export class Servidor extends Raiz {
     return r.ok ? u : null;
   }
   async subcarpetas(partes) {
-    if (!partes.length) return ['Genealogia', 'Genealogia_2'];
+    if (!partes.length) return ['Genealogia'];
     const r = await fetch(this.dir(partes) + '/', { cache: 'no-store' });
     if (!r.ok) return [];
     return [...(await r.text()).matchAll(/href="([^"?]+)\/"/g)].map(m => decodeURIComponent(m[1]));
