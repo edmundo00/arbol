@@ -130,6 +130,24 @@ egistro`.
 
 En el móvil no se puede editar (el navegador no puede escribir en tus archivos). **No edites el mismo GEDCOM con Family Historian a la vez.**
 
+## Herramientas de investigación y seguridad (2.ª lista de 20 mejoras)
+
+- **Revisar el árbol**, pestañas nuevas:
+  - **Qué falta por probar**: los antepasados en una tabla, con el grado de la prueba (A, B, C) de cada hecho;
+  - **Antepasados repetidos**: los que salen con varios números;
+  - **Tareas pendientes**: las notas que empiezan por «Tarea» o «Pendiente»;
+  - **Lugares**: variantes del mismo lugar, que se unifican de una vez;
+  - **Salud del archivo**: códigos repetidos, enlaces sin vuelta, familias vacías, personas sin nombre, con reparación;
+  - **Copias e historial**: diario de cambios, comparación con una copia y restauración.
+- **Ficha**: parentesco con las personas de referencia, cronología, grado de prueba en cada hecho y tareas en las notas.
+- **Texto libre**: busca una frase en las notas, en los contextos de la base de nombres y, si se pide, en todas las transcripciones.
+- **Alta rápida desde una partida** (✎ Editar → «Partida»): con el documento a la izquierda, se rellenan bautizado, padres, abuelos, padrinos o novios, y se crean o enlazan todos de una vez, con su cita.
+- **Compartir** (Ajustes): copia del GEDCOM sin vivos y, si se quiere, sin notas.
+- **Menciones**: el mismo texto en varios documentos (copias de un mismo archivo) sale una sola vez, con la lista de los demás. Los **árboles ya hechos** (PDF y SVG impresos, listados de otros programas y el árbol antiguo) van aparte y plegados, porque no son fuentes.
+- **⬇ Excel (CSV)**: debajo de los resultados de Buscar (todos, no solo los 300 que se ven), de «En los documentos» y de cada pestaña de Revisar. Se abre con doble clic en Excel (separador «;» y tildes bien).
+- **Informe de ascendientes** (Imprimir): en texto, generación a generación, con número, fechas, lugares, boda, padres y fuentes con su grado. **Ver e imprimir / PDF** o **Descargar para Word** (.doc; desde Word se guarda como .docx).
+- **Sin conexión** (en GitHub Pages): la primera vez que se abre con internet, el programa queda guardado en el aparato y luego abre sin red. En el móvil, en el menú del navegador, **Instalar aplicación** o **Añadir a pantalla de inicio**. Los datos (el GEDCOM, las fotos) no se guardan ahí: los sigue eligiendo cada uno. En `localhost` no se usa, para ver siempre los cambios.
+
 ## Pruebas (en este ordenador)
 
 ```
