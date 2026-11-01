@@ -151,6 +151,24 @@ button.mas { font-size: .85em; padding: 6px 10px; border-style: dashed; color: v
 label.check { display: flex; gap: 8px; align-items: center; color: var(--tinta); font-size: .95em; }
 label.check input { width: auto; margin: 0; }
 
+/* Alta desde una partida: documento a la izquierda, formulario a la derecha */
+.caja.dialogo.partida { max-width: 1250px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.dialogo.partida .doc-lado { position: sticky; top: 0; max-height: 92vh; overflow: auto; border-right: 1px solid var(--linea); padding-right: 12px; }
+.dialogo.partida .tira { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.dialogo.partida .tira button { padding: 2px 8px; }
+.dialogo.partida .tira button.activo { background: var(--acento); color: #fff; }
+.dialogo.partida .foto-doc img { width: 100%; border-radius: 6px; }
+.dialogo.partida .trans-doc { font-size: .9em; margin-top: 8px; }
+.pt-persona { border-top: 1px solid var(--linea); padding: 6px 0; }
+.pt-persona .dos { gap: 6px; }
+.pt-persona input { margin: 4px 0; }
+.pt-cab { font-size: .92em; }
+.pt-elegida { font-size: .85em; color: var(--ok); }
+.pt-sug { font-size: .85em; }
+.pt-sug button { margin: 2px; padding: 2px 8px; }
+fieldset.doc-cita { border: 1px solid var(--linea); border-radius: 8px; margin: 8px 0; }
+@media (max-width: 900px) { .caja.dialogo.partida { grid-template-columns: 1fr; } .dialogo.partida .doc-lado { position: static; max-height: 50vh; border-right: 0; } }
+
 /* Investigar */
 .pruebas { margin: 0 0 8px; font-size: .9em; display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .pruebas .prueba { white-space: nowrap; }

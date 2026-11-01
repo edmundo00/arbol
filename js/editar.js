@@ -1,6 +1,6 @@
 // Cambios en el GEDCOM: personas, familias y enlaces. Cada cambio es una «operación» que se puede deshacer.
 // Solo se tocan las líneas necesarias: el resto de cada registro se conserva tal cual (con sus etiquetas propias).
-import { Registro, hijo, hijos } from './gedcom.js?v=202611011136';
+import { Registro, hijo, hijos } from './gedcom.js?v=202611011145';
 
 const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'do', 'das', 'dos', 'van', 'von', 'der', 'den', 'di']);
 
@@ -55,7 +55,7 @@ export class Editor {
 
   // ---------- Operaciones ----------
   empezar(desc) { if (this.tx) throw new Error('Ya hay un cambio a medias.'); this.tx = { desc, antes: new Map(), cabecera: null, log: [] }; }
-  cancelar() { if (this.tx) { this.restaurar(this.tx); this.tx = null; } }
+  cancelar() { if (this.tx) { const tx = this.tx; this.restaurar(tx); this.tx = null; this.refrescar([...tx.antes.keys()]); } }
   terminar() {
     const tx = this.tx; this.tx = null;
     for (const x of tx.antes.keys()) { const r = this.ged.porXref.get(x); if (r && r.modificado) this.sello(r); }
@@ -460,6 +460,37 @@ export class Editor {
     h.forEach((n, k) => { if ((n.tag === 'OBJE' && /^@M[0-9A-FX]+@$/.test(n.valor)) || (n.tag === 'SOUR' && n.hijos.some(x => x.tag === '_REG'))) j = k; });
     for (const o of objs) if (!ya.has(o)) { h.splice(++j, 0, nodo(1, 'OBJE', o)); ya.add(o); }
     return true;
+  }
+
+  // Pone el modelo al día en mitad de una operación (para encadenar varios pasos).
+  alDia() { if (this.tx) this.refrescar([...this.tx.antes.keys()]); }
+
+  // Hace que «padre» y «madre» sean los padres de «hijo», sin duplicar familias. Devuelve la familia.
+  asegurarPadres(hijoId, padreId, madreId) {
+    this.alDia();
+    const h = this.arbol.p(hijoId);
+    let fam = h.famc.map(f => this.arbol.f(f)).find(Boolean);
+    if (fam) {
+      if (padreId && fam.marido && fam.marido !== padreId) throw new Error(`${h.nombre} ${h.apellidos} ya tiene otro padre en el árbol.`);
+      if (madreId && fam.mujer && fam.mujer !== madreId) throw new Error(`${h.nombre} ${h.apellidos} ya tiene otra madre en el árbol.`);
+      if (padreId && !fam.marido) { this.enlazar(fam.id, 'HUSB', padreId); this.enlazar(padreId, 'FAMS', fam.id); }
+      if (madreId && !fam.mujer) { this.enlazar(fam.id, 'WIFE', madreId); this.enlazar(madreId, 'FAMS', fam.id); }
+      this.alDia(); return fam.id;
+    }
+    if (!padreId && !madreId) return null;
+    // ¿Ya existe la pareja? Entonces el hijo va a esa familia
+    let f = padreId && madreId ? this.arbol.p(padreId).fams.map(x => this.arbol.f(x)).find(x => x && x.mujer === madreId) : null;
+    const famId = f ? f.id : this.nuevaFamilia(padreId || null, madreId || null);
+    this.enlazar(famId, 'CHIL', hijoId); this.enlazar(hijoId, 'FAMC', famId);
+    this.alDia(); return famId;
+  }
+
+  // Familia de la pareja (la que ya hay o una nueva). Devuelve la familia.
+  asegurarPareja(aId, bId) {
+    this.alDia();
+    const a = this.arbol.p(aId), ya = a.fams.map(x => this.arbol.f(x)).find(x => x && (x.marido === bId || x.mujer === bId));
+    if (ya) return ya.id;
+    const f = this.conyuge(aId, bId); this.alDia(); return f;
   }
 
   // Cambia un lugar por otro en todos los hechos (unificar variantes). Devuelve cuántas líneas cambia.

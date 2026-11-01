@@ -1,8 +1,8 @@
 // Pantallas: resultados de búsqueda, vista de familia, datos, notas y documentos de cada persona.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011136';
-import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611011136';
-import { esc } from './md.js?v=202611011136';
-import { pruebasDe, resumenPruebas, cronologia, ES_TAREA } from './investigar.js?v=202611011136';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011145';
+import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611011145';
+import { esc } from './md.js?v=202611011145';
+import { pruebasDe, resumenPruebas, cronologia, ES_TAREA } from './investigar.js?v=202611011145';
 
 export function insignias(arbol, id) {
   return arbol.raices.map(({ id: r, letra, nombre: quien }) => {
@@ -59,7 +59,7 @@ export function familia(arbol, id, editando = false) {
       ${hermanos.length ? `<details class="hermanos"${hermanos.length <= 6 ? ' open' : ''}><summary>Hermanos (${hermanos.length})</summary>${hermanos.map(h => tarjeta(arbol, h)).join('')}</details>` : ''}
     </section>
     <section class="col-centro">${tarjeta(arbol, id, { grande: true })}
-      ${editando ? `<p class="botones">${boton('editar', '✎ Editar sus datos')}${boton('fusionar', '⇆ Fusionar con otra ficha…')}${boton('borrar', '🗑 Borrar')}</p>` : ''}
+      ${editando ? `<p class="botones">${boton('editar', '✎ Editar sus datos')}${boton('partida', '📜 Alta desde una partida…')}${boton('fusionar', '⇆ Fusionar con otra ficha…')}${boton('borrar', '🗑 Borrar')}</p>` : ''}
       ${conyuges ? `<h3>Cónyuges e hijos</h3>${conyuges}` : '<p class="nada">Sin cónyuges registrados</p>'}
       ${editando ? `<p class="botones">${boton('conyuge', '+ Añadir cónyuge')}${p.fams.length ? '' : boton('hijo', '+ Añadir hijo (sin cónyuge)')}</p>` : ''}
     </section>

@@ -1,25 +1,26 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611011136';
-import { Arbol, nombreCompleto, vida, miles } from './modelo.js?v=202611011136';
-import { buscar, prepararVariantes } from './buscar.js?v=202611011136';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011136';
-import { BaseNombres } from './nombresdb.js?v=202611011136';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011136';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011136';
-import { revisarSalud, repararSalud } from './salud.js?v=202611011136';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011136';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011136';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011136';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611011136';
-import { md, esc } from './md.js?v=202611011136';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011136';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011136';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011136';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011136';
-import { Guardado } from './guardar.js?v=202611011136';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011136';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011136';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011136';
+import { Gedcom } from './gedcom.js?v=202611011145';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611011145';
+import { buscar, prepararVariantes } from './buscar.js?v=202611011145';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011145';
+import { BaseNombres } from './nombresdb.js?v=202611011145';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011145';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011145';
+import { revisarSalud, repararSalud } from './salud.js?v=202611011145';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011145';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011145';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011145';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611011145';
+import { md, esc } from './md.js?v=202611011145';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011145';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011145';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011145';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011145';
+import { Guardado } from './guardar.js?v=202611011145';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011145';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611011145';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011145';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011145';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -109,7 +110,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011136')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011145')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -518,6 +519,110 @@ async function confirmarMencion(id, m) {
   flotante(r.res ? 'Confirmado: el documento y la cita están en la ficha y en el registro.' : 'Confirmado y apuntado en el registro; saldrá en la ficha la próxima vez que se pase generar.py.');
 }
 
+// ---------- Alta desde una partida ----------
+// Fotos de un documento del registro (de su fuente en el GEDCOM o, si aún no está, de su fila en el registro)
+async function fotosDoc(docId) {
+  const ged = arbol.ged, d = registro ? (await docsDelRegistro()).get(docId) : null;
+  const xs = await xrefSour(docId);
+  const sr = d?.sour && ged.porXref.has(d.sour) ? d.sour : ged.porXref.has(xs) ? xs : editor?.fuenteDe(docId);
+  if (sr) return hijos(ged.porXref.get(sr).arbol, 'OBJE').map(n => ged.porXref.get(n.valor)).filter(r => r && r.raw.includes('reg:' + docId)).map(r => valorNodo(r.arbol, '_FILE'));
+  if (d) { const r = await registrosDocumento(d, bases(ged)); if (r) return r.fotos.map(x => x.f.replace(/\//g, '\\')); }
+  return [];
+}
+// El documento a la izquierda: tiras de fotos, la foto grande y su transcripción
+async function mostrarDoc(docId, caja) {
+  if (!carpeta) { hayCarpeta(caja); return; }
+  caja.innerHTML = '<p class="cargando">Abriendo el documento…</p>';
+  const fotos = await fotosDoc(docId), d = registro ? (await docsDelRegistro()).get(docId) : null;
+  caja.innerHTML = `<div class="tira">${fotos.slice(0, 80).map((f, i) => `<button class="mas" data-f="${i}">${i + 1}</button>`).join('')}</div><div class="foto-doc"></div><div class="md trans-doc"></div>`;
+  const ver = async i => {
+    const f = fotos[i];
+    caja.querySelectorAll('[data-f]').forEach(b => b.classList.toggle('activo', +b.dataset.f === i));
+    try { caja.querySelector('.foto-doc').innerHTML = `<img src="${esc(await carpeta.enlace(f))}" alt="">`; } catch (e) { caja.querySelector('.foto-doc').innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
+    let t = null;
+    try { t = await carpeta.transcripcion(f); } catch {}
+    if (!t && d?.transcripcion && /\.md$/.test(d.transcripcion) && !/[*|]/.test(d.transcripcion)) try { t = await carpeta.texto(d.transcripcion); } catch {}
+    caja.querySelector('.trans-doc').innerHTML = t ? md(t.texto) : '<p class="peq">Sin transcripción de esta foto.</p>';
+  };
+  caja.querySelectorAll('[data-f]').forEach(b => b.onclick = () => ver(+b.dataset.f));
+  if (fotos.length) ver(0);
+  else if (d?.transcripcion && /\.md$/.test(d.transcripcion)) try { caja.querySelector('.trans-doc').innerHTML = md((await carpeta.texto(d.transcripcion)).texto); } catch {}
+  else caja.querySelector('.trans-doc').innerHTML = '<p class="peq">Este documento no tiene fotos ni transcripción en las carpetas.</p>';
+}
+
+// Aplica la partida dentro de una operación del editor. Devuelve { rol: xref }.
+function aplicarPartida(r) {
+  const ids = {};
+  for (const [rol, x] of Object.entries(r.personas)) ids[rol] = x.xref || editor.nuevaPersona({ ...x.nueva, nac: { fecha: '', lugar: '' }, def: { fecha: '', lugar: '' } });
+  editor.alDia();
+  const nodoDe = (xref, tags) => editor.ged.porXref.get(xref).arbol.hijos.find(n => tags.includes(n.tag)) || null;
+  const datosDe = n => ({ fecha: n ? valorNodo(n, 'DATE') : '', lugar: n ? valorNodo(n, 'PLAC') : '', nota: n ? (n.hijos.find(x => x.tag === 'NOTE' && !/^@/.test(x.valor)) ? arbol.notaTexto(n.hijos.find(x => x.tag === 'NOTE' && !/^@/.test(x.valor))) : '') : '' });
+  // Pone el hecho (o completa el que ya hay) sin borrar lo que ya tenía
+  const hecho = (xref, tags, tag, extra) => {
+    const n = nodoDe(xref, tags), d0 = datosDe(n);
+    const nota = [d0.nota, extra].filter(Boolean).join('\n') || undefined;
+    editor.hecho(xref, n, { tag: n ? n.tag : tag, fecha: d0.fecha || r.fecha, lugar: d0.lugar || r.lugar, nota, tipo: n ? valorNodo(n, 'TYPE') : '' });
+  };
+  if (r.tipo === 'bautismo') {
+    const b = ids.bautizado;
+    if (ids.padre || ids.madre) editor.asegurarPadres(b, ids.padre, ids.madre);
+    if (ids.padre && (ids.abuelo_p || ids.abuela_p)) editor.asegurarPadres(ids.padre, ids.abuelo_p, ids.abuela_p);
+    if (ids.madre && (ids.abuelo_m || ids.abuela_m)) editor.asegurarPadres(ids.madre, ids.abuelo_m, ids.abuela_m);
+    hecho(b, ['CHR', 'BAPM'], 'CHR', r.texto ? 'Padrinos: ' + r.texto : '');
+    if (r.nac && !valorNodo(nodoDe(b, ['BIRT']) || { hijos: [] }, 'DATE')) editor.evento(b, 'BIRT', r.nac, valorNodo(nodoDe(b, ['BIRT']) || { hijos: [] }, 'PLAC'));
+  } else if (r.tipo === 'matrimonio') {
+    let fam = null;
+    if (ids.novio && ids.novia) fam = editor.asegurarPareja(ids.novio, ids.novia);
+    if (ids.novio && (ids.padre_novio || ids.madre_novio)) editor.asegurarPadres(ids.novio, ids.padre_novio, ids.madre_novio);
+    if (ids.novia && (ids.padre_novia || ids.madre_novia)) editor.asegurarPadres(ids.novia, ids.padre_novia, ids.madre_novia);
+    if (fam) hecho(fam, ['MARR'], 'MARR', r.texto ? 'Testigos: ' + r.texto : '');
+  } else {
+    const d = ids.difunto;
+    hecho(d, ['DEAT', 'BURI'], 'DEAT', r.texto);
+    const y = anios(r.fecha)[0];
+    if (r.edad >= 0 && y && !nodoDe(d, ['BIRT', 'CHR', 'BAPM'])) editor.evento(d, 'BIRT', `ABT ${y - r.edad}`, '');
+    if (ids.conyuge) editor.asegurarPareja(d, ids.conyuge);
+    if (ids.padre || ids.madre) editor.asegurarPadres(d, ids.padre, ids.madre);
+  }
+  return ids;
+}
+
+async function altaPartida(id) {
+  if (!editor) return;
+  try { await asegurarRegistro(); } catch (e) { if (e.name !== 'AbortError') console.warn(e); }
+  const docs = registro ? await documentosCitables() : [];
+  const r = await formularioPartida({ arbol, variantes, docs, lugares: lugares(), persona: id, mostrarDoc });
+  if (!r) return;
+  if (await actualizarSiCambio()) { alert('El árbol acababa de cambiar fuera de la aplicación y se ha actualizado. Repite el alta.'); return; }
+  await guardado.ponerCandado();
+  const principal = r.personas[{ bautismo: 'bautizado', matrimonio: 'novio', defuncion: 'difunto' }[r.tipo]] || r.personas.novia;
+  const nombreP = principal.xref ? nombreCompleto(arbol.p(principal.xref)) : `${principal.nueva.nombre} ${principal.nueva.apellidos}`.trim();
+  const desc = `Alta de ${PARTIDAS[r.tipo].nombre.toLowerCase()} de ${nombreP}${r.fecha ? ' (' + r.fecha + ')' : ''}`;
+  const csv = [];
+  guardando = true;
+  editor.empezar(desc);
+  let ids;
+  try {
+    ids = aplicarPartida(r);
+    if (r.doc && registro) {
+      const que = `${PARTIDAS[r.tipo].nombre} de ${nombreP}${r.fecha ? ', ' + r.fecha : ''}${r.lugar ? ', ' + r.lugar : ''}`;
+      for (const [rol, x] of Object.entries(ids)) {
+        const linea = await registro.citar({ doc: r.doc.id, xref: x, papel: PAPEL[rol], que, imagenes: r.imagenes, grado: 'A' });
+        if (linea) csv.push({ archivo: 'citas_app.csv', linea });
+      }
+      const prep = await prepararCita(r.doc.id, r.imagenes);
+      for (const [rol, x] of Object.entries(ids)) escribirCita(x, prep, r.doc.id, { papel: PAPEL[rol], que, imagenes: r.imagenes, grado: 'A' });
+    }
+  } catch (e) { editor.cancelar(); await quitarCsv(csv); guardando = false; alert('No se ha guardado nada.\n\n' + e.message); return; }
+  const tx = editor.terminar(); tx.csv = csv;
+  guardando = false;
+  try { await guardarAhora(desc, [...tx.antes.keys()]); flotante(`Guardado: ${desc}. ${Object.keys(ids).length} personas${csv.length ? ', con su cita' : ''}.`); }
+  catch (e) { editor.deshacer(); await quitarCsv(csv); alert('No se ha guardado nada.\n\n' + e.message); if (e.cambiadoFuera) await terminarEdicion(); return; }
+  estadoEdicion();
+  const pr = Object.entries(ids).find(([rol]) => ['bautizado', 'novio', 'difunto', 'novia'].includes(rol))?.[1];
+  if (pr && location.hash !== '#/p/' + pr.slice(1, -1)) location.hash = '#/p/' + pr.slice(1, -1); else ir();
+}
+
 let listaLugares = null;
 function lugares() {
   if (!listaLugares) { const s = new Set(); for (const p of arbol.personas.values()) p.lugares.forEach(l => s.add(l)); listaLugares = [...s].sort((a, b) => a.localeCompare(b, 'es')); }
@@ -613,6 +718,7 @@ async function accion(tipo, id, famId, ds = {}) {
     return operar(`Quitar ${ev.etiqueta.toLowerCase()} de ${nom}`, () => editor.borrarHecho(famId || id, ev.nodo));
   }
   // ---------- Notas ----------
+  if (tipo === 'partida') return altaPartida(id);
   if (tipo === 'tarea') {
     const t = await formularioNota('Tarea pendiente de ' + nom, 'PENDIENTE: ');
     if (t == null) return;

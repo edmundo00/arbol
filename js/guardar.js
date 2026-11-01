@@ -5,8 +5,8 @@
 //   3. el archivo nuevo se lee otra vez y se comprueba: mismas personas más las añadidas, enlaces que apuntan a algo;
 //   4. copias en copias/: la de la sesión (una vez) y la anterior a cada guardado, comprobadas tras escribirlas.
 // La escritura la hace el navegador en un archivo aparte que solo al cerrar sustituye al bueno; después se relee y compara.
-import { Gedcom } from './gedcom.js?v=202611011136';
-import { bdLeer, bdGuardar } from './almacen.js?v=202611011136';
+import { Gedcom } from './gedcom.js?v=202611011145';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611011145';
 
 const iguales = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
 const sello = () => { const d = new Date(), p = x => String(x).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
