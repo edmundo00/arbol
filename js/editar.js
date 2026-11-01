@@ -1,6 +1,6 @@
 // Cambios en el GEDCOM: personas, familias y enlaces. Cada cambio es una «operación» que se puede deshacer.
 // Solo se tocan las líneas necesarias: el resto de cada registro se conserva tal cual (con sus etiquetas propias).
-import { Registro, hijo, hijos } from './gedcom.js?v=202611011109';
+import { Registro, hijo, hijos } from './gedcom.js?v=202611011129';
 
 const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'do', 'das', 'dos', 'van', 'von', 'der', 'den', 'di']);
 
@@ -459,6 +459,16 @@ export class Editor {
     let j = -1;
     h.forEach((n, k) => { if ((n.tag === 'OBJE' && /^@M[0-9A-FX]+@$/.test(n.valor)) || (n.tag === 'SOUR' && n.hijos.some(x => x.tag === '_REG'))) j = k; });
     for (const o of objs) if (!ya.has(o)) { h.splice(++j, 0, nodo(1, 'OBJE', o)); ya.add(o); }
+    return true;
+  }
+
+  // Vuelve a poner un registro tal como está en una copia (si no existe, se crea).
+  restaurarRegistro(xref, texto) {
+    if (!this.ged.porXref.has(xref)) return this.crearTexto(texto);
+    this.tocar(xref);
+    const i = this.ged.registros.findIndex(r => r.xref === xref);
+    const r = new Registro(texto.replace(/\r?\n/g, '\r\n').replace(/(\r\n)*$/, '\r\n').replace(/\r\n/g, this.ged.nl), this.ged.nl);
+    this.ged.registros[i] = r; this.ged.porXref.set(xref, r);
     return true;
   }
 

@@ -5,8 +5,8 @@
 //   3. el archivo nuevo se lee otra vez y se comprueba: mismas personas más las añadidas, enlaces que apuntan a algo;
 //   4. copias en copias/: la de la sesión (una vez) y la anterior a cada guardado, comprobadas tras escribirlas.
 // La escritura la hace el navegador en un archivo aparte que solo al cerrar sustituye al bueno; después se relee y compara.
-import { Gedcom } from './gedcom.js?v=202611011109';
-import { bdLeer, bdGuardar } from './almacen.js?v=202611011109';
+import { Gedcom } from './gedcom.js?v=202611011129';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611011129';
 
 const iguales = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
 const sello = () => { const d = new Date(), p = x => String(x).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
@@ -107,3 +107,40 @@ export class Guardado {
     return { copiaSesion: nueva };
   }
 }
+
+// ---------- Diario de cambios y copias (en la carpeta «copias» junto al GEDCOM) ----------
+const DIARIO = 'diario_cambios.txt';
+const aparato = () => (navigator.userAgentData?.platform || navigator.platform || '').slice(0, 30);
+
+Guardado.prototype.carpetaCopias = function () { return this.dir.getDirectoryHandle('copias', { create: true }); };
+
+// Una línea por cambio: fecha · aparato · descripción · códigos tocados (separados por tabuladores)
+Guardado.prototype.apuntar = async function (desc, xrefs = []) {
+  try {
+    const c = await this.carpetaCopias(), fh = await c.getFileHandle(DIARIO, { create: true });
+    const viejo = await (await fh.getFile()).text();
+    const linea = [new Date().toISOString().slice(0, 19).replace('T', ' '), aparato(), desc.replace(/[\t\r\n]+/g, ' '), xrefs.join(' ')].join('\t');
+    const w = await fh.createWritable({ keepExistingData: false });
+    await w.write((viejo && !viejo.endsWith('\n') ? viejo + '\n' : viejo) + linea + '\n'); await w.close();
+  } catch (e) { console.warn('No se pudo escribir el diario:', e); }
+};
+Guardado.prototype.diario = async function () {
+  try { const c = await this.carpetaCopias(); return (await (await (await c.getFileHandle(DIARIO)).getFile()).text()).split('\n').filter(Boolean).map(l => { const [fecha, aparato, desc, xrefs] = l.split('\t'); return { fecha, aparato, desc, xrefs: (xrefs || '').split(' ').filter(Boolean) }; }); }
+  catch { return []; }
+};
+Guardado.prototype.copias = async function () {
+  const c = await this.carpetaCopias(), out = [];
+  for await (const [n, h] of c.entries()) if (h.kind === 'file' && /\.ged$/i.test(n)) { const f = await h.getFile(); out.push({ nombre: n, tam: f.size, fecha: f.lastModified, deApp: /_app_\d{8}-\d{6}\.ged$/.test(n) }); }
+  return out.sort((a, b) => b.fecha - a.fecha);
+};
+Guardado.prototype.leerCopia = async function (nombre) {
+  const c = await this.carpetaCopias();
+  return new Uint8Array(await (await (await c.getFileHandle(nombre)).getFile()).arrayBuffer());
+};
+// Borra copias antiguas hechas por la aplicación, dejando las «quedan» más recientes. Devuelve { borradas, bytes }.
+Guardado.prototype.limpiarCopias = async function (quedan = 10) {
+  const c = await this.carpetaCopias(), app = (await this.copias()).filter(x => x.deApp);
+  let borradas = 0, bytes = 0;
+  for (const x of app.slice(quedan)) { await c.removeEntry(x.nombre); borradas++; bytes += x.tam; }
+  return { borradas, bytes };
+};

@@ -1,21 +1,23 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611011109';
-import { Arbol, nombreCompleto } from './modelo.js?v=202611011109';
-import { buscar, prepararVariantes } from './buscar.js?v=202611011109';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011109';
-import { BaseNombres } from './nombresdb.js?v=202611011109';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011109';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011109';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611011109';
-import { md, esc } from './md.js?v=202611011109';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes } from './arboles.js?v=202611011109';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011109';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011109';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011109';
-import { Guardado } from './guardar.js?v=202611011109';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011109';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011109';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011109';
+import { Gedcom } from './gedcom.js?v=202611011129';
+import { Arbol, nombreCompleto } from './modelo.js?v=202611011129';
+import { buscar, prepararVariantes } from './buscar.js?v=202611011129';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011129';
+import { BaseNombres } from './nombresdb.js?v=202611011129';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011129';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011129';
+import { revisarSalud, repararSalud } from './salud.js?v=202611011129';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011129';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611011129';
+import { md, esc } from './md.js?v=202611011129';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes } from './arboles.js?v=202611011129';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011129';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011129';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011129';
+import { Guardado } from './guardar.js?v=202611011129';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011129';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011129';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011129';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -105,7 +107,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011109')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011129')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -236,6 +238,7 @@ function verPersona(id, pestana) {
   });
   main.querySelectorAll('[data-md]').forEach(b => b.onclick = () => verTexto(b.dataset.md, b.textContent));
   if (pestana === 'menc') mencionesDe(id);
+  if (pestana === 'ged') historialDe(id);
 }
 
 // ---------- Edición (fase 2): cada cambio se guarda al momento, con copias y comprobaciones ----------
@@ -329,6 +332,7 @@ async function actualizarSiCambio() {
     const ged = Gedcom.desdeBytes(bytes);
     const nuevo = new Arbol(ged);
     if (!nuevo.personas.size) return false;
+    if (guardado) { const d = diferencias(ged, arbol.ged); guardado.apuntar(`Cambio hecho fuera de la aplicación: ${d.anadidas.length} añadidos, ${d.cambiadas.length} cambiados, ${d.quitadas.length} quitados`, [...d.anadidas, ...d.cambiadas, ...d.quitadas].slice(0, 200)); }
     arbol = nuevo; window.arbol = arbol;
     arbol.ponerRaices(raicesGuardadas());
     bytesAbiertos = bytes; listaLugares = null;
@@ -343,10 +347,11 @@ async function actualizarSiCambio() {
 setInterval(() => { if (document.visibilityState === 'visible' && $('#dialogo').hidden) actualizarSiCambio(); }, 20000);
 window.addEventListener('focus', () => { if ($('#dialogo').hidden) actualizarSiCambio(); });
 
-async function guardarAhora() {
+async function guardarAhora(desc = '', xrefs = []) {
   guardando = true;
   try {
     const r = await guardado.guardar(arbol.ged.bytes(), arbol.personas.size);
+    guardado.apuntar(desc || 'Cambio', xrefs);
     bytesAbiertos = guardado.base;   // lo que hay ahora en el disco
     try { const f = await archivoEnDisco(); if (f) { info.fecha = f.lastModified; info.tam = f.size; } } catch {}
     if (fuente) { fuente.datos.bytes = guardado.base; info.tam = guardado.base.length; }
@@ -360,9 +365,9 @@ async function operar(desc, fn) {
   if (await actualizarSiCambio()) { alert('El árbol acababa de cambiar fuera de la aplicación y se ha actualizado. Repite el cambio sobre la versión nueva.'); return; }
   editor.empezar(desc);
   try { fn(); } catch (e) { editor.cancelar(); alert(e.message); return; }
-  editor.terminar();
+  const txHecho = editor.terminar();
   try {
-    const r = await guardarAhora();
+    const r = await guardarAhora(desc, [...txHecho.antes.keys()]);
     flotante('Guardado: ' + desc + (r.copiaSesion ? ` · copia en ${r.copiaSesion}` : ''));
   } catch (e) {
     editor.deshacer();
@@ -376,7 +381,7 @@ async function deshacer() {
   const tx = editor?.deshacer();
   if (!tx) return;
   if (tx.csv?.length) await quitarCsv(tx.csv);
-  try { if (tx.antes.size || tx.cabecera != null) await guardarAhora(); flotante('Deshecho: ' + tx.desc); }
+  try { if (tx.antes.size || tx.cabecera != null) await guardarAhora('Deshacer: ' + tx.desc, [...tx.antes.keys()]); flotante('Deshecho: ' + tx.desc); }
   catch (e) { alert('No se ha podido guardar el deshacer. Recarga el árbol antes de seguir.\n\n' + e.message); await terminarEdicion(); }
   estadoEdicion(); ir();
 }
@@ -412,7 +417,7 @@ async function operarRegistro(desc, escribirCsv, cambiarGed) {
   try { res = cambiarGed(); } catch (e) { editor.cancelar(); await quitarCsv(csv); alert(e.message); return null; }
   const tx = editor.terminar(); tx.csv = csv;
   if (tx.antes.size || tx.cabecera != null) {
-    try { await guardarAhora(); }
+    try { await guardarAhora(desc, [...tx.antes.keys()]); }
     catch (e) { editor.deshacer(); await quitarCsv(csv); alert('No se ha guardado nada.\n\n' + e.message); if (e.cambiadoFuera) await terminarEdicion(); return null; }
   }
   estadoEdicion(); ir();
@@ -971,12 +976,14 @@ function verRevisar(tab) {
   const sub = (k, t) => `<a class="pest${tab === k ? ' activa' : ''}" href="#/revisar/${k}">${t}</a>`;
   pantalla(`<div class="buscador">
     <nav class="pestanas donde"><a class="pest" href="#/buscar">En el árbol</a><a class="pest" href="#/nombres">En los documentos (base de nombres)</a><a class="pest activa" href="#/revisar">Revisar el árbol</a></nav>
-    <nav class="pestanas">${sub('fronteras', 'Dónde se corta la línea')}${sub('incoherencias', 'Incoherencias')}${sub('duplicados', 'Posibles duplicados')}</nav>
+    <nav class="pestanas">${sub('fronteras', 'Dónde se corta la línea')}${sub('incoherencias', 'Incoherencias')}${sub('duplicados', 'Posibles duplicados')}${sub('salud', 'Salud del archivo')}${sub('copias', 'Copias e historial')}</nav>
     ${tab === 'fronteras' ? `<label class="raiz-rev">Antepasados de <select id="r-raiz">${arbol.raices.map(r => `<option value="${esc(r.id)}"${r.id === raiz ? ' selected' : ''}>${esc(r.nombre)}</option>`).join('')}</select></label>` : ''}
     <div id="r-res"><p class="cargando">Revisando…</p></div></div>`);
   $('#r-raiz')?.addEventListener('change', ev => { LS.set('revisarRaiz', ev.target.value); verRevisar(tab); });
   setTimeout(() => {
     const caja = $('#r-res'); if (!caja) return;
+    if (tab === 'salud') return verSalud(caja);
+    if (tab === 'copias') return verCopias(caja);
     caja.innerHTML = tab === 'incoherencias' ? pintarIncoherencias(arbol) : tab === 'duplicados' ? pintarDuplicados(arbol, !!editor) : pintarFronteras(arbol, raiz);
     caja.querySelectorAll('[data-fusionar]').forEach(b => b.onclick = async () => {
       const a = b.dataset.fusionar, r = await formularioFusion(arbol, a, variantes, b.dataset.con);
@@ -985,6 +992,87 @@ function verRevisar(tab) {
       verRevisar(tab);
     });
   }, 30);
+}
+
+// ---------- Salud del archivo ----------
+function verSalud(caja) {
+  const l = revisarSalud(arbol.ged), arreglables = l.filter(x => x.arreglo);
+  const grupos = new Map();
+  for (const x of l) { if (!grupos.has(x.tipo)) grupos.set(x.tipo, []); grupos.get(x.tipo).push(x); }
+  caja.innerHTML = `<p class="peq">${l.length ? `${l.length} avisos en el archivo (${arbol.personas.size.toLocaleString('es')} personas). ${arreglables.length} se pueden arreglar solos.` : '✔ El archivo está sano: no hay enlaces rotos, familias vacías ni líneas raras.'}</p>
+    ${arreglables.length ? (editor ? `<p class="botones"><button id="s-arreglar" class="principal">Arreglar los ${arreglables.length} seguros</button></p>` : '<p class="peq">Para arreglarlos, activa antes «Editar».</p>') : ''}
+    ${[...grupos.entries()].map(([t, xs]) => `<details class="gen"${xs.length < 30 ? ' open' : ''}><summary><b>${esc(t)}</b> <span class="peq">${xs.length}</span></summary>
+      ${xs.slice(0, 300).map(x => `<div class="fila-rev">${esc(x.texto)}${x.arreglo ? ' <span class="falta">se puede arreglar</span>' : ''}</div>`).join('')}</details>`).join('')}`;
+  $('#s-arreglar')?.addEventListener('click', async () => {
+    if (!confirm(`¿Arreglar ${arreglables.length} problemas? Se quitan los enlaces a registros que no existen, se completan los enlaces sin vuelta y se quitan las familias vacías. Se puede deshacer.`)) return;
+    let n = 0;
+    await operar('Arreglar la salud del archivo', () => { n = repararSalud(editor, arreglables); });
+    flotante(`Arreglados ${n} problemas.`); verRevisar('salud');
+  });
+}
+
+// ---------- Copias e historial ----------
+async function verCopias(caja) {
+  if (!guardado) { caja.innerHTML = '<p class="peq">Para ver, comparar y restaurar las copias de seguridad, activa antes «Editar» (da acceso a la carpeta del archivo).</p>'; return; }
+  const [lista, diario] = await Promise.all([guardado.copias(), guardado.diario()]);
+  const mb = b => (b / 1e6).toLocaleString('es', { maximumFractionDigits: 1 }) + ' MB';
+  const deApp = lista.filter(x => x.deApp);
+  caja.innerHTML = `<h3>Copias de seguridad (${lista.length}, ${mb(lista.reduce((s, x) => s + x.tam, 0))})</h3>
+    <p class="peq">Las «_app_» las hace esta aplicación; las demás, los scripts. Además, Dropbox guarda 30 días de versiones de cada archivo.</p>
+    ${deApp.length > 10 ? `<p class="botones"><button id="c-limpiar">Borrar ${deApp.length - 10} copias antiguas de la aplicación (deja las 10 últimas)</button></p>` : ''}
+    <div class="copias">${lista.map((x, i) => `<div class="fila-rev"><b>${esc(x.nombre)}</b> <span class="peq">${esc(new Date(x.fecha).toLocaleString('es'))} · ${mb(x.tam)}</span>
+      <span class="botones"><button class="mas" data-comparar="${i}">Comparar con el actual</button><button class="mas" data-restaurar="${i}">Restaurar todo</button></span>
+      <div class="diff" id="diff${i}"></div></div>`).join('')}</div>
+    <h3>Diario de cambios (${diario.length})</h3>
+    <div class="diario">${diario.slice(-300).reverse().map(d => `<div class="fila-rev"><span class="peq">${esc(d.fecha)} · ${esc(d.aparato)}</span> ${esc(d.desc)}
+      ${d.xrefs.length ? `<span class="peq"> · ${d.xrefs.slice(0, 6).map(x => arbol.p(x) ? `<a href="#/p/${esc(x.slice(1, -1))}">${esc(nombreCompleto(arbol.p(x)))}</a>` : esc(x)).join(', ')}${d.xrefs.length > 6 ? '…' : ''}</span>` : ''}</div>`).join('') || '<p class="nada">Todavía no hay cambios apuntados.</p>'}</div>`;
+  $('#c-limpiar')?.addEventListener('click', async () => {
+    if (!confirm(`¿Borrar ${deApp.length - 10} copias antiguas hechas por la aplicación? Se quedan las 10 últimas, las de los scripts y las versiones de Dropbox.`)) return;
+    const r = await guardado.limpiarCopias(10);
+    flotante(`Borradas ${r.borradas} copias (${mb(r.bytes)} liberados).`); verRevisar('copias');
+  });
+  caja.querySelectorAll('[data-comparar]').forEach(b => b.onclick = async () => {
+    const x = lista[+b.dataset.comparar], div = $('#diff' + b.dataset.comparar);
+    div.innerHTML = '<p class="cargando">Comparando…</p>';
+    const { ged: g } = personasDe(await guardado.leerCopia(x.nombre));
+    const d = diferencias(arbol.ged, g);
+    const nom = (xr, gg) => { const p = arbol.p(xr); if (p) return nombreCompleto(p); const r = gg.porXref.get(xr); return r ? (r.raw.match(/\n1 NAME ([^\r\n]*)/)?.[1] || '').replace(/\//g, '') || xr : xr; };
+    const filaCambio = xr => `<div class="cambio"><a href="#/p/${esc(xr.slice(1, -1))}">${esc(nom(xr, g))}</a> <span class="peq">${esc(xr)}</span>
+      ${editor ? `<button class="mas" data-rest="${esc(xr)}">Volver a como estaba en la copia</button>` : ''}
+      <details><summary class="peq">ver qué cambió</summary>${(() => { const l = lineasDistintas(arbol.ged.porXref.get(xr).texto(), g.porXref.get(xr).texto());
+        return `<pre class="ged">${l.soloCopia.map(t => '− ' + esc(t)).join('\n')}\n${l.soloAhora.map(t => '+ ' + esc(t)).join('\n')}</pre>`; })()}</details></div>`;
+    div.innerHTML = `<p class="peq">Desde esa copia: ${d.anadidas.length} personas o familias nuevas, ${d.cambiadas.length} cambiadas, ${d.quitadas.length} quitadas${d.otros ? ` y ${d.otros} registros de fuentes, notas o fotos` : ''}.
+      «−» es lo que había en la copia y «+» lo que hay ahora.</p>
+      ${d.cambiadas.slice(0, 200).map(filaCambio).join('')}
+      ${d.quitadas.length ? `<p class="peq">Quitadas desde la copia: ${d.quitadas.slice(0, 50).map(xr => `${esc(nom(xr, g))} ${editor ? `<button class="mas" data-rest="${esc(xr)}">recuperar</button>` : ''}`).join(' · ')}</p>` : ''}
+      ${d.anadidas.length ? `<p class="peq">Nuevas desde la copia: ${d.anadidas.slice(0, 50).map(xr => `<a href="#/p/${esc(xr.slice(1, -1))}">${esc(nom(xr, g))}</a>`).join(' · ')}</p>` : ''}`;
+    div.querySelectorAll('[data-rest]').forEach(bb => bb.onclick = async () => {
+      const xr = bb.dataset.rest;
+      if (!confirm(`¿Volver a poner ${nom(xr, g)} (${xr}) tal como estaba en «${x.nombre}»? Solo cambia esa ficha. Se puede deshacer.`)) return;
+      await operar(`Restaurar ${nom(xr, g)} desde ${x.nombre}`, () => editor.restaurarRegistro(xr, g.porXref.get(xr).texto()));
+      verRevisar('copias');
+    });
+  });
+  caja.querySelectorAll('[data-restaurar]').forEach(b => b.onclick = async () => {
+    const x = lista[+b.dataset.restaurar];
+    if (!confirm(`¿Volver TODO el árbol a la copia «${x.nombre}» (${new Date(x.fecha).toLocaleString('es')})?\n\nLo de ahora se guarda antes como copia, así que también se puede volver atrás.`)) return;
+    try {
+      const bytes = await guardado.leerCopia(x.nombre), { personas } = personasDe(bytes);
+      guardando = true;
+      try { await guardado.guardar(bytes, personas); } finally { guardando = false; }
+      await guardado.apuntar(`Restaurar todo el árbol desde ${x.nombre}`);
+      info.fecha = 0; await actualizarSiCambio();
+      flotante(`Restaurado desde ${x.nombre}.`); verRevisar('copias');
+    } catch (e) { alert('No se ha restaurado nada.\n\n' + e.message); }
+  });
+}
+
+// Historial de una persona (diario de cambios) en la pestaña GEDCOM
+async function historialDe(id) {
+  const caja = $('#historial'); if (!caja) return;
+  if (!guardado) { caja.innerHTML = '<p class="peq">El historial de cambios se ve con «Editar» activado.</p>'; return; }
+  const l = (await guardado.diario()).filter(d => d.xrefs.includes(id)).reverse();
+  caja.innerHTML = `<h4>Historial de cambios</h4>${l.map(d => `<div class="fila-rev"><span class="peq">${esc(d.fecha)} · ${esc(d.aparato)}</span> ${esc(d.desc)}</div>`).join('') || '<p class="nada">Sin cambios apuntados en el diario.</p>'}`;
 }
 
 // ---------- Ajustes ----------
@@ -998,6 +1086,10 @@ function ajustes() {
       ${info.fecha ? ' · modificado el ' + esc(new Date(info.fecha).toLocaleString('es')) : ''}
       ${info.copia ? '<br>Es una copia guardada en este navegador. Para actualizarla, abre otra vez el archivo.' : ''}</p>
     <p><button id="otro">Abrir otro GEDCOM…</button></p>
+    <h3>Exportar para compartir</h3>
+    <p class="peq">Un GEDCOM para la familia o para FamilySearch y MyHeritage: las personas que pueden estar vivas salen como «Privado» (sin datos, con sus enlaces).</p>
+    <label class="check"><input type="checkbox" id="x-notas" checked> Quitar también las notas</label>
+    <p><button id="x-compartir">Descargar GEDCOM para compartir</button></p>
     <h3>Personas de referencia</h3>
     <p class="peq">Salen en la barra de arriba y en el filtro de línea, y numeran a sus antepasados (Ahnentafel). Se marcan con la estrella en la ficha de cada persona.</p>
     <ul>${arbol.raices.map(r => `<li>${esc(r.letra)} · <a href="#/p/${esc(r.id.slice(1, -1))}">${esc(r.nombre)}</a> <button data-quitar="${esc(r.id)}">Quitar</button></li>`).join('')}</ul>
@@ -1014,6 +1106,13 @@ function ajustes() {
   </div>`);
   $('#otro').onclick = async () => { await Fuente.olvidar(); LS.set('modo', null); location.hash = '#/'; location.reload(); };
   $('#sinbase')?.addEventListener('click', async () => { baseNombres?.cerrar(); baseNombres = null; await bdGuardar('nombresDb', null); ajustes(); });
+  $('#x-compartir').onclick = () => {
+    const bytes = paraCompartir(arbol.ged, arbol, { vivos: true, notas: $('#x-notas').checked, utf8: true });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+    a.download = info.nombre.replace(/\.ged$/i, '') + '_para_compartir.ged'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  };
   main.querySelectorAll('[data-quitar]').forEach(b => b.onclick = () => { alternarRaiz(b.dataset.quitar); ajustes(); });
   if (hayDisco) {
     $('#carpeta').onclick = async () => { try { await anadirCarpeta(true); ajustes(); } catch (e) { if (e.name !== 'AbortError') alert(e.message); } };
