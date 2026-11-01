@@ -209,6 +209,24 @@ ul.desc a { text-decoration: none; }
 ul.desc a.sM b { color: var(--h); } ul.desc a.sF b { color: var(--m); }
 ul.desc summary { cursor: pointer; }
 
+.fila { grid-template-columns: auto 1fr; }
+.fila .num { min-width: 52px; }
+/* Gráfico de descendientes: cada persona arriba, a la altura de su primer hijo */
+.grafico-desc { overflow-x: auto; padding: 4px 0 10px; }
+.grafico-desc .dn { display: flex; align-items: flex-start; }
+.grafico-desc .caja-arbol { display: flex; flex-direction: column; text-decoration: none; color: var(--tinta); width: 200px; margin: 3px 0; flex: none; align-self: flex-start; }
+.grafico-desc .cony { font-size: .8em; color: var(--suave); }
+.grafico-desc .mas-desc { font-size: .78em; color: var(--acento2); }
+.grafico-desc .ch { display: flex; flex-direction: column; padding-left: 14px; position: relative; }
+.grafico-desc .ch::before { content: ''; position: absolute; left: 0; top: 24px; width: 14px; border-top: 1px solid var(--linea); }
+.grafico-desc .ch > .dn { position: relative; padding-left: 14px; }
+.grafico-desc .ch > .dn::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; border-left: 1px solid var(--linea); }
+.grafico-desc .ch > .dn:first-child::before { top: 24px; }
+.grafico-desc .ch > .dn:last-child::before { bottom: auto; height: 24px; }
+.grafico-desc .ch > .dn:only-child::before { display: none; }
+.grafico-desc .ch > .dn::after { content: ''; position: absolute; left: 0; top: 24px; width: 14px; border-top: 1px solid var(--linea); }
+@media (max-width: 760px) { .grafico-desc .caja-arbol { width: 160px; font-size: .9em; } }
+
 /* Detalle */
 .detalle { margin-top: 18px; background: var(--papel); border: 1px solid var(--linea); border-radius: 12px; overflow: hidden; }
 .pestanas { display: flex; overflow-x: auto; border-bottom: 1px solid var(--linea); }

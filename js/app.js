@@ -1,21 +1,21 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611011058';
-import { Arbol, nombreCompleto } from './modelo.js?v=202611011058';
-import { buscar, prepararVariantes } from './buscar.js?v=202611011058';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011058';
-import { BaseNombres } from './nombresdb.js?v=202611011058';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011058';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011058';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611011058';
-import { md, esc } from './md.js?v=202611011058';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611011058';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011058';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011058';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011058';
-import { Guardado } from './guardar.js?v=202611011058';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011058';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011058';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011058';
+import { Gedcom } from './gedcom.js?v=202611011109';
+import { Arbol, nombreCompleto } from './modelo.js?v=202611011109';
+import { buscar, prepararVariantes } from './buscar.js?v=202611011109';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011109';
+import { BaseNombres } from './nombresdb.js?v=202611011109';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011109';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011109';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611011109';
+import { md, esc } from './md.js?v=202611011109';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes } from './arboles.js?v=202611011109';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011109';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011109';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011109';
+import { Guardado } from './guardar.js?v=202611011109';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011109';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011109';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011109';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -105,7 +105,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011058')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011109')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -640,7 +640,7 @@ function verArbol(id) {
   const p = arbol.p(id);
   document.title = 'Árbol de ' + nombreCompleto(p);
   main.dataset.persona = id;
-  const cuerpo = vista === 'lista' ? lista(arbol, id) : vista === 'desc' ? descendientes(arbol, id) : grafico(arbol, id);
+  const cuerpo = vista === 'lista' ? lista(arbol, id) : vista === 'desc' ? descendientes(arbol, id) : vista === 'gdesc' ? graficoDescendientes(arbol, id) : grafico(arbol, id);
   pantalla(`<div class="arbol-vista"><h2 class="tit-arbol">Árbol de ${esc(nombreCompleto(p))}
       <a class="boton imprimir" href="#/imprimir/${esc(id.slice(1, -1))}">🖨 Imprimir / PDF</a></h2>
     <section class="detalle">${pestanasArbol(vista)}<div class="cuerpo">${cuerpo}</div></section></div>`);
@@ -649,7 +649,7 @@ function verArbol(id) {
   // «Ir al n.º»: abre su generación, la lleva a la vista y la resalta.
   $('#ir-num')?.addEventListener('submit', ev => {
     ev.preventDefault();
-    const n = parseInt($('#num').value, 10);
+    const n = parseInt($('#num').value.replace(/[.\s]/g, ''), 10);
     const fila = n >= 2 && document.getElementById('n' + n);
     if (!fila) return alert(n === 1 ? 'El n.º 1 es la propia persona.' : `No hay antepasado n.º ${n} en el árbol.`);
     fila.closest('details').open = true;

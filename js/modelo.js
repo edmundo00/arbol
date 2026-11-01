@@ -1,6 +1,6 @@
 // Personas y familias sacadas del GEDCOM, listas para buscar y mostrar.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011058';
-import { clave } from './buscar.js?v=202611011058';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011109';
+import { clave } from './buscar.js?v=202611011109';
 
 export const EVENTOS = {
   BIRT: 'Nacimiento', CHR: 'Bautismo', BAPM: 'Bautismo', CONF: 'Confirmación', DEAT: 'Defunción', BURI: 'Entierro',
@@ -153,3 +153,14 @@ export function vida(p) {
 export function nombreCompleto(p) {
   return p ? [p.nombre, p.apellidos, p.sufijo].filter(Boolean).join(' ') || '(sin nombre)' : '?';
 }
+
+// Números legibles: «536870912» → «536.870.912»; en las cifras de un millón o más, también en palabras.
+export const miles = n => String(Math.round(Number(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+export function enPalabras(n) {
+  const r = (x, d) => x.toLocaleString('es-ES', { maximumFractionDigits: x < 10 ? d : 0 });
+  if (n >= 1e12) return `${r(n / 1e12, 1)} billones`;
+  if (n >= 1e9) return `${r(n / 1e9, 1)} mil millones`;
+  if (n >= 1e6) return n < 2e6 && Math.round(n / 1e5) === 10 ? '1 millón' : `${r(n / 1e6, 1)} millones`;
+  return '';
+}
+export const cifra = n => miles(n) + (n >= 1e6 ? ` (${enPalabras(n)})` : '');

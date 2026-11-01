@@ -1,6 +1,6 @@
 // Árboles: gráfico de ascendientes, lista de antepasados por generaciones y esquema de descendientes.
-import { vida, nombreCompleto } from './modelo.js?v=202611011058';
-import { esc } from './md.js?v=202611011058';
+import { vida, nombreCompleto, miles, cifra } from './modelo.js?v=202611011109';
+import { esc } from './md.js?v=202611011109';
 
 const enlace = id => `#/p/${id.slice(1, -1)}`;
 
@@ -27,7 +27,7 @@ function nombreGen(g) { return PARENTESCO[g] || `${g - 1}.ª generación de ante
 
 export function pestanasArbol(vista) {
   const p = (k, t) => `<button class="pest${vista === k ? ' activa' : ''}" data-vista="${k}">${t}</button>`;
-  return `<nav class="pestanas">${p('grafico', 'Gráfico')}${p('lista', 'Antepasados')}${p('desc', 'Descendientes')}</nav>`;
+  return `<nav class="pestanas">${p('grafico', 'Gráfico de antepasados')}${p('gdesc', 'Gráfico de descendientes')}${p('lista', 'Antepasados')}${p('desc', 'Descendientes')}</nav>`;
 }
 
 // ---------- Gráfico de 5 generaciones ----------
@@ -42,10 +42,10 @@ export function grafico(arbol, id, GENS = 5) {
       const sigue = g === GENS && x && (m.get(2 * n) || m.get(2 * n + 1));
       const estilo = `grid-column:${g};grid-row:${k * alto + 1} / span ${alto}`;
       celdas += p
-        ? `<div class="caja-arbol s${p.sexo}" style="${estilo}"><a href="${enlace(x)}"><span class="num">${n}</span>
+        ? `<div class="caja-arbol s${p.sexo}" style="${estilo}"><a href="${enlace(x)}"><span class="num">${miles(n)}</span>
              <span class="nom">${esc(p.nombre)} <b>${esc(p.apellidos)}</b></span><span class="vida">${esc(vida(p))}</span></a>
              ${sigue ? '<span class="seguir" aria-hidden="true">▸</span>' : ''}</div>`
-        : `<div class="caja-arbol vacia" style="${estilo}"><span class="num">${n}</span>${g > 1 && m.get(Math.floor(n / 2)) ? '<span class="vida">desconocido</span>' : ''}</div>`;
+        : `<div class="caja-arbol vacia" style="${estilo}"><span class="num">${miles(n)}</span>${g > 1 && m.get(Math.floor(n / 2)) ? '<span class="vida">desconocido</span>' : ''}</div>`;
     }
   }
   const hijo = arbol.p(id) && padresHijo(arbol, id);
@@ -72,16 +72,16 @@ export function lista(arbol, id) {
   }
   const bloques = [...porGen.entries()].sort((a, b) => a[0] - b[0]).map(([g, l]) => {
     l.sort((a, b) => a[0] - b[0]);
-    return `<details class="gen"${g <= 5 ? ' open' : ''}><summary><b>${esc(nombreGen(g))}</b> <span class="peq">${l.length} de ${2 ** (g - 1)}</span></summary>
+    return `<details class="gen"${g <= 5 ? ' open' : ''}><summary><b>${esc(nombreGen(g))}</b> <span class="peq">${miles(l.length)} de ${cifra(2 ** (g - 1))}</span></summary>
       ${l.map(([n, x]) => {
         const p = arbol.p(x), lugar = p.nac?.lugar || p.def?.lugar || '';
-        return `<a class="fila s${p.sexo}" href="${enlace(x)}" id="n${n}"><span class="num">${n}</span><span class="nom">${esc(p.nombre)} <b>${esc(p.apellidos)}</b></span>
+        return `<a class="fila s${p.sexo}" href="${enlace(x)}" id="n${n}"><span class="num">${miles(n)}</span><span class="nom">${esc(p.nombre)} <b>${esc(p.apellidos)}</b></span>
           <span class="vida">${esc(vida(p))}${lugar ? ' · ' + esc(lugar) : ''}</span></a>`;
       }).join('')}</details>`;
   }).join('');
   return `<p class="peq">Pulsa a cualquiera para ver su árbol; para ver su ficha, pulsa luego «Familia».</p>
     <form class="ir-num" id="ir-num"><label>Ir al antepasado n.º<input id="num" inputmode="numeric" autocomplete="off" placeholder="p. ej. 12"></label><button>Ir</button></form>
-    <p class="peq">${new Set([...m.values()]).size - 1} antepasados conocidos${m.size > new Set([...m.values()]).size ? ` (${m.size - 1} contando dos veces a los que aparecen por varias ramas)` : ''}. Padre = 2 × hijo; madre = 2 × hijo + 1.</p>
+    <p class="peq">${miles(new Set([...m.values()]).size - 1)} antepasados conocidos${m.size > new Set([...m.values()]).size ? ` (${miles(m.size - 1)} contando dos veces a los que aparecen por varias ramas)` : ''}. Padre = 2 × hijo; madre = 2 × hijo + 1.</p>
     ${bloques || '<p class="nada">No hay antepasados registrados.</p>'}`;
 }
 
@@ -108,4 +108,27 @@ export function descendientes(arbol, id, MAX = 12) {
   };
   const html = rama(id, 0);
   return `<p class="peq">${total - 1} descendientes. Pulsa ▸ para abrir o cerrar cada rama.</p><ul class="desc">${html}</ul>`;
+}
+
+// ---------- Gráfico de descendientes: la persona a la izquierda y sus hijos, nietos… hacia la derecha ----------
+export function graficoDescendientes(arbol, id, GENS = 4) {
+  const vistos = new Set();
+  let total = 0;
+  const caja = (x, nivel) => {
+    const p = arbol.p(x);
+    if (!p) return '';
+    const unions = p.fams.map(f => arbol.f(f)).filter(Boolean);
+    const hijos = [...new Set(unions.flatMap(f => f.hijos))].filter(h => arbol.p(h)).sort((a, b) => (arbol.p(a).ymin ?? 9999) - (arbol.p(b).ymin ?? 9999));
+    const conyuges = unions.map(f => arbol.p(f.marido === x ? f.mujer : f.marido)).filter(Boolean);
+    const repetido = vistos.has(x); vistos.add(x); total++;
+    const mas = !repetido && nivel >= GENS && hijos.length;
+    const html = `<a class="caja-arbol s${p.sexo}" href="${enlace(x)}"><span class="nom">${esc(p.nombre)} <b>${esc(p.apellidos)}</b></span>
+      <span class="vida">${esc(vida(p))}</span>
+      ${conyuges.map(c => `<span class="cony">⚭ ${esc(nombreCompleto(c))}</span>`).join('')}
+      ${mas ? `<span class="mas-desc">▸ ${hijos.length} hijo${hijos.length === 1 ? '' : 's'} más</span>` : ''}${repetido ? '<span class="mas-desc">(ya aparece arriba)</span>' : ''}</a>`;
+    if (repetido || nivel >= GENS || !hijos.length) return `<div class="dn">${html}</div>`;
+    return `<div class="dn">${html}<div class="ch">${hijos.map(h => caja(h, nivel + 1)).join('')}</div></div>`;
+  };
+  const html = caja(id, 1);
+  return `<p class="peq">${GENS} generaciones. Pulsa a cualquiera para ver sus descendientes desde él.</p><div class="grafico-desc">${html}</div>`;
 }

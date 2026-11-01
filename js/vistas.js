@@ -1,12 +1,12 @@
 // Pantallas: resultados de búsqueda, vista de familia, datos, notas y documentos de cada persona.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011058';
-import { fechaES, vida, nombreCompleto, anios } from './modelo.js?v=202611011058';
-import { esc } from './md.js?v=202611011058';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011109';
+import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611011109';
+import { esc } from './md.js?v=202611011109';
 
 export function insignias(arbol, id) {
   return arbol.raices.map(({ id: r, letra, nombre: quien }) => {
     const n = arbol.ahnentafel(r).get(id);
-    return n ? `<span class="ahn" title="Antepasado n.º ${n.join(', ')} de ${esc(quien)}">${esc(letra)}&nbsp;${n.slice(0, 2).join('·')}${n.length > 2 ? '…' : ''}</span>` : '';
+    return n ? `<span class="ahn" title="Antepasado n.º ${n.map(miles).join(', ')} de ${esc(quien)}">${esc(letra)}&nbsp;${n.slice(0, 2).map(miles).join(' · ')}${n.length > 2 ? '…' : ''}</span>` : '';
   }).join('');
 }
 

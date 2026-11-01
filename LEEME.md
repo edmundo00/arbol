@@ -50,8 +50,9 @@ Cada aparato y cada archivo guardan su propia lista.
 - **Vista de familia**: la persona con sus cónyuges e hijos, sus padres y sus hermanos. Con un clic se pone en el centro a cualquiera de ellos.
 - **Dos modos, Familia y Árbol**, con los dos botones de la barra de arriba (en el móvil, solo los iconos). El programa recuerda el modo:
   si estás en Árbol y pulsas a alguien, el árbol se centra en esa persona; para ver su ficha, pulsas **Familia**.
-  - **Gráfico**: la persona y 5 generaciones de antepasados (la flecha ▸ indica que hay más hacia atrás).
-  - **Antepasados**: todos, por generaciones, con su número (2 padre, 3 madre, 4 abuelo paterno…). **Ir al n.º** marca la fila de ese antepasado.
+  - **Gráfico de antepasados**: la persona y 5 generaciones de antepasados (la flecha ▸ indica que hay más hacia atrás).
+  - **Gráfico de descendientes**: la persona a la izquierda y 3 generaciones de hijos, nietos y bisnietos hacia la derecha, con sus cónyuges.
+  - **Antepasados**: todos, por generaciones, con su número (2 padre, 3 madre, 4 abuelo paterno…) y cuántos hay de cuántos posibles. Los números llevan puntos de millar y, desde el millón, también en palabras («549.755.813.888 (550 mil millones)»). **Ir al n.º** marca la fila de ese antepasado.
   - **Descendientes**: hijos, nietos… en un esquema que se abre y se cierra.
 - **Imprimir / PDF** (botón en el modo Árbol):
   - **Abanico** (semicírculo, como el cartel de Corrubedo) o **cuadro de ascendientes**, de 3 a 10 generaciones;

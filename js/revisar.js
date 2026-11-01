@@ -1,8 +1,8 @@
 // Revisar el árbol: dónde se corta cada línea, incoherencias de fechas y posibles duplicados.
 // Las reglas son las de 00_control/scripts/auditar_gedcom.py.
-import { antepasados } from './arboles.js?v=202611011058';
-import { nombreCompleto, vida } from './modelo.js?v=202611011058';
-import { esc } from './md.js?v=202611011058';
+import { antepasados } from './arboles.js?v=202611011109';
+import { nombreCompleto, vida, miles } from './modelo.js?v=202611011109';
+import { esc } from './md.js?v=202611011109';
 
 const y = e => (e ? anio(e.fecha) : null);
 // Año de una fecha como en auditar_gedcom.py: el primero entre 1000 y 2099; «entre A y B», el del medio.
@@ -36,10 +36,10 @@ export function pintarFronteras(arbol, raiz) {
   const l = fronteras(arbol, raiz);
   const porGen = new Map();
   for (const x of l) { if (!porGen.has(x.g)) porGen.set(x.g, []); porGen.get(x.g).push(x); }
-  return `<p class="peq">${l.length} antepasados de ${esc(nombreCompleto(arbol.p(raiz)))} con algún progenitor sin identificar.
+  return `<p class="peq">${miles(l.length)} antepasados de ${esc(nombreCompleto(arbol.p(raiz)))} con algún progenitor sin identificar.
       Son las líneas que quedan por investigar; los primeros son los más cercanos.</p>
     ${[...porGen.entries()].map(([g, xs]) => `<details class="gen"${g <= 8 ? ' open' : ''}><summary><b>${esc(GEN(g)[0].toUpperCase() + GEN(g).slice(1))}</b> <span class="peq">${xs.length}</span></summary>
-      ${xs.map(x => `<div class="fila-rev"><span class="num">${x.n}</span> ${enlace(x.p, x.p.nac?.lugar ? ' · ' + x.p.nac.lugar : '')} <span class="falta">falta ${x.falta.join(' y ')}</span></div>`).join('')}</details>`).join('')}`;
+      ${xs.map(x => `<div class="fila-rev"><span class="num">${miles(x.n)}</span> ${enlace(x.p, x.p.nac?.lugar ? ' · ' + x.p.nac.lugar : '')} <span class="falta">falta ${x.falta.join(' y ')}</span></div>`).join('')}</details>`).join('')}`;
 }
 
 // ---------- Incoherencias ----------
