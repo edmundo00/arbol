@@ -1,8 +1,8 @@
 // Pantallas: resultados de búsqueda, vista de familia, datos, notas y documentos de cada persona.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011706';
-import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611011706';
-import { esc } from './md.js?v=202611011706';
-import { pruebasDe, resumenPruebas, cronologia, ES_TAREA } from './investigar.js?v=202611011706';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611011711';
+import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611011711';
+import { esc } from './md.js?v=202611011711';
+import { pruebasDe, resumenPruebas, cronologia, ES_TAREA } from './investigar.js?v=202611011711';
 
 export function insignias(arbol, id) {
   return arbol.raices.map(({ id: r, letra, nombre: quien }) => {

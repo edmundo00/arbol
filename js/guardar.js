@@ -5,8 +5,8 @@
 //   3. el archivo nuevo se lee otra vez y se comprueba: mismas personas más las añadidas, enlaces que apuntan a algo;
 //   4. copias en copias/: la de la sesión (una vez) y la anterior a cada guardado, comprobadas tras escribirlas.
 // La escritura la hace el navegador en un archivo aparte que solo al cerrar sustituye al bueno; después se relee y compara.
-import { Gedcom } from './gedcom.js?v=202611011706';
-import { bdLeer, bdGuardar } from './almacen.js?v=202611011706';
+import { Gedcom } from './gedcom.js?v=202611011711';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611011711';
 
 const iguales = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
 const sello = () => { const d = new Date(), p = x => String(x).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
@@ -36,14 +36,24 @@ export class Guardado {
   // Pide la carpeta del GEDCOM con permiso de escritura y comprueba que el archivo es el mismo que está abierto.
   static async preparar(nombre, bytesAbiertos) {
     let dir = await bdLeer('carpetaGedcom:' + nombre);
-    if (dir && (await dir.requestPermission({ mode: 'readwrite' })) !== 'granted') {
-      // Sin permiso: se olvida esa carpeta para que la próxima vez se pueda elegir otra.
+    const recordada = !!dir;
+    let p = 'granted';
+    try { if (dir) p = await dir.requestPermission({ mode: 'readwrite' }); } catch { p = 'movida'; }
+    if (dir && p !== 'granted') {
+      // Sin permiso (o la carpeta ya no existe): se olvida esa carpeta para que la próxima vez se pueda elegir otra.
       await bdGuardar('carpetaGedcom:' + nombre, null);
-      throw new Error('No se ha dado permiso para escribir en la carpeta. Vuelve a pulsar el botón y elige la carpeta del archivo.');
+      throw new Error(p === 'movida' ? `La carpeta «${dir.name}» ya no está donde estaba (ha cambiado de sitio). Vuelve a pulsar el botón y elige la carpeta donde está ahora «${nombre}».`
+        : 'No se ha dado permiso para escribir en la carpeta. Vuelve a pulsar el botón y elige la carpeta del archivo.');
     }
     if (!dir) dir = await window.showDirectoryPicker({ id: 'arbol-gedcom-dir', mode: 'readwrite' });
     let fh;
-    try { fh = await dir.getFileHandle(nombre); } catch { throw new Error(`En la carpeta «${dir.name}» no está «${nombre}». Elige la carpeta donde está el archivo abierto.`); }
+    try { fh = await dir.getFileHandle(nombre); } catch {
+      if (recordada) {   // la carpeta recordada ya no tiene el archivo (se ha movido): se olvida
+        await bdGuardar('carpetaGedcom:' + nombre, null);
+        throw new Error(`En la carpeta «${dir.name}» ya no está «${nombre}» (ha cambiado de sitio). Vuelve a pulsar el botón y elige la carpeta donde está ahora.`);
+      }
+      throw new Error(`En la carpeta «${dir.name}» no está «${nombre}». Elige la carpeta donde está el archivo abierto.`);
+    }
     const disco = new Uint8Array(await (await fh.getFile()).arrayBuffer());
     if (!iguales(disco, bytesAbiertos)) throw new Error(`El «${nombre}» de esa carpeta no es igual al que tienes abierto (puede haber cambiado). Vuelve a abrir el archivo y luego activa la edición.`);
     await bdGuardar('carpetaGedcom:' + nombre, dir);

@@ -1,27 +1,27 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611011706';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611011706';
-import { buscar, prepararVariantes } from './buscar.js?v=202611011706';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011706';
-import { BaseNombres } from './nombresdb.js?v=202611011706';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011706';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011706';
-import { revisarSalud, repararSalud } from './salud.js?v=202611011706';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011706';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011706';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011706';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611011706';
-import { md, esc } from './md.js?v=202611011706';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011706';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011706';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011706';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011706';
-import { Guardado } from './guardar.js?v=202611011706';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011706';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611011706';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011706';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011706';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611011706';
+import { Gedcom } from './gedcom.js?v=202611011711';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611011711';
+import { buscar, prepararVariantes } from './buscar.js?v=202611011711';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011711';
+import { BaseNombres } from './nombresdb.js?v=202611011711';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011711';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011711';
+import { revisarSalud, repararSalud } from './salud.js?v=202611011711';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011711';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011711';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011711';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611011711';
+import { md, esc } from './md.js?v=202611011711';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011711';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011711';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011711';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011711';
+import { Guardado } from './guardar.js?v=202611011711';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011711';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611011711';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011711';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011711';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611011711';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -32,9 +32,12 @@ let editor = null, guardado = null, guardando = false, bytesAbiertos = null;
 const estadoBusqueda = JSON.parse(sessionStorage.getItem('arbol.busqueda') || '{}');
 
 function pantalla(html) { main.innerHTML = html; window.scrollTo(0, 0); }
+// El archivo o la carpeta que se recordaba ya no está donde estaba (se ha movido, renombrado o borrado)
+const seHaMovido = e => e?.name === 'NotFoundError';
+const MOVIDO = 'Un archivo o una carpeta que el programa recordaba ya no está donde estaba (¿se ha movido de sitio?).';
 function error(e) {
   console.error(e);
-  pantalla(`<div class="caja"><h2>Algo ha fallado</h2><p class="aviso">${esc(e.message || e)}</p>
+  pantalla(`<div class="caja"><h2>Algo ha fallado</h2><p class="aviso">${esc(seHaMovido(e) ? MOVIDO + ' Pulsa «Abrir otro archivo» y elige el GEDCOM donde está ahora.' : e.message || e)}</p>
     <p><button onclick="location.reload()">Volver a intentarlo</button> <button id="otro">Abrir otro archivo</button></p></div>`);
   $('#otro').onclick = async () => { await Fuente.olvidar(); LS.set('modo', null); location.hash = '#/'; location.reload(); };
 }
@@ -49,9 +52,12 @@ async function arrancar() {
       return abrir(await srv.bajar(PRUEBA));
     }
     const ult = await Fuente.ultima();
-    if (ult?.asa && await permiso(ult.asa, false)) fuente = await Fuente.desdeAsa(ult.asa);
-    else if (ult?.copia) fuente = new Fuente(ult.copia);
-    else return inicio(ult);
+    if (ult?.asa) {
+      try { if (await permiso(ult.asa, false)) fuente = await Fuente.desdeAsa(ult.asa); }
+      catch (e) { if (!seHaMovido(e)) throw e; await Fuente.olvidar(); return inicio(null, ult.asa.name); }
+    }
+    if (!fuente && ult?.copia) fuente = new Fuente(ult.copia);
+    if (!fuente) return inicio(ult);
     await recuperarCarpeta();
     abrir(fuente.datos);
   } catch (e) { error(e); }
@@ -59,11 +65,17 @@ async function arrancar() {
 
 async function recuperarCarpeta() {
   if (!hayDisco) return;
-  const listas = [], pendientes = [];
-  for (const h of await Carpetas.guardadas()) (await permiso(h, false) ? listas : pendientes).push(h);
+  const listas = [], pendientes = [], guardadas = await Carpetas.guardadas(), siguen = [];
+  for (const h of guardadas) {
+    // Una carpeta que ya no existe (movida o renombrada) se olvida, para que se pueda elegir la nueva
+    try { if (await permiso(h, false)) { for await (const _ of h.keys()) break; listas.push(h); } else pendientes.push(h); siguen.push(h); }
+    catch (e) { if (!seHaMovido(e)) throw e; carpetasMovidas.push(h.name); }
+  }
+  if (siguen.length < guardadas.length) await Carpetas.guardar(siguen);
   carpeta = listas.length ? new Carpetas(listas.map(h => new Carpeta(h))) : null;
   carpetaPendiente = pendientes;
 }
+let carpetasMovidas = [];
 // Añade una carpeta de fotos (o vuelve a dar permiso a las guardadas). Tiene que llamarse desde un clic.
 async function anadirCarpeta(nueva) {
   const todas = await Carpetas.guardadas();
@@ -78,10 +90,12 @@ async function anadirCarpeta(nueva) {
   await recuperarCarpeta();
 }
 
-function inicio(ult) {
+function inicio(ult, movido = null) {
   $('#cabecera').hidden = true;
   pantalla(`<div class="caja">
     <h2>Abrir un árbol</h2>
+    ${movido ? `<p class="aviso">El archivo «${esc(movido)}» que abriste la última vez ha cambiado de sitio (o ya no existe).
+      Pulsa <b>Elegir archivo GEDCOM…</b> y búscalo donde está ahora.</p>` : ''}
     <p>Elige un archivo GEDCOM (<code>.ged</code>) de este aparato. No se sube a ningún sitio: se lee aquí, en el navegador.</p>
     ${ult?.asa ? `<p><button id="reabrir" class="principal">Volver a abrir «${esc(ult.asa.name)}»</button></p>` : ''}
     <p>${hayDisco ? `<button id="elegir"${ult?.asa ? '' : ' class="principal"'}>Elegir archivo GEDCOM…</button>`
@@ -90,7 +104,11 @@ function inicio(ult) {
       : 'En este aparato se guarda una copia del archivo en el navegador. Cuando lo cambies en el ordenador, vuelve a copiarlo al aparato y ábrelo otra vez.'}</p>
     ${esLocal ? `<hr><p class="peq">Pruebas: <button id="servidor">Usar el servidor local</button></p>` : ''}
   </div>`);
-  if (ult?.asa) $('#reabrir').onclick = () => intentar(async () => { if (!await permiso(ult.asa, true)) throw new Error('Sin permiso para leer el archivo.'); fuente = await Fuente.desdeAsa(ult.asa); });
+  if (ult?.asa) $('#reabrir').onclick = async () => {
+    try { if (!await permiso(ult.asa, true)) return error(new Error('Sin permiso para leer el archivo.')); fuente = await Fuente.desdeAsa(ult.asa); }
+    catch (e) { if (!seHaMovido(e)) return error(e); await Fuente.olvidar(); return inicio(null, ult.asa.name); }
+    intentar(async () => {});
+  };
   if (hayDisco) $('#elegir').onclick = () => intentar(async () => { fuente = await Fuente.elegir(); });
   else $('#archivo').onchange = ev => ev.target.files[0] && intentar(async () => { fuente = await Fuente.desdeFile(ev.target.files[0]); });
   if (esLocal) $('#servidor').onclick = () => { LS.set('modo', 'servidor'); location.reload(); };
@@ -116,7 +134,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011706')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011711')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -921,7 +939,7 @@ const IMG = /^(jpe?g|png|gif|tiff?|bmp|webp|heic)$/;
 function hayCarpeta(caja, falta) {
   if (carpeta && !falta) return true;
   caja.innerHTML = hayDisco
-    ? `<p class="peq">${falta ? esc(falta) + '<br>Si está en otra carpeta, añádela. Lo más sencillo: elegir la carpeta «Genealogia» entera (o toda la de Dropbox):'
+    ? `${carpetasMovidas.length ? `<p class="aviso">${carpetasMovidas.map(n => '«' + esc(n) + '»').join(', ')} ya no está donde estaba (ha cambiado de sitio). Elige la carpeta donde están ahora las fotos.</p>` : ''}<p class="peq">${falta ? esc(falta) + '<br>Si está en otra carpeta, añádela. Lo más sencillo: elegir la carpeta «Genealogia» entera (o toda la de Dropbox):'
                               : 'Para ver fotos y transcripciones, elige la carpeta donde están (por ejemplo «Genealogia», o toda la de Dropbox). Puedes añadir varias.'}
        ${carpetaPendiente.length ? `<button data-c="re">Volver a usar ${carpetaPendiente.map(h => '«' + esc(h.name) + '»').join(', ')}</button>` : ''} <button data-c="elegir">${carpeta ? 'Añadir otra carpeta…' : 'Elegir carpeta…'}</button></p>`
     : '<p class="peq">En este aparato no se pueden ver fotos ni transcripciones: solo el árbol. Se ven en el ordenador, con Chrome o Edge.</p>';
@@ -1045,11 +1063,11 @@ async function necesitaBase(caja, listo) {
     baseNombres = await BaseNombres.abrir(new Uint8Array(await r.arrayBuffer()), 'nombres_lugares.db', Date.parse(r.headers.get('Last-Modified')));
     listo(); return false;
   }
-  const guardada = await bdLeer('nombresDb');
-  if (guardada && await permiso(guardada, false)) {
+  let guardada = await bdLeer('nombresDb');
+  try { if (guardada && await permiso(guardada, false)) {
     caja.innerHTML = '<p class="cargando">Abriendo la base de nombres…</p>';
-    try { await leerBase(guardada); listo(); return false; } catch (e) { caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
-  }
+    try { await leerBase(guardada); listo(); return false; } catch (e) { if (seHaMovido(e)) throw e; caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
+  } } catch (e) { if (!seHaMovido(e)) throw e; await bdGuardar('nombresDb', null); guardada = null; }   // la base cambió de sitio: se elige otra vez
   caja.innerHTML = `<div class="caja-base"><p>Para ver dónde sale cada persona en los documentos, abre la <b>base de nombres y lugares</b>
       (<code>9 Sistema/Control/nombres_lugares.db</code>). Se lee aquí mismo, sin internet.</p>
     ${!hayDisco ? '<p class="aviso">Pesa unos 180 MB: en el móvil puede ir muy lento o no abrir.</p>' : ''}
@@ -1057,7 +1075,11 @@ async function necesitaBase(caja, listo) {
       ${hayDisco ? `<button data-b="elegir"${guardada ? '' : ' class="principal"'}>Elegir base de nombres (.db)…</button>`
                  : '<label class="boton principal">Elegir base de nombres (.db)…<input type="file" hidden data-b="archivo"></label>'}</p>
     <p class="aviso" data-error></p></div>`;
-  const error = e => { if (e.name !== 'AbortError') caja.querySelector('[data-error]').textContent = e.message; };
+  const error = e => {
+    if (e.name === 'AbortError') return;
+    if (seHaMovido(e)) { bdGuardar('nombresDb', null); caja.querySelector('[data-error]').textContent = 'La base de nombres ha cambiado de sitio. Pulsa «Elegir base de nombres» y búscala donde está ahora.'; return; }
+    caja.querySelector('[data-error]').textContent = e.message;
+  };
   const abrir = async obtener => {
     try {
       const x = await obtener();

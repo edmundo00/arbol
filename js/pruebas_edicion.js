@@ -1,10 +1,10 @@
 // Pruebas de la edición sobre una COPIA del GEDCOM en el disco privado del navegador (OPFS): nunca toca el archivo bueno.
-import { Gedcom, decodificar, textoLargo } from './gedcom.js?v=202611011706';
-import { Arbol } from './modelo.js?v=202611011706';
-import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011706';
-import { Guardado, comprobar } from './guardar.js?v=202611011706';
-import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611011706';
-import { clave } from './buscar.js?v=202611011706';
+import { Gedcom, decodificar, textoLargo } from './gedcom.js?v=202611011711';
+import { Arbol } from './modelo.js?v=202611011711';
+import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011711';
+import { Guardado, comprobar } from './guardar.js?v=202611011711';
+import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611011711';
+import { clave } from './buscar.js?v=202611011711';
 
 const out = document.getElementById('out');
 let fallos = 0;

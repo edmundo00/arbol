@@ -1,7 +1,7 @@
 // Registro de documentos (9 Sistema/Control/registro): la aplicación añade filas a citas_app.csv y documentos_app.csv.
 // generar.py (de las sesiones de Claude) las lee y pone las fuentes y fotos en el GEDCOM.
 // Mismo formato que citas.csv y documentos.csv: UTF-8, «;» como separador, sin «;» dentro del texto.
-import { bdLeer, bdGuardar } from './almacen.js?v=202611011706';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611011711';
 
 export const CAB_CITAS = 'doc;xref;papel;que_prueba;imagenes;grado;fecha_alta';
 export const CAB_DOCS = 'id;titulo;fecha;tipo;archivo;imagenes;otros_archivos;transcripcion;ficha;estado;sour;notas';
@@ -42,7 +42,15 @@ export class Registro {
   // Carpeta «9 Sistema/Control/registro» con permiso de escritura (se recuerda). Tiene que llamarse desde un clic.
   static async preparar() {
     let dir = await bdLeer('carpetaRegistro');
-    if (dir && (await dir.requestPermission({ mode: 'readwrite' })) !== 'granted') { await bdGuardar('carpetaRegistro', null); dir = null; }
+    if (dir) {
+      // La recordada sigue valiendo si hay permiso y aún tiene documentos.csv; si no (p. ej. se ha movido de sitio), se olvida.
+      let vale = false;
+      try { vale = (await dir.requestPermission({ mode: 'readwrite' })) === 'granted' && !!(await dir.getFileHandle('documentos.csv')); } catch {}
+      if (!vale) {
+        await bdGuardar('carpetaRegistro', null);
+        throw new Error(`La carpeta del registro «${dir.name}» ya no vale (sin permiso, o ha cambiado de sitio). Vuelve a pulsar el botón y elige la carpeta «Genealogia» (o «Genealogia\\9 Sistema\\Control\\registro»).`);
+      }
+    }
     if (!dir) dir = await window.showDirectoryPicker({ id: 'arbol-registro', mode: 'readwrite' });
     try { await dir.getFileHandle('documentos.csv'); }
     catch {
