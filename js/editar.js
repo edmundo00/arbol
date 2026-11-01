@@ -1,6 +1,6 @@
 // Cambios en el GEDCOM: personas, familias y enlaces. Cada cambio es una «operación» que se puede deshacer.
 // Solo se tocan las líneas necesarias: el resto de cada registro se conserva tal cual (con sus etiquetas propias).
-import { Registro, hijo, hijos } from './gedcom.js?v=202611011045';
+import { Registro, hijo, hijos } from './gedcom.js?v=202611011058';
 
 const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'do', 'das', 'dos', 'van', 'von', 'der', 'den', 'di']);
 
@@ -25,6 +25,25 @@ function hoy() {
   const d = new Date(), M = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
   const t = [d.getHours(), d.getMinutes(), d.getSeconds()].map(x => String(x).padStart(2, '0')).join(':');
   return { fecha: `${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`, hora: t };
+}
+
+// Como partir_largas() de generar.py: las líneas de más de 255 caracteres se parten con CONC a unos 240, sin cortar junto a un espacio.
+export function partirLargas(texto, maximo = 240) {
+  const out = [];
+  for (const l of texto.split('\r\n')) {
+    if (l.length <= 255) { out.push(l); continue; }
+    const m = /^(\d+) (@[^@]+@ )?(\w+) ?/.exec(l);
+    const nivel = +m[1], cab = l.slice(0, m[0].length);
+    let resto = l.slice(m[0].length), primero = true;
+    while (resto) {
+      let corte = Math.min(maximo, resto.length);
+      while (corte > 0 && corte < resto.length && (resto[corte - 1] === ' ' || resto[corte] === ' ')) corte--;
+      if (corte === 0) corte = Math.min(maximo, resto.length);
+      const trozo = resto.slice(0, corte); resto = resto.slice(corte);
+      out.push(primero ? cab + trozo : `${nivel + 1} CONC ${trozo}`); primero = false;
+    }
+  }
+  return out.join('\r\n');
 }
 
 export class Editor {
@@ -408,6 +427,38 @@ export class Editor {
     h.forEach((n, k) => { if (n.tag === 'SOUR' && n.hijos.some(x => x.tag === '_REG')) i = k; });
     if (i < 0) { const k = h.findIndex(n => n.tag === 'CHAN' || (n.tag === 'OBJE' && /^@M\d/.test(n.valor))); i = (k < 0 ? h.length : k) - 1; }
     h.splice(i + 1, 0, c);
+    return true;
+  }
+
+  // Crea un registro a partir de su texto (fuente u objeto del registro de documentos), delante de «0 TRLR», como generar.py.
+  crearTexto(texto) {
+    const r = new Registro(partirLargas(texto.replace(/\r?\n/g, '\r\n').replace(/(\r\n)+$/, '')).replace(/\r\n/g, this.ged.nl) + this.ged.nl, this.ged.nl);
+    if (this.ged.porXref.has(r.xref)) return false;
+    const i = this.ged.registros.findIndex(x => x.tipo === 'TRLR');
+    this.ged.registros.splice(i < 0 ? this.ged.registros.length : i, 0, r);
+    this.ged.porXref.set(r.xref, r);
+    this.tx.antes.set(r.xref, null);
+    this.tx.log.push({ tipo: 'crear', xref: r.xref });
+    return true;
+  }
+
+  // Cita del registro en una persona, como la escribe generar.py: SOUR / PAGE / QUAY / NOTE / _REG, y después
+  // de sus citas las fotos (1 OBJE @M…@) sin repetir. «sr» es la fuente (ya en el archivo o recién creada).
+  citaRegistro(xref, { sr, doc, papel, que, pagina, quay, objs = [] }) {
+    const r = this.tocar(xref), h = r.arbol.hijos;
+    if (h.some(n => n.tag === 'SOUR' && n.valor === sr && n.hijos.some(x => x.tag === '_REG' && x.valor === doc))) return false;
+    const lineas = [`1 SOUR ${sr}`, ...(pagina ? [`2 PAGE ${pagina}`] : []), `2 QUAY ${quay}`, `2 NOTE ${papel}: ${que}`, `2 _REG ${doc}`];
+    const nuevos = new Registro(partirLargas(['0 @X@ INDI', ...lineas].join('\r\n')).replace(/\r\n/g, this.ged.nl) + this.ged.nl, this.ged.nl).arbol.hijos;
+    // Detrás de sus otras citas del registro; si no tiene, delante de «1 CHAN» (o al final)
+    let i = -1;
+    h.forEach((n, k) => { if (n.tag === 'SOUR' && n.hijos.some(x => x.tag === '_REG')) i = k; });
+    if (i < 0) { const k = h.findIndex(n => n.tag === 'CHAN'); i = (k < 0 ? h.length : k) - 1; }
+    h.splice(i + 1, 0, ...nuevos);
+    // Fotos: detrás de sus fotos del registro o de la última cita del registro
+    const ya = new Set(h.filter(n => n.tag === 'OBJE').map(n => n.valor));
+    let j = -1;
+    h.forEach((n, k) => { if ((n.tag === 'OBJE' && /^@M[0-9A-FX]+@$/.test(n.valor)) || (n.tag === 'SOUR' && n.hijos.some(x => x.tag === '_REG'))) j = k; });
+    for (const o of objs) if (!ya.has(o)) { h.splice(++j, 0, nodo(1, 'OBJE', o)); ya.add(o); }
     return true;
   }
 

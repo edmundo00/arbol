@@ -1,7 +1,7 @@
 // Registro de documentos (00_control/registro): la aplicación añade filas a citas_app.csv y documentos_app.csv.
 // generar.py (de las sesiones de Claude) las lee y pone las fuentes y fotos en el GEDCOM.
 // Mismo formato que citas.csv y documentos.csv: UTF-8, «;» como separador, sin «;» dentro del texto.
-import { bdLeer, bdGuardar } from './almacen.js?v=202611011045';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611011058';
 
 export const CAB_CITAS = 'doc;xref;papel;que_prueba;imagenes;grado;fecha_alta';
 export const CAB_DOCS = 'id;titulo;fecha;tipo;archivo;imagenes;otros_archivos;transcripcion;ficha;estado;sour;notas';
@@ -105,3 +105,72 @@ export class Registro {
     return { id, linea };
   }
 }
+
+// ---------- Fuente y fotos de un documento, idénticas a las de generar.py (códigos estables por SHA-1) ----------
+export async function sha1(t) {
+  const b = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(t));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+// Carpetas «Genealogia» (original) y «Genealogia_2» (proyecto), sacadas de las rutas de fotos que ya hay en el GEDCOM.
+export function bases(ged) {
+  for (const r of ged.registros) {
+    if (r.tipo !== 'OBJE') continue;
+    const m = /\n1 _FILE (.*\\)Genealogia\\/i.exec(r.raw);
+    if (m) return { orig: m[1] + 'Genealogia', proy: m[1] + 'Genealogia_2' };
+  }
+  return { orig: 'D:\\Dropbox\\Genealogia', proy: 'D:\\Dropbox\\Genealogia_2' };
+}
+const barra = t => t.replace(/\\/g, '/');
+// Ruta absoluta (con «/») de una foto del registro: del proyecto si empieza por una de sus carpetas (09_descargas…), si no del original.
+export function rutaFoto(rel, b) { return barra(/^\d\d_/.test(rel) ? b.proy : b.orig) + '/' + rel; }
+export function relFoto(f, b) {
+  const g = barra(f);
+  for (const base of [b.orig, b.proy]) { const x = barra(base).replace(/\/$/, '') + '/'; if (g.toLowerCase().startsWith(x.toLowerCase())) return g.slice(x.length).toLowerCase(); }
+  return g.toLowerCase();
+}
+export function numero(f) { const m = /(\d+)\.\w+$/.exec(f); return m ? +m[1] : null; }
+export async function xrefSour(id) { return '@SR' + (await sha1(id)).slice(0, 10).toUpperCase() + '@'; }
+export async function xrefObje(id, f, b) { return '@M' + (await sha1(id + '|' + relFoto(f, b))).slice(0, 12).toUpperCase() + '@'; }
+export function rango(texto) {
+  const s = new Set();
+  for (const t of String(texto || '').replace(/ /g, '').split(',').filter(Boolean)) {
+    const [a, c] = t.split('-');
+    if (!/^\d+$/.test(a) || (c !== undefined && !/^\d+$/.test(c))) continue;
+    for (let i = +a; i <= +(c ?? a) && i - +a < 5000; i++) s.add(i);
+  }
+  return s;
+}
+
+// Registros SOUR y OBJE de un documento con fotos sin comodines (los que da de alta la aplicación).
+// d: fila de documentos*.csv. Devuelve { sr, textos, fotos: [{ f, m }] } o null si sus fotos llevan «*» (eso lo hace generar.py).
+export async function registrosDocumento(d, b) {
+  if (/[*?|]/.test(d.imagenes || '') || (d.otros_archivos || '').trim()) return null;
+  const fotosRel = (d.imagenes || '').trim() ? [d.imagenes.trim()] : [];
+  const fotos = [];
+  for (const rel of fotosRel) { const f = rutaFoto(rel, b); fotos.push({ f, m: await xrefObje(d.id, f, b) }); }
+  const sr = await xrefSour(d.id);
+  const dir = f => f.slice(0, f.lastIndexOf('/'));
+  const nota = [`Registro de documentos: ${d.id}.`, `Fecha: ${d.fecha || '—'}. Tipo: ${d.tipo}. Estado: ${d.estado}.`,
+    `Fotos: ${fotos.length}` + (fotos.length ? `, en ${dir(fotos[0].f)}` : '') + '.'];
+  if (/[*?]/.test(d.transcripcion || '')) return null;
+  const trans = (d.transcripcion || '').split('|').filter(Boolean);
+  if (trans.length) nota.push('Transcripción: ' + (trans.length === 1 ? trans[0] : `${trans.length} archivos, ${dir(trans[0])}/`));
+  if (d.notas) nota.push(d.notas);
+  const sour = [`0 ${sr} SOUR`, `1 TITL ${d.titulo}` + (d.fecha ? ` (${d.fecha})` : '')];
+  if (d.archivo) sour.push(`1 PUBL ${d.archivo}`);
+  sour.push(`1 NOTE ${nota[0]}`, ...nota.slice(1).map(x => `2 CONT ${x}`), `1 REFN reg:${d.id}`, ...fotos.map(x => `1 OBJE ${x.m}`));
+  const objes = fotos.map(({ f, m }) => {
+    const n = numero(f), ext = f.split('.').pop().toLowerCase();
+    return [`0 ${m} OBJE`, `1 FORM ${ext}`, `1 TITL ${d.titulo}` + (n !== null ? ` — img. ${String(n).padStart(3, '0')}` : ''),
+      `1 _FILE ${f.replace(/\//g, '\\')}`, `1 REFN reg:${d.id}`].join('\r\n');
+  });
+  return { sr, textos: [sour.join('\r\n'), ...objes], fotos };
+}
+
+// Todos los documentos del registro (manuales, de la aplicación y automáticos), con la prioridad de generar.py.
+Registro.prototype.documentos = async function () {
+  const m = new Map();
+  for (const n of ['documentos.csv', 'documentos_app.csv', 'documentos_auto.csv'])
+    for (const d of leerCsv((await this.leer(n)) || '')) if (d.id && !m.has(d.id)) m.set(d.id, d);
+  return m;
+};

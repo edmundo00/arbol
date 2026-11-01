@@ -1,21 +1,21 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611011045';
-import { Arbol, nombreCompleto } from './modelo.js?v=202611011045';
-import { buscar, prepararVariantes } from './buscar.js?v=202611011045';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011045';
-import { BaseNombres } from './nombresdb.js?v=202611011045';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011045';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011045';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611011045';
-import { md, esc } from './md.js?v=202611011045';
-import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611011045';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011045';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011045';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011045';
-import { Guardado } from './guardar.js?v=202611011045';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011045';
-import { Registro, GRADOS, QUAY, paginas, leerCsv } from './registro.js?v=202611011045';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011045';
+import { Gedcom } from './gedcom.js?v=202611011058';
+import { Arbol, nombreCompleto } from './modelo.js?v=202611011058';
+import { buscar, prepararVariantes } from './buscar.js?v=202611011058';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011058';
+import { BaseNombres } from './nombresdb.js?v=202611011058';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011058';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011058';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611011058';
+import { md, esc } from './md.js?v=202611011058';
+import { grafico, lista, descendientes, pestanasArbol } from './arboles.js?v=202611011058';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011058';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011058';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011058';
+import { Guardado } from './guardar.js?v=202611011058';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011058';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011058';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011058';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -105,7 +105,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011045')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011058')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -388,7 +388,7 @@ async function asegurarRegistro() {
   if (registro) return registro;
   if (pruebas()) {
     const raizP = await navigator.storage.getDirectory(), dir = await raizP.getDirectoryHandle('prueba-registro', { create: true });
-    for (const n of ['documentos.csv', 'citas_app.csv', 'documentos_app.csv']) {
+    for (const n of ['documentos.csv', 'documentos_auto.csv', 'citas_app.csv', 'documentos_app.csv']) {
       try { await dir.getFileHandle(n); } catch {
         const r = await fetch('/Genealogia_2/00_control/registro/' + n, { cache: 'no-store' });
         if (r.ok) { const w = await (await dir.getFileHandle(n, { create: true })).createWritable(); await w.write(await r.text()); await w.close(); }
@@ -419,26 +419,62 @@ async function operarRegistro(desc, escribirCsv, cambiarGed) {
   return { res, csv };
 }
 
-// Documentos que se pueden citar: los del GEDCOM (fuentes con «REFN reg:…») y los dados de alta desde la app.
+// Documentos del registro (documentos.csv, documentos_app.csv y documentos_auto.csv), leídos una vez por sesión.
+let docsRegistro = null;
+async function docsDelRegistro(forzar = false) {
+  if (!docsRegistro || forzar) docsRegistro = await registro.documentos();
+  return docsRegistro;
+}
+
+// Documentos que se pueden citar
 async function documentosCitables() {
-  const out = new Map();
-  for (const r of arbol.ged.registros) {
-    if (r.tipo !== 'SOUR' || !r.raw.includes('reg:')) continue;
-    const id = hijos(r.arbol, 'REFN').map(n => n.valor).find(v => v.startsWith('reg:'))?.slice(4);
-    if (id) out.set(id, { id, titulo: valorNodo(r.arbol, 'TITL') || id });
-  }
-  for (const d of await registro.docsApp()) if (!out.has(d.id)) out.set(d.id, { id: d.id, titulo: (d.titulo || d.id) + ' (pendiente de generar.py)' });
-  return [...out.values()].sort((a, b) => a.titulo.localeCompare(b.titulo, 'es'));
+  return [...(await docsDelRegistro()).values()]
+    .map(d => ({ id: d.id, titulo: (d.titulo || d.id) + (d.fecha ? ` (${d.fecha})` : '') }))
+    .sort((a, b) => a.titulo.localeCompare(b.titulo, 'es'));
+}
+
+// Lo que hay que escribir en el GEDCOM para citar un documento, igual que generar.py:
+// la fuente que ya hay (la antigua de Family Historian o la del registro) o, si no hay, la fuente y sus fotos nuevas;
+// y las fotos que se enlazan a la persona. null si el documento tiene fotos con «*» y aún no está en el GEDCOM.
+async function prepararCita(docId, imagenes) {
+  const ged = arbol.ged, b = bases(ged), d = (await docsDelRegistro()).get(docId);
+  let sr = null, fotos = [], crear = [];
+  const xs = await xrefSour(docId);
+  if (d?.sour && ged.porXref.has(d.sour)) sr = d.sour;
+  else if (ged.porXref.has(xs)) sr = xs;
+  else sr = editor.fuenteDe(docId);
+  if (sr) {
+    fotos = hijos(ged.porXref.get(sr).arbol, 'OBJE').map(n => n.valor).filter(v => /^@M[0-9A-FX]+@$/.test(v))
+      .map(m => ({ m, f: ged.porXref.get(m) ? valorNodo(ged.porXref.get(m).arbol, '_FILE') : '' }))
+      .filter(x => x.f && ged.porXref.get(x.m).raw.includes('reg:' + docId));
+  } else if (d) {
+    const r = await registrosDocumento(d, b);
+    if (!r) return null;
+    ({ sr, fotos } = r); crear = r.textos;
+  } else return null;
+  const sel = rango(imagenes);
+  const elegidas = sel.size ? fotos.filter(x => sel.has(numero(x.f))) : fotos;
+  const objs = (sel.size || fotos.length <= 12 ? elegidas : fotos.slice(0, 1)).map(x => x.m);
+  return { sr, crear, objs };
+}
+
+function escribirCita(id, prep, docId, d) {
+  if (!prep) return false;
+  for (const t of prep.crear) editor.crearTexto(t);
+  return editor.citaRegistro(id, { sr: prep.sr, doc: docId, papel: d.papel, que: d.que, pagina: paginas(d.imagenes), quay: QUAY[d.grado], objs: prep.objs });
 }
 
 async function citar(id, doc, d) {
   const quien = nombreCompleto(arbol.p(id));
-  const r = await operarRegistro(`Citar «${doc.titulo}» en ${quien}`,
-    async () => [{ archivo: 'citas_app.csv', linea: await registro.citar({ doc: doc.id, xref: id, papel: d.papel, que: d.que, imagenes: d.imagenes, grado: d.grado }) }],
-    () => editor.cita(id, { doc: doc.id, papel: d.papel, que: d.que, pagina: paginas(d.imagenes), quay: QUAY[d.grado] }));
+  let prep = null;
+  const r = await operarRegistro(`Citar «${doc.titulo}» en ${quien}`, async () => {
+    const linea = await registro.citar({ doc: doc.id, xref: id, papel: d.papel, que: d.que, imagenes: d.imagenes, grado: d.grado });
+    prep = await prepararCita(doc.id, d.imagenes);
+    return [{ archivo: 'citas_app.csv', linea }];
+  }, () => escribirCita(id, prep, doc.id, d));
   if (!r) return;
   if (!r.csv.length) flotante('Esa cita ya estaba apuntada.');
-  else flotante(r.res ? 'Cita guardada en el registro y en la ficha.' : 'Cita apuntada en el registro. Saldrá en la ficha cuando una sesión de Claude pase generar.py.');
+  else flotante(r.res ? 'Cita guardada en la ficha y en el registro.' : 'Cita apuntada en el registro; el documento tiene varias fotos con «*» y saldrá en la ficha la próxima vez que se pase generar.py.');
 }
 
 // «✓ Es esta persona» en una mención de la base de nombres
@@ -451,7 +487,7 @@ async function confirmarMencion(id, m) {
     datos: { papel: m.papel && m.papel !== 'texto' ? m.papel : '', que: ctx.length > 200 ? ctx.slice(0, 200) + '…' : ctx, grado: 'B' } });
   if (!d) return;
   const quien = nombreCompleto(arbol.p(id));
-  let docId = deRegistro ? m.reg_id : null;
+  let docId = deRegistro ? m.reg_id : null, prep = null;
   const r = await operarRegistro(`Confirmar mención en «${(m.titulo || '').trim()}» de ${quien}`, async () => {
     const lineas = [];
     if (!docId) {
@@ -462,12 +498,14 @@ async function confirmarMencion(id, m) {
         notas: 'Alta desde la aplicación del árbol (base de nombres)' });
       docId = nd.id;
       lineas.push({ archivo: 'documentos_app.csv', linea: nd.linea });
+      await docsDelRegistro(true);
     }
     lineas.push({ archivo: 'citas_app.csv', linea: await registro.citar({ doc: docId, xref: id, papel: d.papel, que: d.que, imagenes: d.imagenes, grado: d.grado }) });
+    prep = await prepararCita(docId, d.imagenes);
     return lineas;
-  }, () => editor.cita(id, { doc: docId, papel: d.papel, que: d.que, pagina: paginas(d.imagenes), quay: QUAY[d.grado] }));
+  }, () => escribirCita(id, prep, docId, d));
   if (!r) return;
-  flotante(r.res ? 'Confirmado: cita guardada en el registro y en la ficha.' : 'Confirmado y apuntado en el registro. Saldrá en «Documentos» cuando una sesión de Claude pase generar.py.');
+  flotante(r.res ? 'Confirmado: el documento y la cita están en la ficha y en el registro.' : 'Confirmado y apuntado en el registro; saldrá en la ficha la próxima vez que se pase generar.py.');
 }
 
 let listaLugares = null;
