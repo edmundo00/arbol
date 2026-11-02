@@ -10,6 +10,11 @@ Programa para buscar y ver un árbol genealógico en formato GEDCOM, en el orden
 
 ## Cómo se usa
 
+**Lo más sencillo (cualquier navegador, ordenador o móvil):** abre la dirección y pulsa **Abrir GEDCOM…**, o arrastra el `.ged`
+a la ventana. No pide permisos. Sale primero la pantalla de **Estadísticas** (📊 arriba): personas, fechas, apellidos, lugares,
+generaciones y cuántos **grupos sin parentesco** hay (para ver si se coló gente ajena). Pulsa **Ver el árbol** para navegar.
+El navegador guarda una copia y la abre sola la próxima vez; para cambiar de árbol, ⚙ → **Abrir otro GEDCOM…** (o arrastra otro).
+
 ### En el ordenador (Chrome o Edge)
 
 1. Abre la dirección y pulsa **Elegir archivo GEDCOM…**. Elige tu `.ged` (por ejemplo,

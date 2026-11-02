@@ -328,3 +328,21 @@ hr { border: 0; border-top: 1px solid var(--linea); margin: 16px 0; }
 .exportar { margin: .6em 0 } .exportar:empty { display: none }
 .arboles-hechos { margin: 1em 0 } .arboles-hechos > summary { cursor: pointer; color: var(--suave, #666) }
 .mencion .repes { color: #7a5a2a }
+
+/* Abrir GEDCOM y estadísticas */
+a.boton.principal { background: var(--acento); color: #fff; border-color: var(--acento); font-weight: 600; }
+.boton.grande { font-size: 1.2em; padding: 12px 22px; }
+body.soltar::after { content: 'Suelta aquí el archivo GEDCOM'; position: fixed; inset: 12px; border: 4px dashed var(--acento); border-radius: 16px;
+  background: rgba(255,255,255,.85); display: grid; place-items: center; font-size: 1.6em; font-weight: 600; color: var(--acento); z-index: 99; pointer-events: none; }
+.caja.ancha { max-width: 980px; }
+.estadisticas section { margin: 18px 0; }
+.estadisticas section.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 700px) { .estadisticas section.dos { grid-template-columns: 1fr; } }
+table.estad { border-collapse: collapse; width: 100%; font-size: .92em; }
+table.estad th, table.estad td { border-bottom: 1px solid var(--linea); padding: 4px 6px; text-align: left; vertical-align: top; }
+table.estad td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.estadisticas .bien { color: #2e7d32; font-weight: 600; }
+.lista-apellidos { line-height: 1.8; }
+.barras .barra { display: grid; grid-template-columns: 4.5em 1fr 4em; gap: 8px; align-items: center; font-size: .9em; margin: 2px 0; }
+.barras .b { display: block; height: 12px; background: var(--acento); border-radius: 3px; }
+.barras .n { text-align: right; color: var(--suave); }
