@@ -1,9 +1,9 @@
 // Formulario de persona: nueva o elegida entre las que ya existen, con fechas en español y avisos de imposibles.
-import { esc } from './md.js?v=202611050015';
-import { aGedcom, aTexto, avisos, posiblesDuplicados, nacimientoPorEdad } from './fechas.js?v=202611050015';
-import { buscar } from './buscar.js?v=202611050015';
-import { clave } from './buscar.js?v=202611050015';
-import { nombreCompleto, vida } from './modelo.js?v=202611050015';
+import { esc } from './md.js?v=202611050044';
+import { aGedcom, aTexto, avisos, posiblesDuplicados, nacimientoPorEdad } from './fechas.js?v=202611050044';
+import { buscar } from './buscar.js?v=202611050044';
+import { clave } from './buscar.js?v=202611050044';
+import { nombreCompleto, vida } from './modelo.js?v=202611050044';
 
 // opciones: { titulo, datos: {nombre, apellidos, sexo, nac:{fecha,lugar}, def:{fecha,lugar}}, existente: bool, boda: bool,
 //             contexto: {padres:[persona], hijos:[persona]}, excluir: Set, arbol, variantes, lugares: [texto] }
@@ -264,3 +264,34 @@ export function formularioCita(o) {
   });
 }
 const plano = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// ---------- Añadir un documento nuevo a partir de sus fotos ----------
+// o: { fotos: [rutas], transcripciones: [rutas], persona: nombre o null, grados, datos: {titulo, fecha, tipo, archivo} }
+export const TIPOS_DOCUMENTO = ['bautismo', 'matrimonio', 'defunción', 'testamento', 'partición', 'escritura', 'pleito', 'hidalguía', 'padrón', 'catastro', 'prensa', 'otro'];
+export function formularioDocumento(o) {
+  const d = o.datos || {};
+  const v = ventana(`<h2>Añadir documento${o.persona ? ' a ' + esc(o.persona) : ''}</h2>
+    <p class="peq">${o.fotos.length === 1 ? '1 foto' : o.fotos.length + ' fotos'}: ${esc(o.fotos[0].split('/').slice(-2).join('/'))}${o.fotos.length > 1 ? ' …' : ''}<br>${o.transcripciones.length ? `✔ Con su transcripción (${o.transcripciones.length})` : 'Sin transcripción al lado'}</p>
+    <label>Título<input id="d-titulo" value="${esc(d.titulo || '')}"></label>
+    <div class="dos"><label>Fecha<input id="d-fecha" value="${esc(d.fecha || '')}" placeholder="1734-07-04 · 1734"></label>
+      <label>Tipo<select id="d-tipo">${TIPOS_DOCUMENTO.map(t => `<option${t === d.tipo ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label></div>
+    <label>Archivo que lo guarda<input id="d-archivo" value="${esc(d.archivo || '')}"></label>
+    ${o.persona ? `<div class="dos"><label>Su papel<input id="c-papel" placeholder="difunta, padre, testigo…"></label>
+      <label>Grado<select id="c-grado">${o.grados.map(([g, t]) => `<option value="${g}">${esc(t)}</option>`).join('')}</select></label></div>
+      <label>Qué prueba (una frase)<input id="c-que" placeholder="«Enterrada el 4-VII-1734, viuda de Antón Romeu»"></label>`
+    : '<p class="peq">Queda guardado sin persona. Lo podrás citar cuando sepas de quién es.</p>'}
+    <p class="botones"><button id="d-ok" class="principal">Guardar</button> <button id="d-no">Cancelar</button></p>`);
+  v.$('#d-titulo').focus();
+  return new Promise(ok => {
+    v.$('#d-no').onclick = () => { v.cerrar(); ok(null); };
+    v.$('#d-ok').onclick = () => {
+      const r = { titulo: v.$('#d-titulo').value.trim(), fecha: v.$('#d-fecha').value.trim(), tipo: v.$('#d-tipo').value, archivo: v.$('#d-archivo').value.trim() };
+      if (!r.titulo) return alert('Pon un título.');
+      if (o.persona) {
+        Object.assign(r, { papel: v.$('#c-papel').value.trim(), que: v.$('#c-que').value.trim(), grado: v.$('#c-grado').value, imagenes: '' });
+        if (!r.papel || !r.que) return alert('Pon su papel y qué prueba.');
+      }
+      v.cerrar(); ok(r);
+    };
+  });
+}

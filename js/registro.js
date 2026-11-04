@@ -71,7 +71,7 @@ export function rango(texto) {
 // Registros SOUR y OBJE de un documento con fotos sin comodines (los que da de alta la aplicación).
 // d: datos del documento nuevo. Devuelve { sr, textos, fotos: [{ f, m }] }, o null si la transcripción lleva «*».
 export async function registrosDocumento(d, b) {
-  const fotosRel = (d.imagenes || '').trim() ? [d.imagenes.trim()] : [];
+  const fotosRel = (d.imagenes || '').split('|').map(x => x.trim()).filter(Boolean);
   const fotos = [];
   for (const rel of fotosRel) { const f = rutaFoto(rel, b); fotos.push({ f, m: await xrefObje(d.id, f, b) }); }
   const sr = await xrefSour(d.id);

@@ -1,29 +1,29 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611050015';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611050015';
-import { buscar, prepararVariantes } from './buscar.js?v=202611050015';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611050015';
-import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611050015';
-import { entender, personasDelArbol } from './consulta.js?v=202611050015';
-import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611050015';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611050015';
-import { revisarSalud, repararSalud } from './salud.js?v=202611050015';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611050015';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611050015';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611050015';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611050015';
-import { md, esc } from './md.js?v=202611050015';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611050015';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611050015';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611050015';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611050015';
-import { Guardado } from './guardar.js?v=202611050015';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611050015';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611050015';
-import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo } from './registro.js?v=202611050015';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611050015';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611050015';
-import { pintarEstadisticas } from './estadisticas.js?v=202611050015';
+import { Gedcom } from './gedcom.js?v=202611050044';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611050044';
+import { buscar, prepararVariantes } from './buscar.js?v=202611050044';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611050044';
+import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611050044';
+import { entender, personasDelArbol } from './consulta.js?v=202611050044';
+import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611050044';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611050044';
+import { revisarSalud, repararSalud } from './salud.js?v=202611050044';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611050044';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611050044';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611050044';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611050044';
+import { md, esc } from './md.js?v=202611050044';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611050044';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611050044';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611050044';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611050044';
+import { Guardado } from './guardar.js?v=202611050044';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611050044';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611050044';
+import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo } from './registro.js?v=202611050044';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611050044';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611050044';
+import { pintarEstadisticas } from './estadisticas.js?v=202611050044';
 
 const $ = s => document.querySelector(s);
 // La versión publicada (la pone publicar.py en la dirección de este archivo): 202611041952 → «4/11 19:52»
@@ -190,7 +190,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611050015')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611050044')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -278,11 +278,13 @@ function verBuscar() {
       <span class="peq">${baseNombres ? `Base de documentos del ${esc(new Date(baseNombres.fecha).toLocaleDateString('es'))}` : ''}</span></p>
     <div class="resultados"><div id="n-res"></div><aside id="res-arbol"></aside></div>
     <p class="exportar" id="n-excel"></p>
+    ${hayDisco ? '<p class="botones"><button class="mas" id="n-nuevo">+ Añadir documento sin persona (foto nueva)</button></p>' : ''}
     <div class="inicio"${hayQuien(e) || e.lugar.trim() || e.linea ? ' hidden' : ''}><p>Escribe un nombre o un apellido, aquí o en el cuadro de arriba: salen a la vez las personas del árbol y los documentos. Arriba se puede escribir todo seguido: <i>maria fernandez jubia 1731-1735 defunción</i>. No importan las tildes ni la ortografía antigua (Ysabel = Isabel, Joseph = José, Bázquez = Vázquez). Un «*» al final busca por el comienzo.</p>
       <p>${arbol.raices.map(r => `<a class="tarjeta-enlace" href="#/p/${esc(r.id.slice(1, -1))}">${esc(r.nombre)}</a>`).join(' ')}</p>
       <p class="peq">«${esc(info.nombre)}» · ${arbol.personas.size.toLocaleString('es')} personas · ${arbol.familias.size.toLocaleString('es')} familias · <a href="#/estadisticas">Estadísticas</a>
         ${info.copia ? `<br>Copia guardada en este aparato, del archivo del ${esc(new Date(info.fecha).toLocaleString('es'))}` : ''}</p></div>
   </div>`);
+  $('#n-nuevo')?.addEventListener('click', () => anadirDocumento());
   const caja = $('#n-res');
   $('#n-excel').append(botonExcel('documentos', caja, () => caja._excel?.() ?? { cabecera: [], filas: [] }));
   const bP = botonExcel('personas', null, () => ({ cabecera: CAB_PERSONA, filas: personasDelArbol(arbol, estadoBusqueda, variantes).lista.map(x => filaPersona(x.p)) }));
@@ -642,6 +644,93 @@ async function confirmarMencion(id, m) {
   });
 }
 
+// ---------- Añadir un documento a partir de sus fotos: sin programas ni pasos intermedios ----------
+// Dónde está un archivo dentro de la carpeta de documentos: ['2 Documentos', …, 'x.jpg'], o null si no se puede saber.
+async function rutaDe(fh) {
+  for (const c of carpeta?.lista || []) {
+    if (!c.asa) continue;
+    let p = null;
+    try { p = await c.asa.resolve(fh); } catch {}
+    if (!p) continue;
+    const i = p.findIndex(x => x.toLowerCase() === '2 documentos');
+    return { asa: c.asa, previas: i >= 0 ? p.slice(0, i) : p, ruta: i >= 0 ? p.slice(i) : null };
+  }
+  return null;
+}
+// Pide un clic más si el navegador exige uno para abrir un cuadro (tras pedir un permiso, por ejemplo).
+async function conClic(texto, fn) {
+  try { return await fn(); }
+  catch (e) {
+    if (e.name !== 'SecurityError' && e.name !== 'NotAllowedError') throw e;
+    return new Promise((ok, mal) => {
+      const capa = $('#dialogo'); capa.hidden = false; document.body.classList.add('con-visor');
+      capa.innerHTML = `<div class="caja dialogo"><p>${esc(texto)}</p><p class="botones"><button id="k-ok" class="principal">${esc(texto)}</button> <button id="k-no">Cancelar</button></p></div>`;
+      const cerrar = () => { capa.hidden = true; capa.innerHTML = ''; document.body.classList.remove('con-visor'); };
+      capa.querySelector('#k-no').onclick = () => { cerrar(); mal(new DOMException('Cancelado', 'AbortError')); };
+      capa.querySelector('#k-ok').onclick = async () => { cerrar(); try { ok(await fn()); } catch (e2) { mal(e2); } };
+    });
+  }
+}
+async function anadirDocumento(id = null) {
+  if (!hayDisco) return alert('Añadir documentos se hace en Chrome o Edge de ordenador.');
+  try {
+    if (!editor && !await entrarEdicion()) return;
+    const asas = await conClic('Elegir la foto', () => window.showOpenFilePicker({ multiple: true, id: 'arbol-docs', ...(carpeta?.lista?.[0]?.asa ? { startIn: carpeta.lista[0].asa } : {}),
+      types: [{ description: 'Fotos del documento', accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.gif', '.bmp', '.webp'], 'application/pdf': ['.pdf'] } }] }));
+    let info0 = await rutaDe(asas[0]);
+    if (!info0) {   // aún no se sabe dónde está la carpeta Genealogia: se pregunta una vez, situado ya en la foto
+      const h = await conClic('Elegir la carpeta Genealogia', () => window.showDirectoryPicker({ id: 'arbol-fotos', mode: 'read', startIn: asas[0] }));
+      await Carpetas.guardar([...await Carpetas.guardadas(), h]);
+      carpeta = new Carpetas([...(carpeta?.lista || []), new Carpeta(h)]);
+      info0 = await rutaDe(asas[0]);
+    }
+    const fuera = 'La foto tiene que estar dentro de la carpeta «2 Documentos» de Genealogia. Muévela allí, a una carpeta para ese documento, y vuelve a pulsar.';
+    if (!info0?.ruta) return alert(fuera);
+    const rutas = [];
+    for (const a of asas) { const r = await rutaDe(a); if (!r?.ruta) return alert(fuera); rutas.push(r.ruta.join('/')); }
+    // ¿Alguna ya está en un documento?
+    const ged = arbol.ged, ya = new Map();
+    for (const r of ged.registros) {
+      if (r.tipo !== 'OBJE') continue;
+      const f = (valorNodo(r.arbol, 'FILE') || valorNodo(r.arbol, '_FILE') || '').replace(/\\/g, '/').replace(/^.*?(?=2 Documentos\/)/i, '').toLowerCase(), m = /\n1 REFN reg:([^\r\n]*)/.exec(r.raw);
+      if (f && m) ya.set(f, m[1].trim());
+    }
+    const docsYa = [...new Set(rutas.map(r => ya.get(r.toLowerCase())).filter(Boolean))];
+    if (docsYa.length) {
+      const doc = docsDelArbol().get(docsYa[0]);
+      if (!id) return alert(`Esa foto ya está en el documento «${doc?.titulo || docsYa[0]}».`);
+      const d = await formularioCita({ titulo: 'Esa foto ya está en un documento. Citarlo en ' + nombreCompleto(arbol.p(id)), grados: GRADOS, doc: { id: docsYa[0], titulo: doc?.titulo || docsYa[0] }, datos: { grado: 'A' } });
+      if (d) await citar(id, d.doc, d);
+      return;
+    }
+    // Su transcripción, si está al lado con el mismo nombre
+    const trans = [];
+    for (const rel of rutas) {
+      const p = rel.split('/'), base = p.pop().replace(/\.[^.]+$/, '');
+      let dir = info0.asa;
+      try { for (const x of [...info0.previas, ...p]) dir = await dir.getDirectoryHandle(x); } catch { continue; }
+      for (const n of [base + '.md', base + ' (Claude).md']) {
+        try { await dir.getFileHandle(n); trans.push([...p, n].join('/')); break; } catch {}
+      }
+    }
+    // Lo que se puede deducir del nombre y la carpeta; se puede corregir en el formulario
+    const nombre = rutas[0].split('/').pop().replace(/\.[^.]+$/, '').replace(/[_ ]\d{1,3}$/, '');
+    const anio = (/(?:^|[_ -])(1[0-9]{3}|20[0-2][0-9])(?:[_ -]|$)/.exec(nombre) || [])[1] || '';
+    const pistas = { bautis: 'bautismo', nacimiento: 'bautismo', matrimonio: 'matrimonio', boda: 'matrimonio', defunci: 'defunción', entierro: 'defunción', testamento: 'testamento', parti: 'partición', escritura: 'escritura', pleito: 'pleito', hidalgu: 'hidalguía', padron: 'padrón', catastro: 'catastro' };
+    const tipo = Object.entries(pistas).find(([k]) => planoTexto(nombre).includes(k))?.[1] || 'otro';
+    const r = await formularioDocumento({ fotos: rutas, transcripciones: trans, persona: id ? nombreCompleto(arbol.p(id)) : null, grados: GRADOS,
+      datos: { titulo: nombre.replace(/_/g, ' '), fecha: anio, tipo, archivo: rutas[0].split('/')[1] || '' } });
+    if (!r) return;
+    const docId = idNuevo(nombre, new Set(docsDelArbol().keys()));
+    const nuevos = await registrosDocumento({ id: docId, titulo: r.titulo, fecha: r.fecha, tipo: r.tipo, archivo: r.archivo, imagenes: rutas.join('|'), transcripcion: trans.join('|'),
+      estado: trans.length ? 'transcrito' : 'sin transcribir', notas: 'Añadido desde la aplicación del árbol' }, bases(ged));
+    await operar(`Añadir documento «${r.titulo}»`, () => {
+      for (const t of nuevos.textos) editor.crearTexto(t);
+      if (id) escribirCita(id, prepararCita(docId, ''), docId, r);
+    });
+  } catch (e) { if (e.name !== 'AbortError') alert('No se ha añadido nada.\n\n' + e.message); }
+}
+
 // ---------- Alta desde una partida ----------
 // Fotos de un documento del registro (de su fuente en el GEDCOM o, si aún no está, de su fila en el registro)
 function fotosDoc(docId) {
@@ -855,6 +944,7 @@ async function accion(tipo, id, famId, ds = {}) {
     if (t == null) return;
     return operar(`${n ? 'Cambiar' : 'Añadir'} nota de ${nom}`, () => editor.nota(id, n, t));
   }
+  if (tipo === 'documento') return anadirDocumento(id);
   if (tipo === 'citar') {
     const d = await formularioCita({ titulo: 'Citar un documento en ' + nom, grados: GRADOS, docs: documentosCitables(), datos: { grado: 'A' } });
     if (d) await citar(id, d.doc, d);
