@@ -1,10 +1,10 @@
 // Alta rápida desde una partida (bautismo, matrimonio o defunción), con el documento a la izquierda.
 // Cada persona de la partida se crea o se elige entre las que ya existen; los apellidos se proponen a la española.
-import { esc } from './md.js?v=202611042026';
-import { aGedcom } from './fechas.js?v=202611042026';
-import { buscar } from './buscar.js?v=202611042026';
-import { nombreCompleto, vida } from './modelo.js?v=202611042026';
-import { primerApellido, segundoApellido } from './editar.js?v=202611042026';
+import { esc } from './md.js?v=202611042132';
+import { aGedcom } from './fechas.js?v=202611042132';
+import { buscar } from './buscar.js?v=202611042132';
+import { nombreCompleto, vida } from './modelo.js?v=202611042132';
+import { primerApellido, segundoApellido } from './editar.js?v=202611042132';
 
 export const PARTIDAS = {
   bautismo: { nombre: 'Bautismo', roles: [['bautizado', 'Bautizado/a', null], ['padre', 'Padre', 'M'], ['madre', 'Madre', 'F'],
@@ -119,7 +119,8 @@ export function formularioPartida(o) {
     const pintarD = () => {
       const q = plano($('#pt-dbuscar').value);
       if (q.length < 2) { $('#pt-dres').innerHTML = ''; return; }
-      const l = o.docs.filter(x => plano(x.titulo + ' ' + x.id).includes(q)).slice(0, 30);
+      const ws = q.split(/\s+/).filter(Boolean);   // todas las palabras, en cualquier orden
+      const l = o.docs.filter(x => { const t = plano(x.titulo + ' ' + x.id); return ws.every(w => t.includes(w)); }).slice(0, 30);
       $('#pt-dres').innerHTML = l.map((x, i) => `<button type="button" data-i="${i}"><b>${esc(x.titulo)}</b></button>`).join('') || '<p class="peq">Ninguno.</p>';
       $('#pt-dres').querySelectorAll('[data-i]').forEach(b => b.onclick = () => { doc = l[+b.dataset.i]; $('#pt-delegido').textContent = 'Documento: ' + doc.titulo; $('#pt-dres').innerHTML = ''; o.mostrarDoc(doc.id, $('#pt-doc')); });
     };

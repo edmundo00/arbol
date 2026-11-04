@@ -16,7 +16,7 @@ export const hayDisco = typeof window !== 'undefined' && 'showOpenFilePicker' in
 function noExiste(ruta) { const e = new Error(`No se encuentra: ${ruta}`); e.noExiste = true; return e; }
 
 // Trozos de una ruta del GEDCOM: «D:\a\b\c.jpg» → ['a', 'b', 'c.jpg'] (sin la unidad).
-export function trozos(ruta) { return (ruta || '').replace(/\\/g, '/').replace(/^[a-z]:/i, '').split('/').filter(x => x && x !== '.'); }
+export function trozos(ruta) { return (ruta || '').replace(/\\/g, '/').replace(/^[a-z]:/i, '').split('/').filter(x => x && x !== '.' && x !== '..'); }   // «../../2 Documentos/…»: relativa al GEDCOM
 
 // ---------- El GEDCOM ----------
 export class Fuente {
@@ -68,6 +68,8 @@ class Raiz {
     let r = null;
     if (this.recorte != null && this.recorte < p.length) r = await this.probar(p.slice(this.recorte));
     for (let k = 0; !r && k < p.length; k++) { r = await this.probar(p.slice(k)); if (r) this.recorte = k; }
+    // Ruta relativa al GEDCOM («../../2 Documentos/…») y la carpeta elegida es la que contiene a «Genealogia» (toda la de Dropbox)
+    if (!r && /^\.\.[\\/]/.test(ruta)) for (const d of await this.subcarpetas([])) if ((r = await this.probar([d, ...p]))) break;
     this.cache.set(ruta, r);
     if (!r) throw noExiste(ruta);
     return r;

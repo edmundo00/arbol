@@ -131,11 +131,10 @@ Se lee del disco con **sql.js**, que va dentro del programa (`vendor/sqljs`, lic
 11. **⇆ Fusionar con otra ficha**: se elige la otra ficha de la misma persona y se ven las dos lado a lado. Lo que no se elige no se pierde: el otro nombre queda como alternativo y la otra fecha como segundo nacimiento o defunción; padres, cónyuges, hijos, hechos, notas, fuentes y fotos pasan a la ficha que se queda.
 12. **Citar un documento**: en «Documentos», **+ Citar un documento del registro**: se elige el documento y se dice el papel, qué prueba, las fotos («1,3-5») y el grado (A/B/C/?).
 13. **Confirmar menciones**: en «Menciones», **✓ Es esta persona** en las pistas y en las posibles. Si el documento no está en el registro, se da de alta.
-    - Las citas se apuntan en `9 Sistema/Control/registro/citas_app.csv` (y los documentos nuevos en `documentos_app.csv`), que lee `generar.py`. La primera vez pide la carpeta: vale la carpeta `Genealogia` entera (o `Genealogia\9 Sistema\Control\registro`).
-    - **No hace falta Claude**: la aplicación escribe en el GEDCOM la fuente del documento (si aún no estaba), sus fotos y la cita, idénticas a las de `generar.py` (códigos estables por SHA-1; comprobado con 1.560 documentos). Solo los documentos con fotos «*» que aún no estén en el GEDCOM esperan a una pasada de `generar.py`.
+    - Las citas y los documentos se guardan en el GEDCOM, y solo allí: no hay otra carpeta que elegir.
 14. **↶ Deshacer** deshace el último cambio (también lo apuntado en el registro) y lo guarda. **Terminar** quita el candado.
 
-**Se actualiza sola**: si el GEDCOM cambia en el disco mientras la tienes abierta (`generar.py`, otra sesión, otro ordenador), lo vuelve a leer al volver a la ventana, cada 20 segundos y antes de cada cambio tuyo, y avisa. Al actualizarse se pierde el «deshacer» de lo anterior (las copias siguen en `copias/`).
+**Se actualiza sola**: si el GEDCOM cambia en el disco mientras la tienes abierta (un programa, otra sesión, otro ordenador), lo vuelve a leer al volver a la ventana, cada 20 segundos y antes de cada cambio tuyo, y avisa. Al actualizarse se pierde el «deshacer» de lo anterior (las copias siguen en `copias/`).
 
 **Seguridad** (cada cambio se guarda al momento):
 - antes de escribir se relee el archivo: si cambió en el disco (Family Historian, un script, otro aparato), **no se guarda nada** y avisa;

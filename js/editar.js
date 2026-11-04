@@ -1,6 +1,6 @@
 // Cambios en el GEDCOM: personas, familias y enlaces. Cada cambio es una «operación» que se puede deshacer.
 // Solo se tocan las líneas necesarias: el resto de cada registro se conserva tal cual (con sus etiquetas propias).
-import { Registro, hijo, hijos } from './gedcom.js?v=202611042026';
+import { Registro, hijo, hijos } from './gedcom.js?v=202611042132';
 
 const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'do', 'das', 'dos', 'van', 'von', 'der', 'den', 'di']);
 
@@ -27,7 +27,7 @@ function hoy() {
   return { fecha: `${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`, hora: t };
 }
 
-// Como partir_largas() de generar.py: las líneas de más de 255 caracteres se parten con CONC a unos 240, sin cortar junto a un espacio.
+// Como partir() de documentos_ged.py: las líneas de más de 255 caracteres se parten con CONC a unos 240, sin cortar junto a un espacio.
 export function partirLargas(texto, maximo = 240) {
   const out = [];
   for (const l of texto.split('\r\n')) {
@@ -408,13 +408,13 @@ export class Editor {
     if (/^@[^@]+@$/.test(nodoNota.valor) && !this.referencias(nodoNota.valor).length) this.eliminar(nodoNota.valor);
   }
 
-  // ---------- Citas del registro (como las escribe generar.py) ----------
-  // Fuente de un documento del registro: el registro SOUR con «1 REFN reg:<id>» (su xref cambia entre pasadas de generar.py).
+  // ---------- Citas de documentos ----------
+  // Fuente de un documento del registro: el registro SOUR con «1 REFN reg:<id>» .
   fuenteDe(doc) {
     for (const r of this.ged.registros) if (r.tipo === 'SOUR' && r.raw.includes('reg:' + doc) && hijos(r.arbol, 'REFN').some(n => n.valor === 'reg:' + doc)) return r.xref;
     return null;
   }
-  // Escribe la cita en la persona si el documento ya tiene fuente. Devuelve false si no la tiene (la pondrá generar.py).
+  // Escribe la cita en la persona si el documento ya tiene fuente. Devuelve false si no la tiene.
   cita(xref, { doc, papel, que, pagina, quay }) {
     const sr = this.fuenteDe(doc);
     if (!sr) return false;
@@ -430,7 +430,7 @@ export class Editor {
     return true;
   }
 
-  // Crea un registro a partir de su texto (fuente u objeto del registro de documentos), delante de «0 TRLR», como generar.py.
+  // Crea un registro a partir de su texto (fuente u objeto del registro de documentos), delante de «0 TRLR».
   crearTexto(texto) {
     const r = new Registro(partirLargas(texto.replace(/\r?\n/g, '\r\n').replace(/(\r\n)+$/, '')).replace(/\r\n/g, this.ged.nl) + this.ged.nl, this.ged.nl);
     if (this.ged.porXref.has(r.xref)) return false;
@@ -442,12 +442,12 @@ export class Editor {
     return true;
   }
 
-  // Cita del registro en una persona, como la escribe generar.py: SOUR / PAGE / QUAY / NOTE / _REG, y después
+  // Cita de un documento en una persona: SOUR / PAGE / QUAY / NOTE / _REG, y después
   // de sus citas las fotos (1 OBJE @M…@) sin repetir. «sr» es la fuente (ya en el archivo o recién creada).
-  citaRegistro(xref, { sr, doc, papel, que, pagina, quay, objs = [] }) {
+  citaRegistro(xref, { sr, doc, papel, que, pagina, quay, grado = '', objs = [] }) {
     const r = this.tocar(xref), h = r.arbol.hijos;
     if (h.some(n => n.tag === 'SOUR' && n.valor === sr && n.hijos.some(x => x.tag === '_REG' && x.valor === doc))) return false;
-    const lineas = [`1 SOUR ${sr}`, ...(pagina ? [`2 PAGE ${pagina}`] : []), `2 QUAY ${quay}`, `2 NOTE ${papel}: ${que}`, `2 _REG ${doc}`];
+    const lineas = [`1 SOUR ${sr}`, ...(pagina ? [`2 PAGE ${pagina}`] : []), `2 QUAY ${quay}`, `2 NOTE ${papel}: ${que}`, `2 _REG ${doc}`, ...(['C', 'N', 'P'].includes(grado) ? [`2 _GRADO ${grado}`] : [])];
     const nuevos = new Registro(partirLargas(['0 @X@ INDI', ...lineas].join('\r\n')).replace(/\r\n/g, this.ged.nl) + this.ged.nl, this.ged.nl).arbol.hijos;
     // Detrás de sus otras citas del registro; si no tiene, delante de «1 CHAN» (o al final)
     let i = -1;

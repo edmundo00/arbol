@@ -1,9 +1,9 @@
 // Formulario de persona: nueva o elegida entre las que ya existen, con fechas en español y avisos de imposibles.
-import { esc } from './md.js?v=202611042026';
-import { aGedcom, aTexto, avisos, posiblesDuplicados, nacimientoPorEdad } from './fechas.js?v=202611042026';
-import { buscar } from './buscar.js?v=202611042026';
-import { clave } from './buscar.js?v=202611042026';
-import { nombreCompleto, vida } from './modelo.js?v=202611042026';
+import { esc } from './md.js?v=202611042132';
+import { aGedcom, aTexto, avisos, posiblesDuplicados, nacimientoPorEdad } from './fechas.js?v=202611042132';
+import { buscar } from './buscar.js?v=202611042132';
+import { clave } from './buscar.js?v=202611042132';
+import { nombreCompleto, vida } from './modelo.js?v=202611042132';
 
 // opciones: { titulo, datos: {nombre, apellidos, sexo, nac:{fecha,lugar}, def:{fecha,lugar}}, existente: bool, boda: bool,
 //             contexto: {padres:[persona], hijos:[persona]}, excluir: Set, arbol, variantes, lugares: [texto] }
@@ -240,13 +240,13 @@ export function formularioCita(o) {
       <label>Grado<select id="c-grado">${o.grados.map(([g, t]) => `<option value="${g}"${g === (d.grado || 'A') ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label></div>
     <label>Qué prueba (una frase)<input id="c-que" value="${esc(d.que || '')}" placeholder="«Bautizado el 9-XI-1614, hijo de Abraham y Johanna»"></label>
     <label>Fotos donde aparece (números; vacío = todo el documento)<input id="c-img" value="${esc(d.imagenes || '')}" placeholder="1,3-5"></label>
-    <p class="peq">Se apunta en el registro de documentos (citas_app.csv). Si el documento ya tiene fuente en el GEDCOM, la cita sale al momento en la ficha; si no, aparece cuando una sesión de Claude pase generar.py.</p>
-    <p class="botones"><button id="c-ok" class="principal">Guardar</button> <button id="c-no">Cancelar</button></p>`);
+        <p class="botones"><button id="c-ok" class="principal">Guardar</button> <button id="c-no">Cancelar</button></p>`);
   let elegido = o.doc || null;
   if (!o.doc) {
     const pintar = () => {
       const q = plano(v.$('#c-buscar').value);
-      const l = o.docs.filter(x => !q || plano(x.titulo + ' ' + x.id).includes(q)).slice(0, 40);
+      const ws = q.split(/\s+/).filter(Boolean);   // todas las palabras, en cualquier orden
+      const l = o.docs.filter(x => { const t = plano(x.titulo + ' ' + x.id); return ws.every(w => t.includes(w)); }).slice(0, 40);
       v.$('#c-res').innerHTML = l.map((x, i) => `<button type="button" data-i="${i}"><b>${esc(x.titulo)}</b> <span class="peq">${esc(x.id)}</span></button>`).join('') || '<p class="peq">Ningún documento con ese título.</p>';
       v.$('#c-res').querySelectorAll('[data-i]').forEach(b => b.onclick = () => { elegido = l[+b.dataset.i]; v.$('#c-elegido').textContent = 'Elegido: ' + elegido.titulo; v.$('#c-res').innerHTML = ''; });
     };

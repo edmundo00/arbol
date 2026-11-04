@@ -1,7 +1,7 @@
 // Pantallas de la base de nombres y lugares: menciones de una persona y buscadores «¿dónde aparece…?» y «¿quién hay en…?».
-import { tarjeta } from './vistas.js?v=202611042026';
-import { esc } from './md.js?v=202611042026';
-import { fiabilidad, aniosEnTexto } from './nombresdb.js?v=202611042026';
+import { tarjeta } from './vistas.js?v=202611042132';
+import { esc } from './md.js?v=202611042132';
+import { fiabilidad, aniosEnTexto } from './nombresdb.js?v=202611042132';
 
 const TEXTO = /\.(md|txt|csv|html?)$/i, IMAGEN = /\.(jpe?g|png|gif|tiff?|bmp|webp)$/i;
 const ORIGEN = { registro: 'registro', transcripcion: 'transcripción', pdf_texto: 'texto de PDF', copia_ligera: 'copia ligera', ficha: 'ficha',
@@ -15,7 +15,7 @@ function abribles(mm) {
   // Un documento del registro con varias páginas trae «a.md|b.md|…»: se abre la primera
   const primera = r => r && r.split('|')[0].trim();
   const m = { ...mm, transcripcion: primera(mm.transcripcion), ruta: primera(mm.ruta), ruta_original: primera(mm.ruta_original) };
-  // En el registro, la ruta es documentos.csv: solo vale su transcripción.
+  // Un documento del registro no tiene ruta propia: solo vale su transcripción.
   const candidatas = m.origen === 'registro' ? [m.transcripcion] : [m.transcripcion, m.ruta];
   const texto = candidatas.find(r => r && TEXTO.test(r) && !r.includes('*'));
   if (texto) out.push({ tipo: 'texto', ruta: sinOriginal(texto) });

@@ -1,6 +1,6 @@
 // Estadísticas del GEDCOM abierto y comprobación de que solo trae a la familia esperada (grupos desconectados, apellidos).
-import { anios, nombreCompleto, vida, miles } from './modelo.js?v=202611042026';
-import { esc } from './md.js?v=202611042026';
+import { anios, nombreCompleto, vida, miles } from './modelo.js?v=202611042132';
+import { esc } from './md.js?v=202611042132';
 
 const enlace = id => `#/p/${id.slice(1, -1)}`;
 const UNION = new Set(['y', 'e', 'i']);
