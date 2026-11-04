@@ -1,31 +1,34 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611041952';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611041952';
-import { buscar, prepararVariantes } from './buscar.js?v=202611041952';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611041952';
-import { BaseNombres, TIPOS } from './nombresdb.js?v=202611041952';
-import { entender, comoSeEntiende } from './consulta.js?v=202611041952';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611041952';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611041952';
-import { revisarSalud, repararSalud } from './salud.js?v=202611041952';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611041952';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611041952';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611041952';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611041952';
-import { md, esc } from './md.js?v=202611041952';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611041952';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611041952';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611041952';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611041952';
-import { Guardado } from './guardar.js?v=202611041952';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611041952';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611041952';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611041952';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611041952';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611041952';
-import { pintarEstadisticas } from './estadisticas.js?v=202611041952';
+import { Gedcom } from './gedcom.js?v=202611042002';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611042002';
+import { buscar, prepararVariantes } from './buscar.js?v=202611042002';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611042002';
+import { BaseNombres, TIPOS } from './nombresdb.js?v=202611042002';
+import { entender, comoSeEntiende } from './consulta.js?v=202611042002';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611042002';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611042002';
+import { revisarSalud, repararSalud } from './salud.js?v=202611042002';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611042002';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611042002';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611042002';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611042002';
+import { md, esc } from './md.js?v=202611042002';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611042002';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611042002';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611042002';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611042002';
+import { Guardado } from './guardar.js?v=202611042002';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611042002';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611042002';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611042002';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611042002';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611042002';
+import { pintarEstadisticas } from './estadisticas.js?v=202611042002';
 
 const $ = s => document.querySelector(s);
+// La versión publicada (la pone publicar.py en la dirección de este archivo): 202611041952 → «4/11 19:52»
+const VERSION_APP = (() => { const m = /^\d{4}(\d\d)(\d\d)(\d\d)(\d\d)$/.exec(new URL(import.meta.url).searchParams.get('v') || ''); return m ? `Versión ${+m[2]}/${+m[1]} ${m[3]}:${m[4]}` : ''; })();
+document.getElementById('version').textContent = VERSION_APP;
 const main = $('#main');
 const esLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 const PRUEBA = '/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged';   // solo para el servidor de pruebas
@@ -103,6 +106,7 @@ function inicio(ult, movido = null) {
       Las fotos y la base de nombres son opcionales.</p>
     ${ult?.asa ? `<p><button id="reabrir">Volver a abrir «${esc(ult.asa.name)}» (pide permiso)</button></p>` : ''}
     ${hayDisco ? `<p class="peq">Para guardar cambios en el archivo: <button id="elegir">Abrir con permiso de escritura…</button></p>` : ''}
+    <p class="peq">${esc(VERSION_APP)}</p>
     ${esLocal ? `<hr><p class="peq">Pruebas: <button id="servidor">Usar el servidor local</button></p>` : ''}
   </div>`);
   if (ult?.asa) $('#reabrir').onclick = async () => {
@@ -112,16 +116,24 @@ function inicio(ult, movido = null) {
   };
   if (hayDisco) $('#elegir').onclick = () => intentar(async () => { fuente = await Fuente.elegir(); await bdGuardar('pistaGedcom', fuente.asa); pedirCarpetaAlAbrir = true; });
   // Con el cuadro de Chrome se sabe qué archivo es, y luego la carpeta se pide ya situada en la suya
-  if (hayDisco) main.querySelector('label.grande').onclick = async ev => {
-    ev.preventDefault();
-    try {
-      const [asa] = await window.showOpenFilePicker({ id: 'arbol-gedcom', types: [{ description: 'GEDCOM', accept: { 'application/octet-stream': ['.ged', '.gedcom'] } }] });
-      await bdGuardar('pistaGedcom', asa);
-      abrirArchivo(await asa.getFile());
-    } catch (e) { if (e.name !== 'AbortError') error(e); }
-  };
+  abrirConCuadro(main.querySelector('label.grande'));
   $('#archivo').onchange = ev => ev.target.files[0] && abrirArchivo(ev.target.files[0]);
   if (esLocal) $('#servidor').onclick = () => { LS.set('modo', 'servidor'); location.reload(); };
+}
+
+// Elegir el GEDCOM con el cuadro de Chrome: así se sabe de qué archivo viene, y la carpeta se pide luego ya situada en la suya.
+async function elegirGedcom() {
+  const [asa] = await window.showOpenFilePicker({ id: 'arbol-gedcom', types: [{ description: 'GEDCOM', accept: { 'application/octet-stream': ['.ged', '.gedcom'] } }] });
+  await bdGuardar('pistaGedcom', asa);
+  return asa;
+}
+function abrirConCuadro(boton) {
+  if (!hayDisco || !boton) return;
+  boton.onclick = async ev => {
+    ev.preventDefault();
+    try { abrirArchivo(await (await elegirGedcom()).getFile()); }
+    catch (e) { if (e.name !== 'AbortError') error(e); }
+  };
 }
 
 // Abrir un GEDCOM en un paso (botón o arrastrar): se lee y se guarda una copia en el navegador; sin pedir permisos.
@@ -178,7 +190,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611041952')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611042002')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -415,13 +427,22 @@ function activarEdicion(listo = () => {}) {
     <ul><li>Cada cambio se guarda al momento en el archivo, con <b>copia de seguridad</b> en la carpeta «copias».</li>
       <li>Mientras editas, los scripts no pueden escribirlo (candado).</li>
       <li>No lo edites a la vez con Family Historian.</li></ul>
-    ${pistaGedcom ? '<p>Pulsa el botón: el cuadro sale ya en <b>la carpeta del archivo</b>; solo tienes que aceptarlo con <b>Seleccionar carpeta</b>. Se queda recordada en este ordenador.' : '<p>Pulsa el botón y elige la <b>carpeta donde está el archivo</b> (<code>1 Árbol/Árbol de trabajo</code>). Se queda recordada en este ordenador.'}
+    ${pistaGedcom ? '<p>Pulsa el botón: el cuadro sale ya en <b>la carpeta del archivo</b>; solo tienes que aceptarlo con <b>Seleccionar carpeta</b>. Se queda recordada en este ordenador.' : `<p>Pulsa el botón y elige el archivo <b>${esc(info.nombre)}</b> (en <code>1 Árbol/Árbol de trabajo</code>). Después, un clic para aceptar su carpeta, y queda recordada en este ordenador.`}
       Si el navegador pregunta por el permiso, elige <b>«Permitir en cada visita»</b>.</p>`}
     <p class="aviso" id="e-error"></p>
-    <p class="botones"><button id="e-ok" class="principal">${pruebas() ? 'Empezar' : 'Elegir la carpeta y empezar'}</button> <button id="e-no">Cancelar</button></p></div>`;
+    <p class="botones">${!pruebas() && !pistaGedcom ? `<button id="e-archivo" class="principal">Elegir «${esc(info.nombre)}»</button>` : `<button id="e-ok" class="principal">${pruebas() ? 'Empezar' : pistaGedcom ? 'Seleccionar su carpeta' : 'Elegir la carpeta y empezar'}</button>`} <button id="e-no">Cancelar</button></p></div>`;
   const cerrar = () => { capa.hidden = true; capa.innerHTML = ''; document.body.classList.remove('con-visor'); };
   capa.querySelector('#e-no').onclick = () => { cerrar(); listo(false); };
-  capa.querySelector('#e-ok').onclick = async () => {
+  capa.querySelector('#e-archivo')?.addEventListener('click', async () => {
+    try {
+      const asa = await elegirGedcom();
+      if (asa.name !== info.nombre) { capa.querySelector('#e-error').textContent = `Ese es «${asa.name}»; hay que elegir «${info.nombre}».`; return; }
+      pistaGedcom = asa;
+      activarEdicion(listo);   // ahora, con la carpeta ya situada
+    } catch (e) { if (e.name !== 'AbortError') capa.querySelector('#e-error').textContent = e.message; }
+  });
+  const ok = capa.querySelector('#e-ok');
+  if (ok) ok.onclick = async () => {
     if (await conectarEdicion(m => { capa.querySelector('#e-error').textContent = m; })) { cerrar(); listo(true); }
   };
 }
@@ -1465,6 +1486,7 @@ function verEstadisticas() {
     pantalla(`<div class="caja ancha">${pintarEstadisticas(arbol, info)}
       <p><a class="boton principal" href="#/buscar">Ver el árbol</a> <label class="boton">Abrir otro GEDCOM…<input id="otro-ged" type="file" hidden></label></p></div>`);
     $('#otro-ged').onchange = ev => ev.target.files[0] && abrirArchivo(ev.target.files[0]);
+    abrirConCuadro($('#otro-ged').closest('label'));
     main.querySelectorAll('[data-apellido]').forEach(a => a.onclick = ev => {
       ev.preventDefault();
       Object.assign(estadoBusqueda, { q: '', nombre: '', apellidos: a.dataset.apellido, lugar: '', desde: null, hasta: null, linea: null });
@@ -1506,6 +1528,7 @@ function ajustes() {
   </div>`);
   $('#otro').onclick = async () => { await Fuente.olvidar(); LS.set('modo', null); location.hash = '#/'; location.reload(); };
   $('#otro-ged').onchange = ev => ev.target.files[0] && abrirArchivo(ev.target.files[0]);
+  abrirConCuadro($('#otro-ged').closest('label'));
   $('#sinbase')?.addEventListener('click', async () => { baseNombres?.cerrar(); baseNombres = null; await bdGuardar('nombresDb', null); ajustes(); });
   $('#x-compartir').onclick = () => {
     const bytes = paraCompartir(arbol.ged, arbol, { vivos: true, notas: $('#x-notas').checked, utf8: true });

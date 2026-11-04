@@ -1,9 +1,9 @@
 // Formulario de persona: nueva o elegida entre las que ya existen, con fechas en español y avisos de imposibles.
-import { esc } from './md.js?v=202611041952';
-import { aGedcom, aTexto, avisos, posiblesDuplicados, nacimientoPorEdad } from './fechas.js?v=202611041952';
-import { buscar } from './buscar.js?v=202611041952';
-import { clave } from './buscar.js?v=202611041952';
-import { nombreCompleto, vida } from './modelo.js?v=202611041952';
+import { esc } from './md.js?v=202611042002';
+import { aGedcom, aTexto, avisos, posiblesDuplicados, nacimientoPorEdad } from './fechas.js?v=202611042002';
+import { buscar } from './buscar.js?v=202611042002';
+import { clave } from './buscar.js?v=202611042002';
+import { nombreCompleto, vida } from './modelo.js?v=202611042002';
 
 // opciones: { titulo, datos: {nombre, apellidos, sexo, nac:{fecha,lugar}, def:{fecha,lugar}}, existente: bool, boda: bool,
 //             contexto: {padres:[persona], hijos:[persona]}, excluir: Set, arbol, variantes, lugares: [texto] }

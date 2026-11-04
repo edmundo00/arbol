@@ -1,7 +1,7 @@
 // Registro de documentos (9 Sistema/Control/registro): la aplicación añade filas a citas_app.csv y documentos_app.csv.
 // generar.py (de las sesiones de Claude) las lee y pone las fuentes y fotos en el GEDCOM.
 // Mismo formato que citas.csv y documentos.csv: UTF-8, «;» como separador, sin «;» dentro del texto.
-import { bdLeer, bdGuardar } from './almacen.js?v=202611041952';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611042002';
 
 export const CAB_CITAS = 'doc;xref;papel;que_prueba;imagenes;grado;fecha_alta';
 export const CAB_DOCS = 'id;titulo;fecha;tipo;archivo;imagenes;otros_archivos;transcripcion;ficha;estado;sour;notas';

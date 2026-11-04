@@ -1,8 +1,8 @@
 // Revisar el árbol: dónde se corta cada línea, incoherencias de fechas y posibles duplicados.
 // Las reglas son las de 9 Sistema/Control/scripts/auditar_gedcom.py.
-import { antepasados } from './arboles.js?v=202611041952';
-import { nombreCompleto, vida, miles } from './modelo.js?v=202611041952';
-import { esc } from './md.js?v=202611041952';
+import { antepasados } from './arboles.js?v=202611042002';
+import { nombreCompleto, vida, miles } from './modelo.js?v=202611042002';
+import { esc } from './md.js?v=202611042002';
 
 const y = e => (e ? anio(e.fecha) : null);
 // Año de una fecha como en auditar_gedcom.py: el primero entre 1000 y 2099; «entre A y B», el del medio.
