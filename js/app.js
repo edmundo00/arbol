@@ -1,29 +1,29 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611042132';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611042132';
-import { buscar, prepararVariantes } from './buscar.js?v=202611042132';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611042132';
-import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611042132';
-import { entender, personasDelArbol } from './consulta.js?v=202611042132';
-import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611042132';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611042132';
-import { revisarSalud, repararSalud } from './salud.js?v=202611042132';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611042132';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611042132';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611042132';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611042132';
-import { md, esc } from './md.js?v=202611042132';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611042132';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611042132';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611042132';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611042132';
-import { Guardado } from './guardar.js?v=202611042132';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611042132';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611042132';
-import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo } from './registro.js?v=202611042132';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611042132';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611042132';
-import { pintarEstadisticas } from './estadisticas.js?v=202611042132';
+import { Gedcom } from './gedcom.js?v=202611050015';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611050015';
+import { buscar, prepararVariantes } from './buscar.js?v=202611050015';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611050015';
+import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611050015';
+import { entender, personasDelArbol } from './consulta.js?v=202611050015';
+import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611050015';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611050015';
+import { revisarSalud, repararSalud } from './salud.js?v=202611050015';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611050015';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611050015';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611050015';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611050015';
+import { md, esc } from './md.js?v=202611050015';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611050015';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611050015';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611050015';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611050015';
+import { Guardado } from './guardar.js?v=202611050015';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611050015';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611050015';
+import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo } from './registro.js?v=202611050015';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611050015';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611050015';
+import { pintarEstadisticas } from './estadisticas.js?v=202611050015';
 
 const $ = s => document.querySelector(s);
 // La versión publicada (la pone publicar.py en la dirección de este archivo): 202611041952 → «4/11 19:52»
@@ -190,7 +190,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611042132')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611050015')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -1060,8 +1060,8 @@ async function galeria(caja, lista, fuenteDoc) {
 
 async function transcripcion(m, fuenteDoc) {
   if (m.ruta) { try { const t = await carpeta.transcripcion(m.ruta); if (t) return t; } catch (e) { if (!e.noExiste) throw e; } }
-  const d = fuenteDoc?.transcripcion;
-  if (d && /\.md$/.test(d) && !d.includes('*')) { try { return await carpeta.texto(d); } catch (e) { if (!e.noExiste) throw e; } }
+  const d = fuenteDoc?.transcripciones?.[0];
+  if (d) { try { return await carpeta.texto(d); } catch (e) { if (!e.noExiste) throw e; } }
   return null;
 }
 

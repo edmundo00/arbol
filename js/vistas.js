@@ -1,8 +1,8 @@
 // Pantallas: resultados de búsqueda, vista de familia, datos, notas y documentos de cada persona.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611042132';
-import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611042132';
-import { esc } from './md.js?v=202611042132';
-import { pruebasDe, resumenPruebas, cronologia, ES_TAREA } from './investigar.js?v=202611042132';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611050015';
+import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611050015';
+import { esc } from './md.js?v=202611050015';
+import { pruebasDe, resumenPruebas, cronologia, ES_TAREA } from './investigar.js?v=202611050015';
 
 export function insignias(arbol, id) {
   return arbol.raices.map(({ id: r, letra, nombre: quien }) => {
@@ -94,7 +94,8 @@ export function fuente(arbol, x) {
   const campo = k => (new RegExp('^' + k + ':\\s*(.*)$', 'm').exec(nota) || [])[1] || '';
   return { id: x, titulo: valor(a, 'TITL') || valor(a, 'ABBR') || x, publ: valor(a, 'PUBL'), autor: valor(a, 'AUTH'),
            refn: valor(a, 'REFN'), nota, objs: hijos(a, 'OBJE').map(o => media(arbol, o)).filter(Boolean),
-           transcripcion: campo('Transcripción'), ficha: campo('Ficha'), texto: textoLargo(hijo(a, 'TEXT') || { valor: '', hijos: [] }) };
+           transcripciones: (() => { const l = hijos(a, '_TRANS').map(n => n.valor).filter(t => /\.md$/.test(t)); const t = campo('Transcripción'); return l.length ? l : /\.md$/.test(t) && !t.includes('*') ? [t] : []; })(),
+           ficha: campo('Ficha'), texto: textoLargo(hijo(a, 'TEXT') || { valor: '', hijos: [] }) };
 }
 
 // Todas las citas de una persona (las suyas y las de sus hechos), agrupadas por fuente.
@@ -183,7 +184,7 @@ function documentos(docs, sueltas) {
       <div class="botones">
         ${d.fotos.length ? `<button data-fotos="${k}">📷 Fotos (${d.fotos.length}${d.todas.length > d.fotos.length ? ` de ${d.todas.length}` : ''})</button>` : ''}
         ${d.todas.length > d.fotos.length ? `<button data-fotos="${k}" data-todas="1">Todas (${d.todas.length})</button>` : ''}
-        ${f.transcripcion && /\.md$/.test(f.transcripcion) && !f.transcripcion.includes('*') ? `<button data-md="${esc(f.transcripcion)}">📜 Transcripción</button>` : ''}
+        ${f.transcripciones.slice(0, 12).map(t => `<button data-md="${esc(t)}">📜 ${f.transcripciones.length === 1 ? 'Transcripción' : esc(t.split('/').pop().replace(/\.md$/, ''))}</button>`).join('')}${f.transcripciones.length > 12 ? `<span class="peq"> y ${f.transcripciones.length - 12} transcripciones más</span>` : ''}
         ${(f.ficha || '').split(/,\s*/).filter(x => /\.md$/.test(x)).map((x, i) => `<button data-md="${esc(x)}">🗂 Ficha${i ? ' ' + (i + 1) : ''}</button>`).join('')}
       </div>
       <div class="galeria" id="gal${k}"></div>
