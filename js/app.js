@@ -22,6 +22,7 @@ import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611041854'
 import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611041854';
 import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611041854';
 import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611041854';
+import { pintarEstadisticas } from './estadisticas.js?v=202611022100';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -94,14 +95,13 @@ function inicio(ult, movido = null) {
   $('#cabecera').hidden = true;
   pantalla(`<div class="caja">
     <h2>Abrir un árbol</h2>
-    ${movido ? `<p class="aviso">El archivo «${esc(movido)}» que abriste la última vez ha cambiado de sitio (o ya no existe).
-      Pulsa <b>Elegir archivo GEDCOM…</b> y búscalo donde está ahora.</p>` : ''}
-    <p>Elige un archivo GEDCOM (<code>.ged</code>) de este aparato. No se sube a ningún sitio: se lee aquí, en el navegador.</p>
-    ${ult?.asa ? `<p><button id="reabrir" class="principal">Volver a abrir «${esc(ult.asa.name)}»</button></p>` : ''}
-    <p>${hayDisco ? `<button id="elegir"${ult?.asa ? '' : ' class="principal"'}>Elegir archivo GEDCOM…</button>`
-                  : `<label class="boton principal">Elegir archivo GEDCOM…<input id="archivo" type="file" hidden></label>`}</p>
-    <p class="peq">${hayDisco ? 'En este navegador el archivo se lee siempre del disco, así que ves siempre la última versión.'
-      : 'En este aparato se guarda una copia del archivo en el navegador. Cuando lo cambies en el ordenador, vuelve a copiarlo al aparato y ábrelo otra vez.'}</p>
+    ${movido ? `<p class="aviso">El archivo «${esc(movido)}» que abriste la última vez ha cambiado de sitio (o ya no existe). Vuelve a abrirlo.</p>` : ''}
+    <p><label class="boton principal grande">Abrir GEDCOM…<input id="archivo" type="file" hidden></label></p>
+    <p>O <b>arrastra el archivo <code>.ged</code></b> a esta ventana.</p>
+    <p class="peq">El archivo no se sube a ningún sitio: se lee aquí, en el navegador, y se guarda una copia en este aparato para que se abra solo la próxima vez.
+      Las fotos y la base de nombres son opcionales.</p>
+    ${ult?.asa ? `<p><button id="reabrir">Volver a abrir «${esc(ult.asa.name)}» (pide permiso)</button></p>` : ''}
+    ${hayDisco ? `<p class="peq">Para poder guardar cambios en el archivo (más adelante): <button id="elegir">Abrir con permiso de escritura…</button></p>` : ''}
     ${esLocal ? `<hr><p class="peq">Pruebas: <button id="servidor">Usar el servidor local</button></p>` : ''}
   </div>`);
   if (ult?.asa) $('#reabrir').onclick = async () => {
@@ -110,9 +110,31 @@ function inicio(ult, movido = null) {
     intentar(async () => {});
   };
   if (hayDisco) $('#elegir').onclick = () => intentar(async () => { fuente = await Fuente.elegir(); });
-  else $('#archivo').onchange = ev => ev.target.files[0] && intentar(async () => { fuente = await Fuente.desdeFile(ev.target.files[0]); });
+  $('#archivo').onchange = ev => ev.target.files[0] && abrirArchivo(ev.target.files[0]);
   if (esLocal) $('#servidor').onclick = () => { LS.set('modo', 'servidor'); location.reload(); };
 }
+
+// Abrir un GEDCOM en un paso (botón o arrastrar): se lee y se guarda una copia en el navegador; sin pedir permisos.
+// Al abrir uno nuevo se empieza por sus estadísticas.
+async function abrirArchivo(file) {
+  try {
+    pantalla(`<div class="caja"><p class="cargando">Abriendo «${esc(file.name)}»…</p></div>`);
+    await Fuente.desdeFile(file);
+    LS.set('modo', null);
+    location.hash = '#/estadisticas';
+    location.reload();
+  } catch (e) { error(e); }
+}
+document.addEventListener('dragover', e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); document.body.classList.add('soltar'); } });
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('soltar'); });
+document.addEventListener('drop', e => {
+  document.body.classList.remove('soltar');
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  e.preventDefault();
+  if (!/\.ged(com)?$/i.test(f.name) && !confirm(`«${f.name}» no parece un GEDCOM (.ged). ¿Abrirlo igualmente?`)) return;
+  abrirArchivo(f);
+});
 
 async function intentar(f) {
   try { await f(); } catch (e) { if (e.name === 'AbortError') return; return error(e); }
@@ -182,6 +204,7 @@ function ir() {
   if (h === '/texto') return verTexto2();
   if ((m = /^\/revisar(?:\/(\w+))?$/.exec(h))) return verRevisar(m[1] || 'fronteras');
   if (h === '/ajustes') return ajustes();
+  if (h === '/estadisticas') return verEstadisticas();
   return verBuscar();
 }
 
@@ -203,7 +226,7 @@ function verBuscar() {
     <div id="res"></div><p class="exportar" id="b-excel"></p>
     ${!e.q && !e.nombre && !e.apellidos && !e.lugar && !e.linea ? `<div class="inicio"><p>Escribe arriba cualquier trozo de nombre o apellido. No importan las tildes ni la ortografía (b/v, y/i, h…).</p>
       <p>${arbol.raices.map(r => `<a class="tarjeta-enlace" href="#/p/${esc(r.id.slice(1, -1))}">${esc(r.nombre)}</a>`).join(' ')}</p>
-      <p class="peq">«${esc(info.nombre)}» · ${arbol.personas.size.toLocaleString('es')} personas · ${arbol.familias.size.toLocaleString('es')} familias
+      <p class="peq">«${esc(info.nombre)}» · ${arbol.personas.size.toLocaleString('es')} personas · ${arbol.familias.size.toLocaleString('es')} familias · <a href="#/estadisticas">Estadísticas</a>
         ${info.copia ? `<br>Copia guardada en este aparato, del archivo del ${esc(new Date(info.fecha).toLocaleString('es'))}` : ''}</p></div>` : ''}
   </div>`);
   for (const id of ['f-nombre', 'f-apellidos', 'f-lugar', 'f-desde', 'f-hasta', 'f-linea']) $('#' + id).addEventListener('input', lanzar);
@@ -1357,6 +1380,25 @@ function verTexto2() {
   if (e.q) lanzarT();
 }
 
+// ---------- Estadísticas ----------
+
+function verEstadisticas() {
+  document.title = 'Árbol · Estadísticas';
+  pantalla(`<div class="caja ancha"><p class="cargando">Contando…</p></div>`);
+  setTimeout(() => {
+    pantalla(`<div class="caja ancha">${pintarEstadisticas(arbol, info)}
+      <p><a class="boton principal" href="#/buscar">Ver el árbol</a> <label class="boton">Abrir otro GEDCOM…<input id="otro-ged" type="file" hidden></label></p></div>`);
+    $('#otro-ged').onchange = ev => ev.target.files[0] && abrirArchivo(ev.target.files[0]);
+    main.querySelectorAll('[data-apellido]').forEach(a => a.onclick = ev => {
+      ev.preventDefault();
+      Object.assign(estadoBusqueda, { q: '', nombre: '', apellidos: a.dataset.apellido, lugar: '', desde: null, hasta: null, linea: null });
+      $('#q').value = '';
+      sessionStorage.setItem('arbol.busqueda', JSON.stringify(estadoBusqueda));
+      location.hash = '#/buscar';
+    });
+  }, 20);
+}
+
 // ---------- Ajustes ----------
 
 function ajustes() {
@@ -1367,7 +1409,7 @@ function ajustes() {
     <p><b>${esc(info.nombre)}</b><br>${(info.tam / 1e6).toFixed(2)} MB · ${esc(info.cod)} · ${arbol.personas.size.toLocaleString('es')} personas
       ${info.fecha ? ' · modificado el ' + esc(new Date(info.fecha).toLocaleString('es')) : ''}
       ${info.copia ? '<br>Es una copia guardada en este navegador. Para actualizarla, abre otra vez el archivo.' : ''}</p>
-    <p><button id="otro">Abrir otro GEDCOM…</button></p>
+    <p><label class="boton principal">Abrir otro GEDCOM…<input id="otro-ged" type="file" hidden></label> <a class="boton" href="#/estadisticas">Estadísticas</a> <button id="otro">Cerrar este árbol</button></p>
     <h3>Exportar para compartir</h3>
     <p class="peq">Un GEDCOM para la familia o para FamilySearch y MyHeritage: las personas que pueden estar vivas salen como «Privado» (sin datos, con sus enlaces).</p>
     <label class="check"><input type="checkbox" id="x-notas" checked> Quitar también las notas</label>
@@ -1387,6 +1429,7 @@ function ajustes() {
     <hr><p class="peq">Fase 1: solo lectura. El programa no cambia ningún archivo.</p>
   </div>`);
   $('#otro').onclick = async () => { await Fuente.olvidar(); LS.set('modo', null); location.hash = '#/'; location.reload(); };
+  $('#otro-ged').onchange = ev => ev.target.files[0] && abrirArchivo(ev.target.files[0]);
   $('#sinbase')?.addEventListener('click', async () => { baseNombres?.cerrar(); baseNombres = null; await bdGuardar('nombresDb', null); ajustes(); });
   $('#x-compartir').onclick = () => {
     const bytes = paraCompartir(arbol.ged, arbol, { vivos: true, notas: $('#x-notas').checked, utf8: true });
