@@ -328,3 +328,10 @@ hr { border: 0; border-top: 1px solid var(--linea); margin: 16px 0; }
 .exportar { margin: .6em 0 } .exportar:empty { display: none }
 .arboles-hechos { margin: 1em 0 } .arboles-hechos > summary { cursor: pointer; color: var(--suave, #666) }
 .mencion .repes { color: #7a5a2a }
+.resumen-busqueda { margin: .6em 0; padding: 8px 10px; background: var(--papel, #fffaf0); border: 1px solid var(--linea); border-radius: 6px; }
+.resumen-busqueda a { display: inline-block; margin-left: .5em; }
+.mas-resultados { margin: .6em 0; } .mas-resultados button { margin-left: .5em; }
+.falta-dato { color: #7a5a2a; font-style: italic; font-size: .9em; }
+.filtros.nombres select { width: 100%; }
+.filtros.nombres .doble { grid-column: span 2; } .filtros.nombres .triple { grid-column: span 3; }
+@media (max-width: 640px) { .filtros.nombres .doble, .filtros.nombres .triple { grid-column: span 2; } }

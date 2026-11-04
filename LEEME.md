@@ -92,7 +92,12 @@ Se lee del disco con **sql.js**, que va dentro del programa (`vendor/sqljs`, lic
   - **pistas** (enlazadas solo por el nombre: hay que comprobarlas);
   - **posibles por el nombre** (mismo nombre en documentos sin enlace: pueden ser otra persona).
   Cada una con su documento, papel, fecha y contexto, y botones **📜 Texto** y **📷 Imagen** que abren la transcripción o la foto con las carpetas elegidas.
-- **Buscador → «En los documentos»**: **Nombre** y **Apellidos** (por separado: «Juan» en Nombre no encuentra a los apellidados Juan) y **¿Quién hay en el lugar…?**, con años desde y hasta. Da lo mismo que `python -I "9 Sistema/Control/scripts/buscar_nombres.py"` (comprobado en las pruebas).
+- **Buscador → «En los documentos»**: **Nombre** y **Apellidos** (por separado: «Juan» en Nombre no encuentra a los apellidados Juan), **Lugar** y años desde y hasta. Con nombre, el lugar y los años acotan a esa persona; solo con lugar, sale quién hay allí.
+  - Salen primero los documentos y después las personas del árbol, en cuatro grupos: **cumplen lo pedido**; **cumplen en parte** (coincide un dato y del otro no consta nada); **sin ese dato**, plegado; y **fuera de lo pedido**, plegado (su año o su lugar son otros). Nada se oculta sin decirlo: cada grupo da su cifra y cada resultado dice su año y su lugar y de dónde salen.
+  - El año es el de la fecha de la mención o de su documento; si no hay, el escrito junto al nombre; si no, el de la transcripción enlazada. El lugar es el de la cabecera, el de la transcripción enlazada, el de la carpeta de la parroquia o el escrito junto al nombre. Un lugar nombrado en otra parte de un libro no basta para cumplir.
+  - **Tipo de documento** y **Archivo** funcionan igual. El tipo sale de la cabecera o, si no lo tiene, del título o del nombre del archivo (la lista de grupos está en `TIPOS`, en `js/nombresdb.js`). El archivo sale de la carpeta `2 Documentos/<archivo>/`. Libros, fichas y notas no tienen tipo: van a «sin ese dato».
+  - Dentro de cada grupo, primero el nombre exacto («María Fernández» antes que «María Rosa Fernández»). No hay tope: se ven de 100 en 100 con «Ver más», diciendo cuántas faltan, y el Excel lleva la lista entera.
+  - `buscar_nombres.py` no tiene estos grupos: con años sigue dejando pasar lo que no tiene fecha y corta en 300.
 - La primera vez pide **Elegir base de nombres (.db)…**; después se recuerda, como el GEDCOM, y se lee siempre del disco.
 - Pesa unos 180 MB: en el ordenador abre en un par de segundos; en el móvil puede ir muy lento.
 

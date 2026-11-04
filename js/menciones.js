@@ -1,6 +1,6 @@
 // Pantallas de la base de nombres y lugares: menciones de una persona y buscadores «¿dónde aparece…?» y «¿quién hay en…?».
-import { esc } from './md.js?v=202611011941';
-import { fiabilidad } from './nombresdb.js?v=202611011941';
+import { esc } from './md.js?v=202611041854';
+import { fiabilidad } from './nombresdb.js?v=202611041854';
 
 const TEXTO = /\.(md|txt|csv|html?)$/i, IMAGEN = /\.(jpe?g|png|gif|tiff?|bmp|webp)$/i;
 const ORIGEN = { registro: 'registro', transcripcion: 'transcripción', pdf_texto: 'texto de PDF', copia_ligera: 'copia ligera', ficha: 'ficha',
@@ -111,28 +111,133 @@ export function pintarMenciones(caja, { enlazadas, posibles }, acciones, persona
 
 const etiquetaAhn = p => [p.ahnentafel ? `n.º ${p.ahnentafel}` : '', p.ahnentafel_diana ? `D${p.ahnentafel_diana}` : ''].filter(Boolean).join(', ');
 
-// Resultados de «¿Dónde aparece…?»
-export function pintarDonde(caja, { personas, menciones }, acciones) {
-  let grupos = [];
-  caja.innerHTML = `<h3>En el árbol: ${personas.length} persona${personas.length === 1 ? '' : 's'}</h3>
-    <div class="lista">${personas.map(p => `<a class="tarjeta s${p.sexo || 'U'}" href="#/p/${esc(p.xref.slice(1, -1))}">
+// ---------- Listas largas: se pinta un trozo y se dice cuántas quedan ----------
+const miles = n => n.toLocaleString('es');
+const plural = (n, uno, varios) => `${miles(n)} ${n === 1 ? uno : varios}`;
+
+// Pinta «lista» en «cont» de PASO en PASO, con un botón que dice cuántas faltan. «pintar(trozo, indiceInicial)» da el HTML;
+// «tras()» se llama cada vez que se añaden filas (para conectar sus botones).
+function listaPorTrozos(cont, lista, pintar, tras, paso = 100) {
+  let hechos = 0;
+  const pie = document.createElement('p');
+  pie.className = 'mas-resultados';
+  const sigue = n => {
+    const trozo = lista.slice(hechos, hechos + n);
+    pie.insertAdjacentHTML('beforebegin', pintar(trozo, hechos));
+    hechos += trozo.length;
+    const faltan = lista.length - hechos;
+    pie.innerHTML = faltan ? `<span class="peq">Se ven ${miles(hechos)} de ${miles(lista.length)}; faltan ${miles(faltan)}.</span>
+      <button data-mas>Ver ${miles(Math.min(paso, faltan))} más</button>${faltan > paso ? ` <button data-todas>Ver todas</button>` : ''}` : '';
+    pie.querySelector('[data-mas]')?.addEventListener('click', () => sigue(paso));
+    pie.querySelector('[data-todas]')?.addEventListener('click', () => sigue(lista.length));
+    tras?.();
+  };
+  cont.append(pie);
+  sigue(paso);
+}
+
+// Un bloque de menciones: título, ayuda y filas, con sus botones Texto / Imagen conectados.
+function bloqueMenciones(padre, lista, acciones, { titulo, ayuda, plegado, clase = '' }) {
+  if (!lista.length) return;
+  const cuerpo = document.createElement('div');
+  listaPorTrozos(cuerpo, lista, (trozo, ini) => trozo.map((m, i) => filaMencion(m, ini + i)).join(''), () => conectar(cuerpo, lista, acciones));
+  if (plegado) {
+    const d = document.createElement('details');
+    d.className = 'arboles-hechos ' + clase;
+    d.innerHTML = `<summary>${titulo}</summary>${ayuda ? `<p class="peq">${ayuda}</p>` : ''}`;
+    d.append(cuerpo); padre.append(d);
+  } else {
+    padre.insertAdjacentHTML('beforeend', `${titulo ? `<h4>${titulo}</h4>` : ''}${ayuda ? `<p class="peq">${ayuda}</p>` : ''}`);
+    padre.append(cuerpo);
+  }
+}
+
+const tarjetaPersona = p => `<a class="tarjeta s${p.sexo || 'U'}" href="#/p/${esc(p.xref.slice(1, -1))}">
       <span class="nom">${esc(p.nombre)}</span>
-      <span class="vida">${[p.nac_fecha && 'n. ' + p.nac_fecha + (p.nac_lugar ? ' ' + p.nac_lugar : ''), p.def_fecha && 'f. ' + p.def_fecha + (p.def_lugar ? ' ' + p.def_lugar : '')].filter(Boolean).map(esc).join(' — ')}</span>
-      ${etiquetaAhn(p) ? `<span class="insig"><span class="ahn">${esc(etiquetaAhn(p))}</span></span>` : ''}</a>`).join('')}</div>
-    <h3>En documentos: ${menciones.length} ${menciones.length === 1 ? 'mención' : 'menciones'}${menciones.length >= 300 ? ' (las 300 primeras)' : ''}</h3>
-    ${(() => { const l = agrupar(menciones.filter(m => !esArbolHecho(m))), a = agrupar(menciones.filter(esArbolHecho)); grupos = [...l, ...a];
-      return (l.map((m, i) => filaMencion(m, i)).join('') || '<p class="nada">Ninguna fuera de los árboles ya hechos.</p>')
-        + (a.length ? `<details class="arboles-hechos"><summary>Árboles ya hechos (${a.length}): no son fuentes</summary>${a.map((m, i) => filaMencion(m, l.length + i)).join('')}</details>` : ''); })()}`;
-  conectar(caja, grupos, acciones);
+      <span class="vida">${[p.nac_fecha && 'n. ' + p.nac_fecha + (p.nac_lugar ? ' ' + p.nac_lugar : ''), p.def_fecha && 'f. ' + p.def_fecha + (p.def_lugar ? ' ' + p.def_lugar : '')].filter(Boolean).map(esc).join(' — ')}${p._p?.notas.length ? ` <span class="falta-dato">${esc(p._p.notas.join(', '))}</span>` : ''}</span>
+      ${etiquetaAhn(p) ? `<span class="insig"><span class="ahn">${esc(etiquetaAhn(p))}</span></span>` : ''}</a>`;
+
+function bloquePersonas(padre, lista, { titulo, plegado }) {
+  if (!lista.length) return;
+  const cuerpo = document.createElement('div');
+  cuerpo.className = 'lista';
+  listaPorTrozos(cuerpo, lista, trozo => trozo.map(tarjetaPersona).join(''));
+  if (plegado) { const d = document.createElement('details'); d.className = 'arboles-hechos'; d.innerHTML = `<summary>${titulo}</summary>`; d.append(cuerpo); padre.append(d); }
+  else { padre.insertAdjacentHTML('beforeend', titulo ? `<h4>${titulo}</h4>` : ''); padre.append(cuerpo); }
+}
+
+// Excel: toda la lista, aunque en pantalla solo se vea un trozo.
+const NOM_GRUPO = ['Cumple', 'Cumple en parte', 'Sin dato', 'Fuera de lo pedido'];
+function datosExcel(menciones) {
+  return () => ({
+    cabecera: ['Grupo', 'Nombre', 'Papel', 'Fecha', 'Año', 'Lugar', 'Documento', 'Procedencia', 'Código', 'Persona enlazada', 'Por qué', 'Contexto', 'Ruta'],
+    filas: menciones.map(m => [NOM_GRUPO[m._g] || '', m.nombre, m.papel || '', m.fecha || '', m.anio || m.danio || '', m.lugar || '', (m.titulo || '').trim(), ORIGEN[m.origen] || m.origen || '',
+      m.xref || '', m.enlazado || '', (m._p?.notas || []).join(', '), m.contexto || '', (m.transcripcion || m.ruta || '').split('|')[0]]),
+  });
+}
+
+// Resultados de «¿Dónde aparece…?»: primero los documentos que cumplen lo pedido, en grupos, y nada se oculta sin decirlo.
+export function pintarDonde(caja, { personas, menciones, lugares = [], filtros = false }, acciones, pedido = {}) {
+  caja.innerHTML = '';
+  caja._excel = datosExcel(menciones);
+  const hechos = menciones.filter(esArbolHecho), docs = menciones.filter(m => !esArbolHecho(m));
+  const de = (lista, g) => lista.filter(x => x._g === g);
+  const grupos = [0, 1, 2, 3].map(g => agrupar(de(docs, g)));
+  const cuenta = l => l.reduce((s, m) => s + 1 + m._otros.length, 0);
+  const pg = [0, 1, 2, 3].map(g => de(personas, g));
+
+  const queda = [pedido.lugar?.trim() && `lugar «${pedido.lugar.trim()}»`,
+    pedido.desde != null || pedido.hasta != null ? `años ${pedido.desde ?? '…'}–${pedido.hasta ?? '…'}` : '',
+    pedido.tipo && `tipo «${pedido.tipo}»`, pedido.archivo && `archivo «${pedido.archivo}»`].filter(Boolean).join(', ');
+  caja.insertAdjacentHTML('beforeend', `<p class="resumen-busqueda">${filtros
+    ? `Con ${esc(queda)}: <b>${plural(grupos[0].length, 'documento cumple', 'documentos cumplen')}</b>${grupos[1].length ? `, ${plural(grupos[1].length, 'cumple en parte', 'cumplen en parte')}` : ''}${grupos[2].length ? `, ${plural(grupos[2].length, 'no tiene ese dato', 'no tienen ese dato')}` : ''}${grupos[3].length ? `; ${plural(grupos[3].length, 'queda fuera', 'quedan fuera')}` : ''}.`
+    : `<b>${plural(cuenta(grupos[0]), 'mención', 'menciones')}</b> en documentos${cuenta(grupos[0]) > grupos[0].length ? ` (${miles(grupos[0].length)} sin repetir el mismo texto)` : ''}${hechos.length ? `, y ${miles(hechos.length)} en árboles ya hechos` : ''}.`}
+    <a href="#" data-ir="personas">En el árbol: ${plural(personas.length, 'persona', 'personas')}${filtros ? ` (${miles(pg[0].length)} cumplen)` : ''}</a></p>
+    ${pedido.lugar?.trim() ? (lugares.length ? `<details class="peq"><summary>${plural(lugares.length, 'lugar coincide', 'lugares coinciden')} con «${esc(pedido.lugar.trim())}»</summary>${lugares.map(l => esc(l.forma)).join('; ')}</details>`
+      : `<p class="peq">«${esc(pedido.lugar.trim())}» no es ningún lugar de la base: solo se busca esa palabra junto a los nombres.</p>`) : ''}`);
+  caja.querySelector('[data-ir]').onclick = ev => { ev.preventDefault(); caja.querySelector('#en-arbol')?.scrollIntoView(); };
+
+  // --- Documentos
+  caja.insertAdjacentHTML('beforeend', '<h3>En documentos</h3>');
+  if (filtros && !grupos[0].length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ningún documento cumple todo lo pedido. Mira abajo los que no tienen el dato.</p>');
+  if (!filtros && !grupos[0].length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguna fuera de los árboles ya hechos.</p>');
+  bloqueMenciones(caja, grupos[0], acciones, { titulo: filtros ? `Cumplen lo pedido (${miles(grupos[0].length)})` : '' });
+  bloqueMenciones(caja, grupos[1], acciones, { titulo: `Cumplen en parte (${miles(grupos[1].length)}): coincide un dato y del otro no consta nada`,
+    ayuda: 'Cada una dice qué dato le falta: pueden ser o no.' });
+  bloqueMenciones(caja, grupos[2], acciones, { plegado: true, titulo: `Sin ese dato (${miles(grupos[2].length)}): mismo nombre, sin nada que comprobar`,
+    ayuda: 'No se pueden descartar: son sobre todo libros, fichas y notas. No se ocultan, pero no se sabe si cumplen.' });
+  bloqueMenciones(caja, grupos[3], acciones, { plegado: true, titulo: `Fuera de lo pedido (${miles(grupos[3].length)}): algún dato no coincide` });
+  const a = agrupar(hechos.filter(m => m._g !== 3));
+  bloqueMenciones(caja, a, acciones, { plegado: true, titulo: `Árboles ya hechos (${miles(a.length)}): no son fuentes` });
+
+  // --- Árbol
+  caja.insertAdjacentHTML('beforeend', `<h3 id="en-arbol">En el árbol: ${plural(personas.length, 'persona', 'personas')}</h3>`);
+  if (!personas.length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguna.</p>');
+  if (filtros && !pg[0].length && personas.length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguna cumple todo lo pedido.</p>');
+  bloquePersonas(caja, pg[0], { titulo: filtros ? `Cumplen lo pedido (${miles(pg[0].length)})` : '' });
+  bloquePersonas(caja, pg[1], { titulo: `Cumplen en parte (${miles(pg[1].length)})` });
+  bloquePersonas(caja, pg[2], { plegado: true, titulo: `Sin fechas ni lugares en el árbol (${miles(pg[2].length)})` });
+  bloquePersonas(caja, pg[3], { plegado: true, titulo: `Fuera de lo pedido (${miles(pg[3].length)}): sus años o sus lugares son otros` });
 }
 
 // Resultados de «¿Quién hay en el lugar…?»
-export function pintarLugar(caja, { lugares, eventos, menciones }, acciones) {
+export function pintarLugar(caja, { lugares, eventos, menciones, filtros = false }, acciones) {
   const TIPO = { BIRT: 'nace', CHR: 'bautizo', BAPM: 'bautizo', DEAT: 'muere', BURI: 'entierro', MARR: 'boda', RESI: 'vive', OCCU: 'oficio' };
-  caja.innerHTML = `<p class="peq">Lugares que coinciden: ${lugares.slice(0, 15).map(l => esc(l.forma + (l.municipio ? ` (${l.municipio})` : ''))).join('; ') || 'ninguno'}</p>
-    <h3>Hechos del árbol en ese lugar: ${eventos.length}</h3>
-    <div class="eventos">${eventos.map(e => `<div><span class="anio">${esc(e.anio || '')}</span> ${esc(TIPO[e.tipo] || e.tipo)} · <a href="#/p/${esc(e.xref.slice(1, -1))}">${esc(e.nombre)}</a> <span class="peq">${esc(e.fecha || '')}, ${esc(e.lugar || '')}</span></div>`).join('') || '<p class="nada">Ninguno.</p>'}</div>
-    <h3>Personas en documentos de ese lugar: ${menciones.length}</h3>
-    ${menciones.map((m, i) => filaMencion(m, i)).join('') || '<p class="nada">Ninguna.</p>'}`;
-  conectar(caja, menciones, acciones);
+  const fila = e => `<div><span class="anio">${esc(e.anio || '')}</span> ${esc(TIPO[e.tipo] || e.tipo)} · <a href="#/p/${esc(e.xref.slice(1, -1))}">${esc(e.nombre)}</a> <span class="peq">${esc(e.fecha || '')}, ${esc(e.lugar || '')}</span></div>`;
+  caja.innerHTML = `<p class="peq">Lugares que coinciden: ${lugares.slice(0, 15).map(l => esc(l.forma + (l.municipio ? ` (${l.municipio})` : ''))).join('; ') || 'ninguno'}${lugares.length > 15 ? ` y ${lugares.length - 15} más` : ''}</p>`;
+  caja._excel = datosExcel(menciones);
+  const ev = [0, 2, 3].map(g => eventos.filter(e => e._g === g));
+  caja.insertAdjacentHTML('beforeend', `<h3>Hechos del árbol en ese lugar: ${miles(ev[0].length)}</h3>`);
+  const pintaEv = (lista, padre) => { const c = document.createElement('div'); c.className = 'eventos'; listaPorTrozos(c, lista, t => t.map(fila).join('')); padre.append(c); };
+  if (ev[0].length) pintaEv(ev[0], caja); else caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguno.</p>');
+  const pleg = (lista, titulo) => { if (!lista.length) return; const d = document.createElement('details'); d.className = 'arboles-hechos'; d.innerHTML = `<summary>${titulo}</summary>`; pintaEv(lista, d); caja.append(d); };
+  pleg(ev[1], `Sin fecha en el árbol (${miles(ev[1].length)})`);
+  pleg(ev[2], `De otros años (${miles(ev[2].length)})`);
+  const m = [0, 1, 2, 3].map(g => menciones.filter(x => x._g === g));
+  caja.insertAdjacentHTML('beforeend', `<h3>Personas en documentos de ese lugar: ${miles(m[0].length)}</h3>`);
+  if (!m[0].length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguna.</p>');
+  bloqueMenciones(caja, m[0], acciones, { titulo: '' });
+  bloqueMenciones(caja, m[1], acciones, { titulo: `Cumplen en parte (${miles(m[1].length)}): coincide un dato y del otro no consta nada` });
+  bloqueMenciones(caja, m[2], acciones, { plegado: true, titulo: `Sin ese dato (${miles(m[2].length)}): no se sabe si cumplen` });
+  bloqueMenciones(caja, m[3], acciones, { plegado: true, titulo: `Fuera de lo pedido (${miles(m[3].length)}): algún dato no coincide` });
 }

@@ -1,10 +1,11 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611011941';
-import { Arbol } from './modelo.js?v=202611011941';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611011941';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611041854';
+import { Arbol } from './modelo.js?v=202611041854';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611041854';
 const RUTAS = { gedcom: '/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged' };
-import { Servidor, Carpetas } from './almacen.js?v=202611011941';
-import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611011941';
+import { Servidor, Carpetas } from './almacen.js?v=202611041854';
+import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611041854';
+import { esArbolHecho } from './menciones.js?v=202611041854';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -45,7 +46,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011941')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611041854')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);
@@ -107,10 +108,32 @@ async function main() {
   const mm = base.filas('SELECT nombre, clave FROM menciones WHERE id % 20 = 0');
   const malM = mm.filter(r => claveNombre(r.nombre || '') !== (r.clave || ''));
   ok(malM.length / mm.length < 0.001, `Clave igual en ${mm.length - malM.length} de ${mm.length} menciones` + (malM.length ? `: ${malM.slice(0, 3).map(r => r.nombre + ' → ' + claveNombre(r.nombre) + ' ≠ ' + r.clave).join(' | ')}` : ''));
-  const comp = (t, p, m) => { const r = base.donde(t); ok(r.personas.length === p && r.menciones.length === m, `«${t}»: ${r.personas.length} personas y ${r.menciones.length} menciones (Python: ${p} y ${m})`); };
-  comp('Ysabel Fraga', 1, 31); comp('Pardo Osorio', 61, 300); comp('Ferr* Romero', 3, 189); comp('Houwelingen', 6, 85);
+  // Sin filtros no se pierde nada: las mismas cifras que contando directamente en la base.
+  const comp = t => {
+    const r = base.donde(t), w = t.split(' ').map(x => x.endsWith('*') ? `(' ' || clave || ' ') LIKE '% ${tokensClave(x)[0]}%'` : `(' ' || clave || ' ') LIKE '% ${tokensClave(x)[0]} %'`).join(' AND ');
+    const p = base.filas(`SELECT COUNT(*) n FROM personas_gedcom WHERE ${w}`)[0].n, m = base.filas(`SELECT COUNT(*) n FROM menciones WHERE ${w}`)[0].n;
+    ok(r.personas.length === p && r.menciones.length === m, `«${t}»: ${r.personas.length} personas y ${r.menciones.length} menciones (contadas en la base: ${p} y ${m})`);
+    ok(r.menciones.every(x => x._g === 0), `«${t}» sin filtros: ninguna queda fuera`);
+  };
+  comp('Ysabel Fraga'); comp('Pardo Osorio'); comp('Ferr* Romero'); comp('Houwelingen');
+  // El caso que motivó los filtros: el entierro de María Fernández en Xubia, 4-VII-1734
+  const caso = base.donde('', { nombre: 'maria', apellidos: 'fernandez', lugar: 'jubia', desde: 1731, hasta: 1735 });
+  const docsCaso = caso.menciones.filter(m => !esArbolHecho(m));
+  const pos = docsCaso.findIndex(m => /fernandez_maria_defuncion\.md$/.test(m.ruta) && m.anio === 1734);
+  ok(pos >= 0 && pos < 5 && docsCaso[pos]._g === 0, `María Fernández, Xubia, 1731–1735: el entierro de 1734 sale en el puesto ${pos + 1} y cumple`);
+  ok(docsCaso[pos]?.contexto?.includes('viuda'), `El entierro de 1734 trae su frase: «${(docsCaso[pos]?.contexto || '').slice(0, 60)}…»`);
+  const cumplen = docsCaso.filter(m => m._g === 0);
+  ok(cumplen.every(m => m._p.notas.length === 2), 'Todos los que cumplen dicen su año y su lugar');
+  ok(!cumplen.some(m => /Cee|Córgomo|Valdeorras/.test(m.lugar || '')), 'Ninguno de los que cumplen es de otro sitio');
+  ok(caso.menciones.some(m => m._g === 2) && caso.menciones.some(m => m._g === 3), 'Los que no tienen el dato o no coinciden siguen en sus grupos, no se pierden');
+  // Tipo y archivo: el mismo caso sigue saliendo con «Defunción» y «Diocesano Mondoñedo», y desaparece de lo que cumple con «Bautismo»
+  const conTipo = o => base.donde('', { nombre: 'maria', apellidos: 'fernandez', lugar: 'jubia', desde: 1731, hasta: 1735, ...o }).menciones.find(m => /fernandez_maria_defuncion\.md$/.test(m.ruta) && m.anio === 1734);
+  ok(conTipo({ tipo: 'Defunción o entierro', archivo: 'Diocesano Mondoñedo' })?._g === 0, 'Con tipo «Defunción» y archivo «Diocesano Mondoñedo», el entierro cumple');
+  ok(conTipo({ tipo: 'Bautismo o nacimiento' })?._g === 3, 'Con tipo «Bautismo», el entierro queda fuera de lo pedido');
+  ok(conTipo({ archivo: 'ARCHV Valladolid' })?._g === 3, 'Con archivo «ARCHV Valladolid», el entierro queda fuera de lo pedido');
+  ok(base.archivos().includes('Diocesano Mondoñedo'), `El desplegable de archivos tiene ${base.archivos().length} archivos`);
   const lv = base.enLugar('Valdoviño', { desde: 1700, hasta: 1750 });
-  ok(lv.lugares.length === 19 && lv.eventos.length === 143 && lv.menciones.length === 400, `Lugar «Valdoviño» 1700–1750: ${lv.lugares.length} lugares, ${lv.eventos.length} hechos, ${lv.menciones.length} menciones (Python: 19, 143, 400)`);
+  ok(lv.lugares.length > 0 && lv.eventos.some(e => e._g === 0) && lv.menciones.some(m => m._g === 0) && lv.menciones.some(m => m._g === 2), `Lugar «Valdoviño» 1700–1750: ${lv.lugares.length} lugares, ${lv.eventos.filter(e => e._g === 0).length} hechos, ${lv.menciones.filter(m => m._g === 0).length} menciones en esos años y ${lv.menciones.filter(m => m._g === 2).length} sin fecha`);
   const na = base.donde('', { nombre: 'Ysabel', apellidos: 'Fraga' }), libre = base.donde('Ysabel Fraga');
   ok(na.menciones.length > 0 && na.menciones.every(m => libre.menciones.some(x => x.id === m.id)), `Nombre «Ysabel» + Apellidos «Fraga»: ${na.menciones.length} menciones (de ${libre.menciones.length} en búsqueda libre)`);
   const soloAp = base.donde('', { apellidos: 'Fraga' }), soloN = base.donde('', { nombre: 'Fraga' });

@@ -1,27 +1,27 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611011941';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611011941';
-import { buscar, prepararVariantes } from './buscar.js?v=202611011941';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611011941';
-import { BaseNombres } from './nombresdb.js?v=202611011941';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611011941';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611011941';
-import { revisarSalud, repararSalud } from './salud.js?v=202611011941';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611011941';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611011941';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611011941';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611011941';
-import { md, esc } from './md.js?v=202611011941';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611011941';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611011941';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611011941';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611011941';
-import { Guardado } from './guardar.js?v=202611011941';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611011941';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611011941';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611011941';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611011941';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611011941';
+import { Gedcom } from './gedcom.js?v=202611041854';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611041854';
+import { buscar, prepararVariantes } from './buscar.js?v=202611041854';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611041854';
+import { BaseNombres, TIPOS } from './nombresdb.js?v=202611041854';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611041854';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611041854';
+import { revisarSalud, repararSalud } from './salud.js?v=202611041854';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611041854';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611041854';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611041854';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611041854';
+import { md, esc } from './md.js?v=202611041854';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611041854';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611041854';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611041854';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611041854';
+import { Guardado } from './guardar.js?v=202611041854';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611041854';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611041854';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611041854';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611041854';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611041854';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -134,7 +134,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611011941')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611041854')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -1114,32 +1114,38 @@ function verNombres() {
     <div class="filtros nombres">
       <label>Nombre<input id="n-nombre" value="${esc(e.nombre || '')}" placeholder="Ysabel · Joseph · Mª Josefa"></label>
       <label>Apellidos<input id="n-apellidos" value="${esc(e.apellidos || '')}" placeholder="Fraga · Pardo Osorio · Ferr*"></label>
-      <label>¿Quién hay en el lugar…?<input id="n-lugar" value="${esc(e.lugar || '')}" placeholder="Corrubedo · Valdoviño"></label>
+      <label>Lugar<input id="n-lugar" value="${esc(e.lugar || '')}" placeholder="Corrubedo · Valdoviño"></label>
       <label>Desde<input id="n-desde" inputmode="numeric" value="${esc(e.desde ?? '')}" placeholder="1600"></label>
       <label>Hasta<input id="n-hasta" inputmode="numeric" value="${esc(e.hasta ?? '')}" placeholder="1800"></label>
+      <label class="doble">Tipo de documento<select id="n-tipo"><option value="">Todos</option>${TIPOS.map(t => `<option${e.tipo === t.nom ? ' selected' : ''}>${esc(t.nom)}</option>`).join('')}</select></label>
+      <label class="triple">Archivo<select id="n-archivo"><option value="">Todos</option>${(baseNombres?.archivos() || (e.archivo ? [e.archivo] : [])).map(a => `<option${e.archivo === a ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select></label>
     </div>
     <p class="peq">No importan los acentos ni la ortografía antigua (Ysabel = Isabel, Joseph = José, Bázquez = Vázquez). Un «*» al final busca por el comienzo.
-      Pulsa Intro para buscar.${baseNombres ? ` · Base: ${esc(baseNombres.nombre)}, del ${esc(new Date(baseNombres.fecha).toLocaleDateString('es'))}` : ''}</p>
+      Con nombre, el lugar y los años acotan a esa persona; solo con lugar, sale quién hay allí. Pulsa Intro para buscar.${baseNombres ? ` · Base: ${esc(baseNombres.nombre)}, del ${esc(new Date(baseNombres.fecha).toLocaleDateString('es'))}` : ''}</p>
     <div id="n-res"></div><p class="exportar" id="n-excel"></p>
   </div>`);
   const caja = $('#n-res');
-  $('#n-excel').append(botonExcel('documentos', caja));
+  $('#n-excel').append(botonExcel('documentos', caja, () => caja._excel?.() ?? { cabecera: [], filas: [] }));
   const lanzarN = () => {
     const num = v => /^\d{3,4}$/.test(v.trim()) ? +v.trim() : null;
-    Object.assign(e, { nombre: $('#n-nombre').value, apellidos: $('#n-apellidos').value, lugar: $('#n-lugar').value, desde: num($('#n-desde').value), hasta: num($('#n-hasta').value) });
+    Object.assign(e, { nombre: $('#n-nombre').value, apellidos: $('#n-apellidos').value, lugar: $('#n-lugar').value, desde: num($('#n-desde').value), hasta: num($('#n-hasta').value), tipo: $('#n-tipo').value, archivo: $('#n-archivo').value });
     sessionStorage.setItem('arbol.nombres', JSON.stringify(e));
     const quien = (e.nombre + e.apellidos).trim();
-    if (!quien && !e.lugar.trim()) { caja.innerHTML = ''; return; }
+    if (!quien && !e.lugar.trim()) {
+      caja.innerHTML = e.tipo || e.archivo || e.desde != null || e.hasta != null ? '<p class="nada">Escribe además un nombre, unos apellidos o un lugar.</p>' : '';
+      caja._excel = () => ({ cabecera: [], filas: [] }); return;
+    }
     caja.innerHTML = '<p class="cargando">Buscando…</p>';
     setTimeout(() => {
       try {
-        if (e.lugar.trim() && (!quien || document.activeElement === $('#n-lugar'))) pintarLugar(caja, baseNombres.enLugar(e.lugar, e), accionesDoc);
-        else pintarDonde(caja, baseNombres.donde('', { ...e, nombre: e.nombre, apellidos: e.apellidos }), accionesDoc);
+        if (!quien) pintarLugar(caja, baseNombres.enLugar(e.lugar, e), accionesDoc);
+        else pintarDonde(caja, baseNombres.donde('', e), accionesDoc, e);
       } catch (err) { caja.innerHTML = `<p class="aviso">${esc(err.message)}</p>`; }
     }, 20);
   };
   const intentar = () => necesitaBase(caja, () => verNombres()).then(ok => ok && lanzarN());
   main.querySelectorAll('.filtros.nombres input').forEach(i => i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); intentar(); } }));
+  main.querySelectorAll('.filtros.nombres select').forEach(s => s.addEventListener('change', intentar));
   intentar();
 }
 
