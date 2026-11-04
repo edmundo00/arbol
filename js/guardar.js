@@ -5,8 +5,8 @@
 //   3. el archivo nuevo se lee otra vez y se comprueba: mismas personas más las añadidas, enlaces que apuntan a algo;
 //   4. copias en copias/: la de la sesión (una vez) y la anterior a cada guardado, comprobadas tras escribirlas.
 // La escritura la hace el navegador en un archivo aparte que solo al cerrar sustituye al bueno; después se relee y compara.
-import { Gedcom } from './gedcom.js?v=202611041944';
-import { bdLeer, bdGuardar } from './almacen.js?v=202611041944';
+import { Gedcom } from './gedcom.js?v=202611041952';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611041952';
 
 const iguales = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
 const sello = () => { const d = new Date(), p = x => String(x).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
@@ -34,7 +34,8 @@ export class Guardado {
   constructor(dir, nombre, base) { this.dir = dir; this.nombre = nombre; this.base = base; this.copiaSesion = false; this.ultimo = null; }
 
   // Pide la carpeta del GEDCOM con permiso de escritura y comprueba que el archivo es el mismo que está abierto.
-  static async preparar(nombre, bytesAbiertos) {
+  // «pista»: el archivo abierto; el cuadro de elegir carpeta sale ya en la carpeta de ese archivo.
+  static async preparar(nombre, bytesAbiertos, pista = null) {
     let dir = await bdLeer('carpetaGedcom:' + nombre);
     const recordada = !!dir;
     let p = 'granted';
@@ -45,7 +46,11 @@ export class Guardado {
       throw new Error(p === 'movida' ? `La carpeta «${dir.name}» ya no está donde estaba (ha cambiado de sitio). Vuelve a pulsar el botón y elige la carpeta donde está ahora «${nombre}».`
         : 'No se ha dado permiso para escribir en la carpeta. Vuelve a pulsar el botón y elige la carpeta del archivo.');
     }
-    if (!dir) dir = await window.showDirectoryPicker({ id: 'arbol-gedcom-dir', mode: 'readwrite' });
+    if (!dir) {
+      // Con «id», Chrome empezaría en la última carpeta elegida y no haría caso de startIn
+      if (pista) try { dir = await window.showDirectoryPicker({ mode: 'readwrite', startIn: pista }); } catch (e) { if (e.name === 'AbortError') throw e; }
+      if (!dir) dir = await window.showDirectoryPicker({ id: 'arbol-gedcom-dir', mode: 'readwrite' });
+    }
     let fh;
     try { fh = await dir.getFileHandle(nombre); } catch {
       if (recordada) {   // la carpeta recordada ya no tiene el archivo (se ha movido): se olvida
