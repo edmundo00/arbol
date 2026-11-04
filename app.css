@@ -353,3 +353,4 @@ table.estad td.num { text-align: right; white-space: nowrap; font-variant-numeri
 .barras .barra { display: grid; grid-template-columns: 4.5em 1fr 4em; gap: 8px; align-items: center; font-size: .9em; margin: 2px 0; }
 .barras .b { display: block; height: 12px; background: var(--acento); border-radius: 3px; }
 .barras .n { text-align: right; color: var(--suave); }
+.ir-docs { margin: .4em 0 .8em; } .mas-en-doc { margin: 4px 0; } .mas-en-doc > summary { cursor: pointer; color: var(--suave); } .mas-en-doc > div { margin: 3px 0 3px 1em; }

@@ -1,6 +1,6 @@
 // Pantallas de la base de nombres y lugares: menciones de una persona y buscadores «¿dónde aparece…?» y «¿quién hay en…?».
-import { esc } from './md.js?v=202611041856';
-import { fiabilidad } from './nombresdb.js?v=202611041856';
+import { esc } from './md.js?v=202611041901';
+import { fiabilidad, aniosEnTexto } from './nombresdb.js?v=202611041901';
 
 const TEXTO = /\.(md|txt|csv|html?)$/i, IMAGEN = /\.(jpe?g|png|gif|tiff?|bmp|webp)$/i;
 const ORIGEN = { registro: 'registro', transcripcion: 'transcripción', pdf_texto: 'texto de PDF', copia_ligera: 'copia ligera', ficha: 'ficha',
@@ -36,6 +36,9 @@ export function filaMencion(m, i, { enlazar = true, confirmar = false } = {}) {
     ${m._p?.notas.length ? `<div class="peq encaje ${m._p.n > 0 ? 'si' : m._p.n < 0 ? 'no' : ''}">${m._p.n > 0 ? '✔' : m._p.n < 0 ? '✘' : '·'} ${esc(m._p.notas.join(', '))}</div>` : ''}
     ${m._otros?.length ? `<div class="peq repes">El mismo texto en ${m._otros.length} documento${m._otros.length === 1 ? '' : 's'} más: ${esc([...new Set(m._otros.map(o => (o.titulo || '').trim()))].slice(0, 12).join(' · '))}${m._otros.length > 12 ? ' …' : ''}</div>` : ''}
     ${m.contexto ? `<div class="ctx">«${esc(m.contexto.slice(0, 300))}${m.contexto.length > 300 ? '…' : ''}»</div>` : ''}
+    ${m._mas?.length ? `<details class="peq mas-en-doc"><summary>Y ${m._mas.length} ${m._mas.length === 1 ? 'mención' : 'menciones'} más en este documento: ${esc([...new Set(m._mas.map(o => o.nombre))].slice(0, 5).join(', '))}${new Set(m._mas.map(o => o.nombre)).size > 5 ? '…' : ''}</summary>
+      ${m._mas.slice(0, 200).map(o => `<div><b>${esc(o.nombre)}</b>${o.papel && o.papel !== 'texto' ? ' — ' + esc(o.papel) : ''}${o.xref ? ` → <a href="#/p/${esc(o.xref.slice(1, -1))}">${esc(o.enlazado || o.xref)}</a>` : ''}${o.pagina && !['gedcom_notas', 'arbol'].includes(o.origen) ? ' · p. ' + esc(o.pagina) : ''}${o.contexto ? ` <span class="ctx">«${esc(o.contexto.slice(0, 200))}»</span>` : ''}</div>`).join('')}
+      ${m._mas.length > 200 ? `<div>… y ${m._mas.length - 200} más (están todas en el Excel).</div>` : ''}</details>` : ''}
     ${botones || confirmar ? `<div class="botones">${botones}${confirmar ? `<button class="si" data-conf="${i}">✓ Es esta persona</button>` : ''}</div>` : ''}
   </div>`;
 }
@@ -87,6 +90,40 @@ function agrupar(lista) {
   return [...g.values()];
 }
 
+// Una fila por documento. La lista llega ordenada, así que la primera mención de cada documento es la mejor; las demás quedan
+// dentro de ella (_mas). Una cita del registro se une a la transcripción del mismo documento y del mismo año: es la misma partida.
+function porDocumento(lista) {
+  const trans = new Map();   // reg_id → [mención de transcripción con su documento y año]
+  for (const m of lista) if (m.origen === 'transcripcion' && m.reg_id) {
+    if (!trans.has(m.reg_id)) trans.set(m.reg_id, new Map());
+    if (!trans.get(m.reg_id).has(m.doc_id)) trans.get(m.reg_id).set(m.doc_id, m);
+  }
+  const g = new Map();
+  for (const m of lista) {
+    let doc = m.doc_id, base = null;
+    if (m.origen === 'registro' && trans.has(m.reg_id)) {
+      const ys = aniosEnTexto(m.contexto), cands = [...trans.get(m.reg_id).values()];
+      const a = o => o.anio ?? o.danio;
+      base = cands.length === 1 ? (!ys.length || ys.includes(a(cands[0])) ? cands[0] : null) : cands.find(o => ys.includes(a(o))) || null;
+      if (base) doc = base.doc_id;
+    }
+    const f = g.get(doc);
+    if (!f) {
+      // La fila abre la transcripción aunque la mejor mención venga del registro
+      g.set(doc, { ...m, ...(base ? { titulo: base.titulo, ruta: base.ruta, ruta_original: base.ruta_original, transcripcion: base.transcripcion, origen: base.origen, doc_id: base.doc_id, fecha: base.fecha, anio: base.anio, danio: base.danio } : {}), _mas: [] });
+      continue;
+    }
+    if (m.clave === f.clave && m.origen !== f.origen) {   // la misma persona por las dos vías: se juntan sus datos
+      if (!f.xref && m.xref) { f.xref = m.xref; f.enlace = m.enlace; f.enlazado = m.enlazado; }
+      if (!f.contexto && m.contexto) f.contexto = m.contexto;
+      if ((!f.papel || f.papel === 'texto') && m.papel) f.papel = m.papel;
+      continue;
+    }
+    f._mas.push(m);
+  }
+  return [...g.values()];
+}
+
 // Pestaña «Menciones» de la ficha de una persona
 export function pintarMenciones(caja, { enlazadas, posibles }, acciones, persona = null) {
   posibles = posibles.map(x => ({ ...x, _p: puntuar(x, persona) })).sort((a, b) => b._p.n - a._p.n);
@@ -117,7 +154,7 @@ const plural = (n, uno, varios) => `${miles(n)} ${n === 1 ? uno : varios}`;
 
 // Pinta «lista» en «cont» de PASO en PASO, con un botón que dice cuántas faltan. «pintar(trozo, indiceInicial)» da el HTML;
 // «tras()» se llama cada vez que se añaden filas (para conectar sus botones).
-function listaPorTrozos(cont, lista, pintar, tras, paso = 100) {
+function listaPorTrozos(cont, lista, pintar, tras, paso = 30) {
   let hechos = 0;
   const pie = document.createElement('p');
   pie.className = 'mas-resultados';
@@ -182,40 +219,39 @@ export function pintarDonde(caja, { personas, menciones, lugares = [], filtros =
   caja._excel = datosExcel(menciones);
   const hechos = menciones.filter(esArbolHecho), docs = menciones.filter(m => !esArbolHecho(m));
   const de = (lista, g) => lista.filter(x => x._g === g);
-  const grupos = [0, 1, 2, 3].map(g => agrupar(de(docs, g)));
-  const cuenta = l => l.reduce((s, m) => s + 1 + m._otros.length, 0);
+  const grupos = [0, 1, 2, 3].map(g => agrupar(porDocumento(de(docs, g))));
   const pg = [0, 1, 2, 3].map(g => de(personas, g));
 
   const queda = [pedido.lugar?.trim() && `lugar «${pedido.lugar.trim()}»`,
-    pedido.desde != null || pedido.hasta != null ? `años ${pedido.desde ?? '…'}–${pedido.hasta ?? '…'}` : '',
+    pedido.desde != null || pedido.hasta != null ? (pedido.desde === pedido.hasta ? `año ${pedido.desde}` : `años ${pedido.desde ?? '…'}–${pedido.hasta ?? '…'}`) : '',
     pedido.tipo && `tipo «${pedido.tipo}»`, pedido.archivo && `archivo «${pedido.archivo}»`].filter(Boolean).join(', ');
   caja.insertAdjacentHTML('beforeend', `<p class="resumen-busqueda">${filtros
     ? `Con ${esc(queda)}: <b>${plural(grupos[0].length, 'documento cumple', 'documentos cumplen')}</b>${grupos[1].length ? `, ${plural(grupos[1].length, 'cumple en parte', 'cumplen en parte')}` : ''}${grupos[2].length ? `, ${plural(grupos[2].length, 'no tiene ese dato', 'no tienen ese dato')}` : ''}${grupos[3].length ? `; ${plural(grupos[3].length, 'queda fuera', 'quedan fuera')}` : ''}.`
-    : `<b>${plural(cuenta(grupos[0]), 'mención', 'menciones')}</b> en documentos${cuenta(grupos[0]) > grupos[0].length ? ` (${miles(grupos[0].length)} sin repetir el mismo texto)` : ''}${hechos.length ? `, y ${miles(hechos.length)} en árboles ya hechos` : ''}.`}
+    : `<b>${plural(grupos[0].length, 'documento', 'documentos')}</b>${hechos.length ? `, y ${plural(hechos.length, 'mención', 'menciones')} en árboles ya hechos` : ''}.`}
     <a href="#" data-ir="personas">En el árbol: ${plural(personas.length, 'persona', 'personas')}${filtros ? ` (${miles(pg[0].length)} cumplen)` : ''}</a></p>
     ${pedido.lugar?.trim() ? (lugares.length ? `<details class="peq"><summary>${plural(lugares.length, 'lugar coincide', 'lugares coinciden')} con «${esc(pedido.lugar.trim())}»</summary>${lugares.map(l => esc(l.forma)).join('; ')}</details>`
       : `<p class="peq">«${esc(pedido.lugar.trim())}» no es ningún lugar de la base: solo se busca esa palabra junto a los nombres.</p>`) : ''}`);
-  caja.querySelector('[data-ir]').onclick = ev => { ev.preventDefault(); caja.querySelector('#en-arbol')?.scrollIntoView(); };
+  caja.querySelector('[data-ir]').onclick = ev => { ev.preventDefault(); const h = caja.querySelector('#en-arbol'); if (h?.nextElementSibling?.tagName === 'DETAILS') h.nextElementSibling.open = true; h?.scrollIntoView(); };
 
   // --- Documentos
   caja.insertAdjacentHTML('beforeend', '<h3>En documentos</h3>');
   if (filtros && !grupos[0].length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ningún documento cumple todo lo pedido. Mira abajo los que no tienen el dato.</p>');
   if (!filtros && !grupos[0].length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguna fuera de los árboles ya hechos.</p>');
   bloqueMenciones(caja, grupos[0], acciones, { titulo: filtros ? `Cumplen lo pedido (${miles(grupos[0].length)})` : '' });
-  bloqueMenciones(caja, grupos[1], acciones, { titulo: `Cumplen en parte (${miles(grupos[1].length)}): coincide un dato y del otro no consta nada`,
+  bloqueMenciones(caja, grupos[1], acciones, { plegado: grupos[0].length > 0, titulo: `Cumplen en parte (${miles(grupos[1].length)}): coincide un dato y del otro no consta nada`,
     ayuda: 'Cada una dice qué dato le falta: pueden ser o no.' });
   bloqueMenciones(caja, grupos[2], acciones, { plegado: true, titulo: `Sin ese dato (${miles(grupos[2].length)}): mismo nombre, sin nada que comprobar`,
     ayuda: 'No se pueden descartar: son sobre todo libros, fichas y notas. No se ocultan, pero no se sabe si cumplen.' });
   bloqueMenciones(caja, grupos[3], acciones, { plegado: true, titulo: `Fuera de lo pedido (${miles(grupos[3].length)}): algún dato no coincide` });
-  const a = agrupar(hechos.filter(m => m._g !== 3));
+  const a = agrupar(porDocumento(hechos.filter(m => m._g !== 3)));
   bloqueMenciones(caja, a, acciones, { plegado: true, titulo: `Árboles ya hechos (${miles(a.length)}): no son fuentes` });
 
   // --- Árbol
   caja.insertAdjacentHTML('beforeend', `<h3 id="en-arbol">En el árbol: ${plural(personas.length, 'persona', 'personas')}</h3>`);
   if (!personas.length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguna.</p>');
   if (filtros && !pg[0].length && personas.length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguna cumple todo lo pedido.</p>');
-  bloquePersonas(caja, pg[0], { titulo: filtros ? `Cumplen lo pedido (${miles(pg[0].length)})` : '' });
-  bloquePersonas(caja, pg[1], { titulo: `Cumplen en parte (${miles(pg[1].length)})` });
+  bloquePersonas(caja, pg[0], { plegado: filtros && grupos[0].length > 0, titulo: filtros ? `Cumplen lo pedido (${miles(pg[0].length)})` : '' });
+  bloquePersonas(caja, pg[1], { plegado: filtros && grupos[0].length > 0, titulo: `Cumplen en parte (${miles(pg[1].length)})` });
   bloquePersonas(caja, pg[2], { plegado: true, titulo: `Sin fechas ni lugares en el árbol (${miles(pg[2].length)})` });
   bloquePersonas(caja, pg[3], { plegado: true, titulo: `Fuera de lo pedido (${miles(pg[3].length)}): sus años o sus lugares son otros` });
 }
@@ -233,8 +269,8 @@ export function pintarLugar(caja, { lugares, eventos, menciones, filtros = false
   const pleg = (lista, titulo) => { if (!lista.length) return; const d = document.createElement('details'); d.className = 'arboles-hechos'; d.innerHTML = `<summary>${titulo}</summary>`; pintaEv(lista, d); caja.append(d); };
   pleg(ev[1], `Sin fecha en el árbol (${miles(ev[1].length)})`);
   pleg(ev[2], `De otros años (${miles(ev[2].length)})`);
-  const m = [0, 1, 2, 3].map(g => menciones.filter(x => x._g === g));
-  caja.insertAdjacentHTML('beforeend', `<h3>Personas en documentos de ese lugar: ${miles(m[0].length)}</h3>`);
+  const m = [0, 1, 2, 3].map(g => porDocumento(menciones.filter(x => x._g === g)));
+  caja.insertAdjacentHTML('beforeend', `<h3>Documentos de ese lugar: ${miles(m[0].length)}</h3>`);
   if (!m[0].length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguna.</p>');
   bloqueMenciones(caja, m[0], acciones, { titulo: '' });
   bloqueMenciones(caja, m[1], acciones, { titulo: `Cumplen en parte (${miles(m[1].length)}): coincide un dato y del otro no consta nada` });

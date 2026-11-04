@@ -1,11 +1,13 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611041856';
-import { Arbol } from './modelo.js?v=202611041856';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611041856';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611041901';
+import { Arbol } from './modelo.js?v=202611041901';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611041901';
 const RUTAS = { gedcom: '/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged' };
-import { Servidor, Carpetas } from './almacen.js?v=202611041856';
-import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611041856';
-import { esArbolHecho } from './menciones.js?v=202611041856';
+import { Servidor, Carpetas } from './almacen.js?v=202611041901';
+import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611041901';
+import { esArbolHecho } from './menciones.js?v=202611041901';
+import { entender, comoSeEntiende } from './consulta.js?v=202611041901';
+import { lugares as listaDeLugares } from './investigar.js?v=202611041901';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -46,7 +48,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611041856')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611041901')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);
@@ -132,6 +134,14 @@ async function main() {
   ok(conTipo({ tipo: 'Bautismo o nacimiento' })?._g === 3, 'Con tipo «Bautismo», el entierro queda fuera de lo pedido');
   ok(conTipo({ archivo: 'ARCHV Valladolid' })?._g === 3, 'Con archivo «ARCHV Valladolid», el entierro queda fuera de lo pedido');
   ok(base.archivos().includes('Diocesano Mondoñedo'), `El desplegable de archivos tiene ${base.archivos().length} archivos`);
+  // Cuadro de arriba: cada palabra a su sitio
+  const ent = (t, esperado) => { const c = entender(t, arbol, () => listaDeLugares(arbol).todos); ok(Object.entries(esperado).every(([k, v]) => c[k] === v), `«${t}» → ${comoSeEntiende(c)}`); };
+  ent('maria fernandez jubia 1731-1735', { nombre: 'maria', apellidos: 'fernandez', lugar: 'jubia', desde: 1731, hasta: 1735 });
+  ent('fernandez maria defunción 1734 xubia', { nombre: 'maria', apellidos: 'fernandez', lugar: 'xubia', desde: 1734, hasta: 1734, tipo: 'Defunción o entierro' });
+  ent('ysabel da fraga', { nombre: 'ysabel', apellidos: 'fraga', lugar: '' });
+  ent('fraga', { nombre: '', apellidos: 'fraga', lugar: '' });
+  ent('juan', { nombre: 'juan', apellidos: '' });
+  ent('pardo osorio en san martin de jubia', { apellidos: 'pardo osorio', lugar: 'san martin de jubia' });
   const lv = base.enLugar('Valdoviño', { desde: 1700, hasta: 1750 });
   ok(lv.lugares.length > 0 && lv.eventos.some(e => e._g === 0) && lv.menciones.some(m => m._g === 0) && lv.menciones.some(m => m._g === 2), `Lugar «Valdoviño» 1700–1750: ${lv.lugares.length} lugares, ${lv.eventos.filter(e => e._g === 0).length} hechos, ${lv.menciones.filter(m => m._g === 0).length} menciones en esos años y ${lv.menciones.filter(m => m._g === 2).length} sin fecha`);
   const na = base.donde('', { nombre: 'Ysabel', apellidos: 'Fraga' }), libre = base.donde('Ysabel Fraga');
