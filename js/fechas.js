@@ -1,50 +1,77 @@
 // Fechas escritas en español → fecha GEDCOM, y avisos de imposibles (las reglas de 9 Sistema/Control/scripts/auditar_gedcom.py).
-import { anios } from './modelo.js?v=202611042002';
+import { anios } from './modelo.js?v=202611042026';
 
-const MESES = { ene: 'JAN', enero: 'JAN', feb: 'FEB', febrero: 'FEB', mar: 'MAR', marzo: 'MAR', abr: 'APR', abril: 'APR',
-  may: 'MAY', mayo: 'MAY', jun: 'JUN', junio: 'JUN', jul: 'JUL', julio: 'JUL', ago: 'AUG', agosto: 'AUG',
-  sep: 'SEP', sept: 'SEP', septiembre: 'SEP', setiembre: 'SEP', oct: 'OCT', octubre: 'OCT', nov: 'NOV', noviembre: 'NOV',
-  dic: 'DEC', diciembre: 'DEC', jan: 'JAN', apr: 'APR', aug: 'AUG', dec: 'DEC' };
+const MESES = { ene: 'JAN', enero: 'JAN', henero: 'JAN', xan: 'JAN', xaneiro: 'JAN', jan: 'JAN', january: 'JAN',
+  feb: 'FEB', febrero: 'FEB', hebrero: 'FEB', febreiro: 'FEB', february: 'FEB', mar: 'MAR', marzo: 'MAR', march: 'MAR',
+  abr: 'APR', abril: 'APR', apr: 'APR', april: 'APR', may: 'MAY', mayo: 'MAY', maio: 'MAY',
+  jun: 'JUN', junio: 'JUN', xun: 'JUN', xuno: 'JUN', june: 'JUN', jul: 'JUL', julio: 'JUL', xul: 'JUL', xullo: 'JUL', july: 'JUL',
+  ago: 'AUG', agosto: 'AUG', aug: 'AUG', august: 'AUG', sep: 'SEP', sept: 'SEP', septiembre: 'SEP', setiembre: 'SEP', setembro: 'SEP', september: 'SEP',
+  oct: 'OCT', octubre: 'OCT', outubro: 'OCT', october: 'OCT', nov: 'NOV', noviembre: 'NOV', novembro: 'NOV', november: 'NOV',
+  dic: 'DEC', diciembre: 'DEC', decembro: 'DEC', dec: 'DEC', december: 'DEC' };
 const NUM = ['', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const ROMANOS = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12 };
+const sinTildes = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-// Una fecha simple: «1974», «6 mar 1974», «6 de marzo de 1974», «6/3/1974», «marzo 1974».
+// Una fecha simple: «1974», «6 mar 1974», «6 de marzo de 1974», «6/3/1974», «6.3.1974», «4-VII-1734», «1734-07-04», «marzo 1974».
 function simple(t) {
-  t = t.trim().toLowerCase().replace(/\bde\b/g, ' ').replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
+  t = sinTildes(t).trim().toLowerCase();
   let m;
+  if ((m = /^(\d{3,4})-(\d{1,2})-(\d{1,2})$/.exec(t)) && +m[2] <= 12 && +m[2] >= 1 && +m[3] >= 1 && +m[3] <= 31) return `${+m[3]} ${NUM[+m[2]]} ${m[1]}`;
+  t = t.replace(/\b(?:de|del|dia|el|ano)\b/g, ' ').replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
   if ((m = /^(\d{3,4})$/.exec(t))) return m[1];
-  if ((m = /^(\d{1,2})[/-](\d{1,2})[/-](\d{3,4})$/.exec(t))) {
+  if ((m = /^(\d{1,2})[/\- ](\d{1,2})[/\- ](\d{3,4})$/.exec(t))) {
     const d = +m[1], mes = +m[2];
     if (mes < 1 || mes > 12 || d < 1 || d > 31) return null;
     return `${d} ${NUM[mes]} ${m[3]}`;
   }
-  if ((m = /^(\d{1,2})[/-](\d{3,4})$/.exec(t)) && +m[1] >= 1 && +m[1] <= 12) return `${NUM[+m[1]]} ${m[2]}`;
-  if ((m = /^(\d{1,2}) ([a-z]+) (\d{3,4})$/.exec(t)) && MESES[m[2]] && +m[1] >= 1 && +m[1] <= 31) return `${+m[1]} ${MESES[m[2]]} ${m[3]}`;
-  if ((m = /^([a-z]+) (\d{3,4})$/.exec(t)) && MESES[m[1]]) return `${MESES[m[1]]} ${m[2]}`;
-  // Ya en GEDCOM: «6 MAR 1974»
-  if ((m = /^(\d{1,2} )?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec) (\d{3,4})$/.exec(t))) return `${m[1] || ''}${m[2].toUpperCase()} ${m[3]}`;
+  if ((m = /^(\d{1,2})[/\- ]([ivx]+)[/\- ](\d{3,4})$/.exec(t)) && ROMANOS[m[2]] && +m[1] >= 1 && +m[1] <= 31) return `${+m[1]} ${NUM[ROMANOS[m[2]]]} ${m[3]}`;
+  if ((m = /^([ivx]+)[/\- ](\d{3,4})$/.exec(t)) && ROMANOS[m[1]]) return `${NUM[ROMANOS[m[1]]]} ${m[2]}`;
+  if ((m = /^(\d{1,2})[/\- ](\d{3,4})$/.exec(t)) && +m[1] >= 1 && +m[1] <= 12) return `${NUM[+m[1]]} ${m[2]}`;
+  if ((m = /^(\d{1,2})[ -]?([a-z]+)[ -]?(\d{3,4})$/.exec(t)) && MESES[m[2]] && +m[1] >= 1 && +m[1] <= 31) return `${+m[1]} ${MESES[m[2]]} ${m[3]}`;
+  if ((m = /^([a-z]+) (\d{1,2}) (\d{3,4})$/.exec(t)) && MESES[m[1]] && +m[2] >= 1 && +m[2] <= 31) return `${+m[2]} ${MESES[m[1]]} ${m[3]}`;   // «july 4 1734»
+  if ((m = /^([a-z]+)[ -]?(\d{3,4})$/.exec(t)) && MESES[m[1]]) return `${MESES[m[1]]} ${m[2]}`;
   return null;
 }
+
+const ROMANOS_SIGLO = { xii: 12, xiii: 13, xiv: 14, xv: 15, xvi: 16, xvii: 17, xviii: 18, xix: 19, xx: 20, xxi: 21 };
+// Lo que puede ir delante de la fecha. Cada palabra tiene que ser entera: «hacia» no es «h» + «acia».
+const PREFIJOS = [
+  ['ABT', ['aproximadamente', 'aproximado', 'aproximada', 'alrededor', 'approximately', 'approx', 'around', 'circa', 'cerca', 'sobre', 'hacia', 'about', 'aprox', 'abt', 'ca', 'h', 'c', '~', '±']],
+  ['BEF', ['anterior', 'antes', 'before', 'ante', 'ant', 'bef', 'a', '<']],
+  ['AFT', ['posterior', 'despues', 'after', 'desp', 'dsp', 'post', 'tras', 'aft', 'd', '>']],
+  ['CAL', ['calculada', 'calculado', 'calc', 'cal']],
+  ['EST', ['estimada', 'estimado', 'est']],
+];
+const RE_PREFIJOS = PREFIJOS.map(([ged, ps]) => [ged, new RegExp(`^(?:${ps.join('|')})(?![a-z])[.:]?\\s*(?:(?:de la|de|del|a la|a|el|ano|en)\\s+)*`)]);
 
 // Devuelve { ged, error }. Vacío → { ged: '' }.
 export function aGedcom(texto) {
   const t = (texto || '').trim();
   if (!t) return { ged: '' };
-  const l = t.toLowerCase();
+  let l = sinTildes(t).toLowerCase().replace(/\s+/g, ' ');
   let m;
-  if ((m = /^(?:entre|bet)\s+(.+?)\s+(?:y|and|-)\s+(.+)$/.exec(l))) {
-    const a = simple(m[1]), b = simple(m[2]);
-    return a && b ? { ged: `BET ${a} AND ${b}` } : { error: 'No entiendo alguna de las dos fechas de «entre … y …».' };
+  // Siglo: «s. XVIII», «siglo 18»
+  if ((m = /^(?:s\.?|siglo) ?([ivxl]+|\d{1,2})$/.exec(l))) {
+    const n = ROMANOS_SIGLO[m[1]] || +m[1];
+    if (n >= 1 && n <= 21) return { ged: `BET ${(n - 1) * 100 + 1} AND ${n * 100}` };
   }
-  const prefijos = [[/^(?:h\.?|hacia|c\.?|ca\.?|circa|aprox\.?|aproximadamente|abt)\s*/, 'ABT'], [/^(?:antes de|ant\.?|bef)\s*/, 'BEF'],
-    [/^(?:después de|despues de|desp\.?|aft)\s*/, 'AFT'], [/^(?:calc\.?|calculada|cal)\s*/, 'CAL'], [/^(?:est\.?|estimada)\s*/, 'EST']];
-  for (const [re, ged] of prefijos) {
+  // Periodos: «entre 1700 y 1710», «de 1700 a 1710», «desde 1700 hasta 1710», «between 1700 and 1710», «1700-1710», «1797/1800»
+  m = /^(?:entre|between|bet\.?|bt\.?|btw\.?|desde|de|del|from)\s+(.+?)\s*(?:\s(?:y|e|and|a|al|hasta|to)\s|-|–)\s*(.+)$/.exec(l) || /^(\d{3,4})\s*(?:-|–|\/)\s*(\d{3,4})$/.exec(l);
+  if (m) {
+    const a = simple(m[1]), b = simple(m[2]);
+    if (a && b) return { ged: `BET ${a} AND ${b}` };
+    if (/^(?:entre|between|bet|bt)/.test(l)) return { error: 'No entiendo alguna de las dos fechas de «entre … y …».' };
+  }
+  // Una interrogación al final es una fecha dudosa: «1734?», «¿1734?»
+  if (/\?$/.test(l)) { const s = simple(l.replace(/[¿?]/g, '')); if (s) return { ged: `ABT ${s}` }; }
+  for (const [ged, re] of RE_PREFIJOS) {
     if (re.test(l)) {
       const s = simple(l.replace(re, ''));
-      return s ? { ged: `${ged} ${s}` } : { error: 'No entiendo la fecha que va detrás.' };
+      if (s) return { ged: `${ged} ${s}` };
     }
   }
   const s = simple(l);
-  return s ? { ged: s } : { error: 'No entiendo la fecha. Ejemplos: 1750 · 6 mar 1974 · 6/3/1974 · h. 1750 · antes de 1733 · entre 1700 y 1710' };
+  return s ? { ged: s } : { error: 'No entiendo la fecha. Ejemplos: 1750 · 6 mar 1974 · 6/3/1974 · 4-VII-1734 · h. 1750 · antes de 1733 · entre 1700 y 1710' };
 }
 
 // GEDCOM → como se escribe en el formulario

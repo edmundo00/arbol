@@ -1,6 +1,7 @@
 // Entiende lo escrito en el cuadro de arriba: «maria fernandez jubia 1731-1735 defunción» → nombre, apellidos, lugar, años y tipo.
 // Lo que dude se ve después en los campos de la pestaña «En los documentos», donde se puede corregir.
-import { clavePalabra, plano, PARTICULAS } from './nombresdb.js?v=202611042002';
+import { buscar, clave } from './buscar.js?v=202611042026';
+import { clavePalabra, plano, PARTICULAS, grupo } from './nombresdb.js?v=202611042026';
 
 const TIPO_PALABRA = {
   bautismo: 'Bautismo o nacimiento', bautizo: 'Bautismo o nacimiento', nacimiento: 'Bautismo o nacimiento', bautismos: 'Bautismo o nacimiento',
@@ -74,4 +75,32 @@ export function entender(texto, arbol, lugares) {
 export function comoSeEntiende(c) {
   return [c.nombre && `nombre ${c.nombre}`, c.apellidos && `apellidos ${c.apellidos}`, c.lugar && `lugar ${c.lugar}`,
     c.desde != null && (c.desde === c.hasta ? `año ${c.desde}` : `años ${c.desde}–${c.hasta}`), c.tipo && `tipo ${c.tipo}`].filter(Boolean).join(' · ');
+}
+
+// Personas del árbol que coinciden, leídas del GEDCOM abierto (siempre al día), con el mismo criterio de grupos que los documentos.
+export function personasDelArbol(arbol, e, variantes) {
+  const quien = `${e.nombre || ''} ${e.apellidos || ''}`.trim();
+  const hayQuien = !!quien;
+  if (!hayQuien && !e.lugar?.trim() && !e.linea) return { lista: [], filtros: false };
+  const cL = clave(e.lugar || '');
+  // Sin nombre, el lugar elige a quién se mira; con nombre, lo que no coincide se cuenta aparte
+  const base = buscar(arbol, quien, { nombre: e.nombre, apellidos: e.apellidos, linea: e.linea, variantes, lugar: hayQuien ? '' : e.lugar, limite: 1e7 }).lista;
+  const hayF = e.desde != null || e.hasta != null;
+  const lista = base.map(p => {
+    const notas = [];
+    let f = 'na', l = 'na';
+    if (hayF) {
+      if (p.ymin == null) { f = 'sin'; notas.push('sin fechas'); }
+      else {
+        const a = p.ymax > p.ymin ? p.ymin : p.ymin - 60, b = p.ymax > p.ymin ? p.ymax : p.ymin + 60;
+        f = (e.desde == null || b >= e.desde) && (e.hasta == null || a <= e.hasta) ? 'si' : 'no';
+      }
+    }
+    if (cL && hayQuien) {
+      if (!p.claveLugar) { l = 'sin'; notas.push('sin lugar'); }
+      else l = p.claveLugar.includes(cL) ? 'si' : 'no';
+    }
+    return { p, _g: grupo(f, l), notas };
+  });
+  return { lista: lista.map((x, i) => [x, i]).sort((a, b) => a[0]._g - b[0]._g || a[1] - b[1]).map(x => x[0]), filtros: hayF || !!(cL && hayQuien) };
 }

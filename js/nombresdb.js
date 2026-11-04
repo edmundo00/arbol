@@ -152,7 +152,7 @@ export class BaseNombres {
 
   // ¿Dónde aparece…? Devuelve todas las coincidencias con el nombre, ya clasificadas y ordenadas: nada se corta aquí.
   // Cada resultado lleva _g (ver GRUPO) y _p.notas, que dicen por qué está en ese grupo.
-  donde(texto, { desde = null, hasta = null, lugar = '', nombre = '', apellidos = '', tipo = '', archivo = '' } = {}) {
+  donde(texto, { desde = null, hasta = null, lugar = '', nombre = '', apellidos = '', ...otros } = {}) {
     const na = (nombre || apellidos) && !texto;
     const cp = na ? condicionesNA(nombre, apellidos, 'clave') : condiciones(texto, 'clave');
     const cm = na ? condicionesNA(nombre, apellidos, 'm.clave') : condiciones(texto, 'm.clave');
@@ -194,14 +194,13 @@ export class BaseNombres {
       if (f.nota) notas.push(f.nota);
       const l = hayLugar ? estadoLugar(m, lq, dl, conLugar) : { e: 'na' };
       if (l.nota) notas.push(l.nota);
-      const t = estadoTipo(m, tipo), a = estadoArchivo(m, archivo);
-      if (t.nota) notas.push(t.nota);
-      if (a.nota) notas.push(a.nota);
-      m._g = grupo(f.e, l.e, t.e, a.e); m._p = { n: m._g === GRUPO.CUMPLE ? 1 : m._g === GRUPO.FUERA ? -1 : 0, notas };
+      const x = estadosOtros(m, otros);
+      for (const o of x) if (o.nota) notas.push(o.nota);
+      m._g = grupo(f.e, l.e, ...x.map(o => o.e)); m._p = { n: m._g === GRUPO.CUMPLE ? 1 : m._g === GRUPO.FUERA ? -1 : 0, notas };
       m._rango = [m.clave === exacto ? 0 : 1, f.fuerte === false || l.fuerte === false ? 1 : 0, ORDEN[m.origen] ?? 2,
         m.anio ?? m.danio ?? 9999, m.ruta || ''];
     }
-    return { personas: personas.sort(porRango), menciones: menciones.sort(porRango), lugares, filtros: hayFecha || hayLugar || !!tipo || !!archivo };
+    return { personas: personas.sort(porRango), menciones: menciones.sort(porRango), lugares, filtros: hayFecha || hayLugar || hayOtros(otros) };
   }
 
   // Archivos que hay en la base, para el desplegable (carpetas de 2 Documentos, y la Biblioteca).
@@ -218,7 +217,7 @@ export class BaseNombres {
   }
 
   // ¿Quién hay en el lugar…? (sin nombre). Con años, lo que no tiene fecha no se esconde: va en su grupo.
-  enLugar(texto, { desde = null, hasta = null, tipo = '', archivo = '' } = {}) {
+  enLugar(texto, { desde = null, hasta = null, ...otros } = {}) {
     const c = condiciones(texto, 'clave');
     if (!c.sql) return { lugares: [], eventos: [], menciones: [] };
     const lugares = this.filas(`SELECT * FROM lugares WHERE ${c.sql} ORDER BY n_eventos + n_documentos DESC`, c.params);
@@ -242,12 +241,12 @@ export class BaseNombres {
         if (!claves.some(k => ctx.includes(k))) continue;
       }
       const f = hayFecha ? estadoFecha(m, desde, hasta, regs) : { e: 'na' };
-      const t = estadoTipo(m, tipo), a = estadoArchivo(m, archivo);
-      m._g = grupo(f.e, t.e, a.e); m._p = { n: m._g === GRUPO.CUMPLE ? 1 : m._g === GRUPO.FUERA ? -1 : 0, notas: [f.nota, t.nota, a.nota].filter(Boolean) };
+      const x = estadosOtros(m, otros);
+      m._g = grupo(f.e, ...x.map(o => o.e)); m._p = { n: m._g === GRUPO.CUMPLE ? 1 : m._g === GRUPO.FUERA ? -1 : 0, notas: [f.nota, ...x.map(o => o.nota)].filter(Boolean) };
       menciones.push(m);
     }
     menciones.sort((a, b) => a._g - b._g);   // estable: dentro de cada grupo sigue el orden de la consulta
-    return { lugares, eventos, menciones, filtros: hayFecha || !!tipo || !!archivo };
+    return { lugares, eventos, menciones, filtros: hayFecha || hayOtros(otros) };
   }
 }
 
@@ -263,7 +262,7 @@ const porRango = (a, b) => {
   }
   return 0;
 };
-function grupo(...estados) {
+export function grupo(...estados) {
   const v = estados.filter(e => e !== 'na');
   if (v.includes('no')) return GRUPO.FUERA;
   if (v.every(e => e === 'si')) return GRUPO.CUMPLE;
@@ -380,6 +379,33 @@ function estadoArchivo(m, archivo) {
   const a = archivoDe(m);
   if (!a) return { e: 'sin', nota: 'sin archivo' };
   return a === archivo ? { e: 'si', nota: `archivo: ${a}` } : { e: 'no', nota: `archivo: ${a}` };
+}
+
+// ---------- Papel de la persona en el documento, y lo que el documento tiene ----------
+export const PAPELES_DOC = [
+  { nom: 'Difunto o difunta', rx: /difunt|fallecid|enterrad|muert/i },
+  { nom: 'Novio o novia', rx: /novi[oa]|contrayente|c[oó]nyuge|espos[oa]|marido|mujer/i },
+  { nom: 'Bautizado o nacido', rx: /bautizad|nacid/i },
+  { nom: 'Padre o madre', rx: /padre|madre/i, no: /padrino/i },
+  { nom: 'Hijo o hija', rx: /hij[oa]/i },
+  { nom: 'Padrino o madrina', rx: /padrino|madrina/i },
+  { nom: 'Testigo', rx: /testig/i },
+  { nom: 'Otorgante o parte de un pleito', rx: /otorgante|testador|vendedor|comprador|demandante|demandad|litigante|pleiteante/i },
+];
+const IMAGEN_DOC = /\.(jpe?g|png|gif|tiff?|bmp|webp)$/i;
+const hayOtros = o => !!(o.tipo || o.archivo || o.papel || o.ancestros || o.conFoto || o.transcrito || o.enlazado);
+function estadosOtros(m, o) {
+  const out = [estadoTipo(m, o.tipo), estadoArchivo(m, o.archivo)];
+  if (o.papel) {
+    const c = PAPELES_DOC.find(x => x.nom === o.papel), p = String(m.papel || '').trim();
+    if (!p || /^(texto|extracto|persona del [aá]rbol)$/i.test(p)) out.push({ e: 'sin', nota: 'sin papel' });
+    else out.push(c.rx.test(p) && !(c.no && c.no.test(p)) ? { e: 'si', nota: `papel: ${p.slice(0, 40)}` } : { e: 'no', nota: `papel: ${p.slice(0, 40)}` });
+  }
+  if (o.ancestros) out.push(!m.xref ? { e: 'sin', nota: 'sin enlace al árbol' } : o.ancestros.has(m.xref) ? { e: 'si', nota: 'es de esa línea' } : { e: 'no', nota: 'no es de esa línea' });
+  if (o.conFoto) out.push(IMAGEN_DOC.test(String(m.ruta_original || '').split('|')[0].trim()) ? { e: 'si' } : { e: 'no', nota: 'sin foto' });
+  if (o.transcrito) out.push(m.transcripcion ? { e: 'si' } : { e: 'no', nota: 'sin transcribir' });
+  if (o.enlazado) out.push(m.xref ? { e: 'si' } : { e: 'no', nota: 'sin enlace al árbol' });
+  return out;
 }
 
 // Años de vida de una persona del árbol, con lo que haya: nacimiento, muerte u otros hechos.

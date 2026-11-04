@@ -1,29 +1,29 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611042002';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611042002';
-import { buscar, prepararVariantes } from './buscar.js?v=202611042002';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611042002';
-import { BaseNombres, TIPOS } from './nombresdb.js?v=202611042002';
-import { entender, comoSeEntiende } from './consulta.js?v=202611042002';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611042002';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611042002';
-import { revisarSalud, repararSalud } from './salud.js?v=202611042002';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611042002';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611042002';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611042002';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611042002';
-import { md, esc } from './md.js?v=202611042002';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611042002';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611042002';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611042002';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611042002';
-import { Guardado } from './guardar.js?v=202611042002';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611042002';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611042002';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611042002';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611042002';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611042002';
-import { pintarEstadisticas } from './estadisticas.js?v=202611042002';
+import { Gedcom } from './gedcom.js?v=202611042026';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611042026';
+import { buscar, prepararVariantes } from './buscar.js?v=202611042026';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611042026';
+import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611042026';
+import { entender, personasDelArbol } from './consulta.js?v=202611042026';
+import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611042026';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611042026';
+import { revisarSalud, repararSalud } from './salud.js?v=202611042026';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611042026';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611042026';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611042026';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611042026';
+import { md, esc } from './md.js?v=202611042026';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611042026';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611042026';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611042026';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611042026';
+import { Guardado } from './guardar.js?v=202611042026';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611042026';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611042026';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611042026';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611042026';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611042026';
+import { pintarEstadisticas } from './estadisticas.js?v=202611042026';
 
 const $ = s => document.querySelector(s);
 // La versión publicada (la pone publicar.py en la dirección de este archivo): 202611041952 → «4/11 19:52»
@@ -190,7 +190,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611042002')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611042026')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -239,7 +239,6 @@ function ir() {
     return modo() === 'arbol' ? verArbol('@' + m[1] + '@') : verPersona('@' + m[1] + '@', m[2] || 'datos');
   }
   if ((m = /^\/imprimir\/([^/]+)$/.exec(h))) return verImprimir('@' + m[1] + '@');
-  if (h === '/nombres') return verNombres();
   if (h === '/texto') return verTexto2();
   if ((m = /^\/revisar(?:\/(\w+))?$/.exec(h))) return verRevisar(m[1] || 'fronteras');
   if (h === '/ajustes') return ajustes();
@@ -247,70 +246,110 @@ function ir() {
   return verBuscar();
 }
 
+// ---------- Buscar: una sola pantalla. Las personas salen al instante del GEDCOM abierto; los documentos, de la base de nombres, debajo ----------
+const entenderQ = q => q.trim() ? entender(q, arbol, () => listaDeLugares(arbol).todos) : null;
+const guardarEstado = () => sessionStorage.setItem('arbol.busqueda', JSON.stringify(estadoBusqueda));
+const hayQuien = e => !!(e.nombre + ' ' + e.apellidos).trim();
+
 function verBuscar() {
   document.title = 'Árbol · Buscar';
+  main.dataset.persona = '';
   const e = estadoBusqueda;
+  e.nombre ||= ''; e.apellidos ||= ''; e.lugar ||= '';
   if (e.linea && !arbol.raices.some(r => r.id === e.linea)) e.linea = null;
+  const opc = (lista, val) => lista.map(n => `<option${val === n ? ' selected' : ''}>${esc(n)}</option>`).join('');
+  const casilla = (id, k, txt) => `<label class="casilla"><input type="checkbox" id="${id}"${e[k] ? ' checked' : ''}> ${txt}</label>`;
   pantalla(`<div class="buscador">
-    <nav class="pestanas donde"><a class="pest activa" href="#/buscar">En el árbol</a><a class="pest" href="#/nombres">En los documentos (base de nombres)</a><a class="pest" href="#/texto">Texto libre</a><a class="pest" href="#/revisar">Revisar el árbol</a></nav>
-    <div class="filtros arbol">
-      <label>Nombre<input id="f-nombre" value="${esc(e.nombre || '')}" placeholder="Juan, Mª Josefa…"></label>
-      <label>Apellidos<input id="f-apellidos" value="${esc(e.apellidos || '')}" placeholder="Fraga, Pardo Osorio…"></label>
-      <label>Lugar<input id="f-lugar" value="${esc(e.lugar || '')}" placeholder="Ferrol, Corrubedo…"></label>
-      <label>Desde<input id="f-desde" inputmode="numeric" value="${esc(e.desde ?? '')}" placeholder="1600"></label>
-      <label>Hasta<input id="f-hasta" inputmode="numeric" value="${esc(e.hasta ?? '')}" placeholder="1800"></label>
-      <label>Línea<select id="f-linea"><option value="">Todo el árbol</option>
-        ${arbol.raices.map(r => `<option value="${esc(r.id)}"${e.linea === r.id ? ' selected' : ''}>Antepasados de ${esc(r.nombre)}</option>`).join('')}</select></label>
+    <nav class="pestanas donde"><a class="pest activa" href="#/buscar">Buscar</a><a class="pest" href="#/texto">Texto libre</a><a class="pest" href="#/revisar">Revisar el árbol</a></nav>
+    <div class="filtros nombres">
+      <label>Nombre<input id="n-nombre" value="${esc(e.nombre)}" placeholder="Ysabel · Joseph · Mª Josefa"></label>
+      <label>Apellidos<input id="n-apellidos" value="${esc(e.apellidos)}" placeholder="Fraga · Pardo Osorio · Ferr*"></label>
+      <label>Lugar<input id="n-lugar" value="${esc(e.lugar)}" placeholder="Corrubedo · Valdoviño"></label>
+      <label>Desde<input id="n-desde" inputmode="numeric" value="${esc(e.desde ?? '')}" placeholder="1600"></label>
+      <label>Hasta<input id="n-hasta" inputmode="numeric" value="${esc(e.hasta ?? '')}" placeholder="1800"></label>
     </div>
-    <div id="res"></div><p class="exportar" id="b-excel"></p>
-    ${!e.q && !e.nombre && !e.apellidos && !e.lugar && !e.linea ? `<div class="inicio"><p>Escribe arriba un nombre o un apellido: según escribes salen las personas del árbol, y <b>con Intro, también los documentos</b>. Puedes añadir lugar, años y tipo: <i>maria fernandez jubia 1731-1735 defunción</i>. No importan las tildes ni la ortografía (b/v, y/i, h…).</p>
+    <div class="filtros otros">
+      <label>Tipo de documento<select id="n-tipo"><option value="">Todos</option>${opc(TIPOS.map(x => x.nom), e.tipo)}</select></label>
+      <label>Archivo<select id="n-archivo"><option value="">Todos</option>${opc(baseNombres?.archivos() || (e.archivo ? [e.archivo] : []), e.archivo)}</select></label>
+      <label>Su papel<select id="n-papel"><option value="">Cualquiera</option>${opc(PAPELES_DOC.map(x => x.nom), e.papel)}</select></label>
+      <label>Línea<select id="n-linea"><option value="">Todo el árbol</option>${arbol.raices.map(r => `<option value="${esc(r.id)}"${e.linea === r.id ? ' selected' : ''}>Antepasados de ${esc(r.nombre)}</option>`).join('')}</select></label>
+    </div>
+    <p class="casillas">${casilla('n-foto', 'conFoto', 'Con foto')}${casilla('n-trans', 'transcrito', 'Transcrito')}${casilla('n-enl', 'enlazado', 'Enlazado al árbol')}
+      <span class="peq">${baseNombres ? `Base de documentos del ${esc(new Date(baseNombres.fecha).toLocaleDateString('es'))}` : ''}</span></p>
+    <div class="resultados"><div id="n-res"></div><aside id="res-arbol"></aside></div>
+    <p class="exportar" id="n-excel"></p>
+    <div class="inicio"${hayQuien(e) || e.lugar.trim() || e.linea ? ' hidden' : ''}><p>Escribe un nombre o un apellido, aquí o en el cuadro de arriba: salen a la vez las personas del árbol y los documentos. Arriba se puede escribir todo seguido: <i>maria fernandez jubia 1731-1735 defunción</i>. No importan las tildes ni la ortografía antigua (Ysabel = Isabel, Joseph = José, Bázquez = Vázquez). Un «*» al final busca por el comienzo.</p>
       <p>${arbol.raices.map(r => `<a class="tarjeta-enlace" href="#/p/${esc(r.id.slice(1, -1))}">${esc(r.nombre)}</a>`).join(' ')}</p>
       <p class="peq">«${esc(info.nombre)}» · ${arbol.personas.size.toLocaleString('es')} personas · ${arbol.familias.size.toLocaleString('es')} familias · <a href="#/estadisticas">Estadísticas</a>
-        ${info.copia ? `<br>Copia guardada en este aparato, del archivo del ${esc(new Date(info.fecha).toLocaleString('es'))}` : ''}</p></div>` : ''}
+        ${info.copia ? `<br>Copia guardada en este aparato, del archivo del ${esc(new Date(info.fecha).toLocaleString('es'))}` : ''}</p></div>
   </div>`);
-  for (const id of ['f-nombre', 'f-apellidos', 'f-lugar', 'f-desde', 'f-hasta', 'f-linea']) $('#' + id).addEventListener('input', lanzar);
-  // Todos los resultados (no solo los 300 que se ven) a Excel
-  $('#b-excel').append(botonExcel('busqueda', null, () => {
-    const r = buscarEnArbol(e, 1e7);
-    return { cabecera: CAB_PERSONA, filas: r.lista.map(filaPersona) };
-  }));
-  lanzar();
+  const caja = $('#n-res');
+  $('#n-excel').append(botonExcel('documentos', caja, () => caja._excel?.() ?? { cabecera: [], filas: [] }));
+  const bP = botonExcel('personas', null, () => ({ cabecera: CAB_PERSONA, filas: personasDelArbol(arbol, estadoBusqueda, variantes).lista.map(x => filaPersona(x.p)) }));
+  bP.textContent = '⬇ Personas a Excel (CSV)'; $('#n-excel').append(' ', bP);
+  // Los campos mandan: si se tocan, lo escrito arriba ya no es lo que se ve
+  const olvidarQ = () => { $('#q').value = ''; estadoBusqueda.q = ''; };
+  main.querySelectorAll('.filtros input').forEach(i => {
+    i.addEventListener('input', () => { olvidarQ(); buscarTodo(); });
+    i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); buscarTodo(0); } });
+  });
+  main.querySelectorAll('.filtros select, .casillas input').forEach(s => s.addEventListener('change', () => buscarTodo(0)));
+  buscarTodo(0);
 }
 
-// Lo escrito en el cuadro de arriba, ya separado en nombre, lugar, años y tipo (consulta.js)
-const entenderQ = q => q.trim() ? entender(q, arbol, () => listaDeLugares(arbol).todos) : null;
-// Personas del árbol: los campos de la pestaña mandan sobre lo escrito arriba.
-function buscarEnArbol(e, limite) {
-  const c = entenderQ(e.q || '');
-  return buscar(arbol, c ? c.palabras : '', { nombre: e.nombre, apellidos: e.apellidos, lugar: e.lugar || c?.lugar || '', desde: e.desde ?? c?.desde ?? null, hasta: e.hasta ?? c?.hasta ?? null, linea: e.linea, variantes, ...(limite ? { limite } : {}) });
-}
-// Lleva lo escrito arriba a la pestaña «En los documentos», con cada dato en su campo.
-function irADocumentos() {
-  const c = entenderQ($('#q').value);
-  if (!c) return;
-  Object.assign(estadoNombres, { nombre: c.nombre, apellidos: c.apellidos, lugar: c.lugar, desde: c.desde, hasta: c.hasta, tipo: c.tipo, archivo: '' });
-  sessionStorage.setItem('arbol.nombres', JSON.stringify(estadoNombres));
-  if (location.hash === '#/nombres') verNombres(); else location.hash = '#/nombres';
+function leerCampos() {
+  const num = v => /^\d{3,4}$/.test(v.trim()) ? +v.trim() : null;
+  Object.assign(estadoBusqueda, { nombre: $('#n-nombre').value, apellidos: $('#n-apellidos').value, lugar: $('#n-lugar').value, desde: num($('#n-desde').value), hasta: num($('#n-hasta').value),
+    tipo: $('#n-tipo').value, archivo: $('#n-archivo').value, papel: $('#n-papel').value, linea: $('#n-linea').value || null,
+    conFoto: $('#n-foto').checked, transcrito: $('#n-trans').checked, enlazado: $('#n-enl').checked });
 }
 
+// Personas al momento; los documentos, un poco después de dejar de escribir (o enseguida con espera = 0).
 let temporizador;
-function lanzar() {
+function buscarTodo(espera = 450) {
+  if (!$('#n-nombre')) return;
+  leerCampos(); guardarEstado();
+  const e = estadoBusqueda, quien = hayQuien(e);
+  const hay = quien || e.lugar.trim() || e.linea;
+  document.querySelector('.inicio').hidden = !!hay;
+  const cajaA = $('#res-arbol'), caja = $('#n-res');
+  if (hay) pintarArbol(cajaA, arbol, personasDelArbol(arbol, e, variantes)); else cajaA.innerHTML = '';
   clearTimeout(temporizador);
-  temporizador = setTimeout(() => {
-    const num = v => /^\d{3,4}$/.test(v.trim()) ? +v.trim() : null;
-    const e = estadoBusqueda;
-    e.q = $('#q').value;
-    if (location.hash === '#/nombres') { sessionStorage.setItem('arbol.busqueda', JSON.stringify(e)); return; }   // en documentos se busca con Intro
-    if ($('#f-lugar')) { e.nombre = $('#f-nombre').value; e.apellidos = $('#f-apellidos').value; e.lugar = $('#f-lugar').value; e.desde = num($('#f-desde').value); e.hasta = num($('#f-hasta').value); e.linea = $('#f-linea').value || null; }
-    sessionStorage.setItem('arbol.busqueda', JSON.stringify(e));
-    if (!$('#res')) { location.hash = '#/buscar'; return; }
-    const r = buscarEnArbol(e);
-    const c = entenderQ(e.q || '');
-    $('#res').innerHTML = (c ? `<p class="ir-docs">Personas del árbol. <a href="#/nombres" data-docs><b>Buscar en los documentos →</b></a> <span class="peq">(o pulsa Intro) · Entendido: ${esc(comoSeEntiende(c))}</span></p>` : '')
-      + (r.total || e.q || e.nombre || e.apellidos || e.lugar || e.linea || e.desde || e.hasta ? resultados(arbol, r) : '');
-    $('#res').querySelector('[data-docs]')?.addEventListener('click', ev => { ev.preventDefault(); irADocumentos(); });
-    const ini = document.querySelector('.inicio'); if (ini) ini.hidden = !!(e.q || e.nombre || e.apellidos || e.lugar || e.linea);
-  }, 120);
+  if (!quien && !e.lugar.trim()) {
+    caja.innerHTML = (e.tipo || e.archivo || e.papel || e.desde != null || e.hasta != null || e.conFoto || e.transcrito || e.enlazado) && !e.linea ? '<p class="nada">Escribe además un nombre, unos apellidos o un lugar.</p>' : '';
+    caja._excel = () => ({ cabecera: [], filas: [] });
+    return;
+  }
+  temporizador = setTimeout(buscarDocumentos, espera);
+}
+
+async function buscarDocumentos() {
+  const caja = $('#n-res');
+  if (!caja) return;
+  const eraSinBase = !baseNombres;
+  if (!await necesitaBase(caja, buscarDocumentos)) return;
+  if (eraSinBase) return verBuscar();   // ya hay base: se rellena el desplegable de archivos
+  const e = estadoBusqueda, op = { ...e, ancestros: e.linea ? arbol.ahnentafel(e.linea) : null };
+  caja.insertAdjacentHTML('afterbegin', '<p class="cargando">Buscando en los documentos…</p>');
+  setTimeout(() => {
+    try {
+      if (!hayQuien(e)) pintarLugar(caja, baseNombres.enLugar(e.lugar, op), accionesDoc);
+      else pintarDonde(caja, baseNombres.donde('', op), accionesDoc, op);
+    } catch (err) { caja.innerHTML = `<p class="aviso">${esc(err.message)}</p>`; }
+  }, 20);
+}
+
+// Cuadro de arriba: lo escrito se reparte en los campos y se busca.
+function desdeCuadro() {
+  const e = estadoBusqueda, c = entenderQ($('#q').value);
+  e.q = $('#q').value;
+  if (c) Object.assign(e, { nombre: c.nombre, apellidos: c.apellidos, lugar: c.lugar, desde: c.desde, hasta: c.hasta, ...(c.tipo ? { tipo: c.tipo } : {}) });
+  else Object.assign(e, { nombre: '', apellidos: '', lugar: '', desde: null, hasta: null });
+  guardarEstado();
+  if (!$('#n-nombre')) { location.hash = '#/buscar'; return; }
+  $('#n-nombre').value = e.nombre; $('#n-apellidos').value = e.apellidos; $('#n-lugar').value = e.lugar;
+  $('#n-desde').value = e.desde ?? ''; $('#n-hasta').value = e.hasta ?? ''; if (c?.tipo) $('#n-tipo').value = c.tipo;
+  buscarTodo();
 }
 
 // ---------- Modo: Familia o Árbol (se recuerda) ----------
@@ -1222,53 +1261,6 @@ async function mencionesDe(id) {
   catch (e) { caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
 }
 
-const estadoNombres = JSON.parse(sessionStorage.getItem('arbol.nombres') || '{}');
-function verNombres() {
-  document.title = 'Árbol · Documentos';
-  main.dataset.persona = '';
-  const e = estadoNombres;
-  pantalla(`<div class="buscador">
-    <nav class="pestanas donde"><a class="pest" href="#/buscar">En el árbol</a><a class="pest activa" href="#/nombres">En los documentos (base de nombres)</a><a class="pest" href="#/texto">Texto libre</a><a class="pest" href="#/revisar">Revisar el árbol</a></nav>
-    <div class="filtros nombres">
-      <label>Nombre<input id="n-nombre" value="${esc(e.nombre || '')}" placeholder="Ysabel · Joseph · Mª Josefa"></label>
-      <label>Apellidos<input id="n-apellidos" value="${esc(e.apellidos || '')}" placeholder="Fraga · Pardo Osorio · Ferr*"></label>
-      <label>Lugar<input id="n-lugar" value="${esc(e.lugar || '')}" placeholder="Corrubedo · Valdoviño"></label>
-      <label>Desde<input id="n-desde" inputmode="numeric" value="${esc(e.desde ?? '')}" placeholder="1600"></label>
-      <label>Hasta<input id="n-hasta" inputmode="numeric" value="${esc(e.hasta ?? '')}" placeholder="1800"></label>
-      <label class="doble">Tipo de documento<select id="n-tipo"><option value="">Todos</option>${TIPOS.map(t => `<option${e.tipo === t.nom ? ' selected' : ''}>${esc(t.nom)}</option>`).join('')}</select></label>
-      <label class="triple">Archivo<select id="n-archivo"><option value="">Todos</option>${(baseNombres?.archivos() || (e.archivo ? [e.archivo] : [])).map(a => `<option${e.archivo === a ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select></label>
-    </div>
-    <p class="peq">No importan los acentos ni la ortografía antigua (Ysabel = Isabel, Joseph = José, Bázquez = Vázquez). Un «*» al final busca por el comienzo.
-      Con nombre, el lugar y los años acotan a esa persona; solo con lugar, sale quién hay allí. Pulsa Intro para buscar.${baseNombres ? ` · Base: ${esc(baseNombres.nombre)}, del ${esc(new Date(baseNombres.fecha).toLocaleDateString('es'))}` : ''}</p>
-    <div id="n-res"></div><p class="exportar" id="n-excel"></p>
-  </div>`);
-  const caja = $('#n-res');
-  $('#n-excel').append(botonExcel('documentos', caja, () => caja._excel?.() ?? { cabecera: [], filas: [] }));
-  const lanzarN = () => {
-    const num = v => /^\d{3,4}$/.test(v.trim()) ? +v.trim() : null;
-    Object.assign(e, { nombre: $('#n-nombre').value, apellidos: $('#n-apellidos').value, lugar: $('#n-lugar').value, desde: num($('#n-desde').value), hasta: num($('#n-hasta').value), tipo: $('#n-tipo').value, archivo: $('#n-archivo').value });
-    sessionStorage.setItem('arbol.nombres', JSON.stringify(e));
-    const quien = (e.nombre + e.apellidos).trim();
-    if (!quien && !e.lugar.trim()) {
-      caja.innerHTML = e.tipo || e.archivo || e.desde != null || e.hasta != null ? '<p class="nada">Escribe además un nombre, unos apellidos o un lugar.</p>' : '';
-      caja._excel = () => ({ cabecera: [], filas: [] }); return;
-    }
-    caja.innerHTML = '<p class="cargando">Buscando…</p>';
-    setTimeout(() => {
-      try {
-        if (!quien) pintarLugar(caja, baseNombres.enLugar(e.lugar, e), accionesDoc);
-        else pintarDonde(caja, baseNombres.donde('', e), accionesDoc, e);
-      } catch (err) { caja.innerHTML = `<p class="aviso">${esc(err.message)}</p>`; }
-    }, 20);
-  };
-  const intentar = () => necesitaBase(caja, () => verNombres()).then(ok => ok && lanzarN());
-  // Si se busca desde los campos, lo escrito arriba ya no es lo que se está viendo.
-  const olvidarQ = () => { $('#q').value = ''; estadoBusqueda.q = ''; sessionStorage.setItem('arbol.busqueda', JSON.stringify(estadoBusqueda)); };
-  main.querySelectorAll('.filtros.nombres input').forEach(i => i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); olvidarQ(); intentar(); } }));
-  main.querySelectorAll('.filtros.nombres select').forEach(s => s.addEventListener('change', () => { olvidarQ(); intentar(); }));
-  intentar();
-}
-
 // ---------- Revisar el árbol: dónde se corta cada línea, incoherencias y duplicados ----------
 
 function verRevisar(tab) {
@@ -1277,7 +1269,7 @@ function verRevisar(tab) {
   const raiz = LS.get('revisarRaiz') && arbol.p(LS.get('revisarRaiz')) ? LS.get('revisarRaiz') : arbol.raices[0]?.id;
   const sub = (k, t) => `<a class="pest${tab === k ? ' activa' : ''}" href="#/revisar/${k}">${t}</a>`;
   pantalla(`<div class="buscador">
-    <nav class="pestanas donde"><a class="pest" href="#/buscar">En el árbol</a><a class="pest" href="#/nombres">En los documentos (base de nombres)</a><a class="pest" href="#/texto">Texto libre</a><a class="pest activa" href="#/revisar">Revisar el árbol</a></nav>
+    <nav class="pestanas donde"><a class="pest" href="#/buscar">Buscar</a><a class="pest" href="#/texto">Texto libre</a><a class="pest activa" href="#/revisar">Revisar el árbol</a></nav>
     <nav class="pestanas">${sub('fronteras', 'Dónde se corta la línea')}${sub('incoherencias', 'Incoherencias')}${sub('duplicados', 'Posibles duplicados')}${sub('pruebas', 'Qué falta por probar')}${sub('repetidos', 'Antepasados repetidos')}${sub('tareas', 'Tareas pendientes')}${sub('lugares', 'Lugares')}${sub('salud', 'Salud del archivo')}${sub('copias', 'Copias e historial')}</nav>
     ${['fronteras', 'pruebas', 'repetidos'].includes(tab) ? `<label class="raiz-rev">Antepasados de <select id="r-raiz">${arbol.raices.map(r => `<option value="${esc(r.id)}"${r.id === raiz ? ' selected' : ''}>${esc(r.nombre)}</option>`).join('')}</select></label>` : ''}
     <div id="r-res"><p class="cargando">Revisando…</p></div><p class="exportar" id="r-excel"></p></div>`);
@@ -1449,7 +1441,7 @@ function verTexto2() {
   main.dataset.persona = '';
   const e = JSON.parse(sessionStorage.getItem('arbol.texto') || '{}');
   pantalla(`<div class="buscador">
-    <nav class="pestanas donde"><a class="pest" href="#/buscar">En el árbol</a><a class="pest" href="#/nombres">En los documentos (base de nombres)</a><a class="pest activa" href="#/texto">Texto libre</a><a class="pest" href="#/revisar">Revisar el árbol</a></nav>
+    <nav class="pestanas donde"><a class="pest" href="#/buscar">Buscar</a><a class="pest activa" href="#/texto">Texto libre</a><a class="pest" href="#/revisar">Revisar el árbol</a></nav>
     <div class="filtros nombres"><label class="ancho">Frase o palabra<input id="t-q" value="${esc(e.q || '')}" placeholder="molino de Illade · Casa de Andeiro · escribano"></label></div>
     <label class="check"><input type="checkbox" id="t-trans"${e.trans ? ' checked' : ''}> Buscar también dentro de los archivos de transcripción (más lento)</label>
     <p class="peq">Busca en las notas del árbol${baseNombres ? ', en el texto de las menciones de la base de nombres' : ' (y en la base de nombres, si la abres en «En los documentos»)'} y, si lo marcas, en las transcripciones. Pulsa Intro.</p>
@@ -1547,12 +1539,8 @@ function ajustes() {
 // ---------- Cabecera ----------
 
 $('#q').value = estadoBusqueda.q || '';
-$('#q').addEventListener('input', lanzar);
-$('#q').addEventListener('focus', () => { if (!$('#res') && location.hash !== '#/nombres') location.hash = '#/buscar'; });
-$('#q').addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  e.preventDefault(); $('#q').blur();
-  if (hayDisco || baseNombres) irADocumentos();   // en el móvil la base pesa demasiado: ahí, solo si ya está abierta o con el enlace
-});
+$('#q').addEventListener('input', desdeCuadro);
+$('#q').addEventListener('focus', () => { if (!$('#n-nombre')) location.hash = '#/buscar'; });
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#q').blur(); if ($('#n-nombre')) buscarTodo(0); } });
 
 arrancar();

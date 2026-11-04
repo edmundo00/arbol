@@ -1,13 +1,14 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611042002';
-import { Arbol } from './modelo.js?v=202611042002';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611042002';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611042026';
+import { Arbol } from './modelo.js?v=202611042026';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611042026';
 const RUTAS = { gedcom: '/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged' };
-import { Servidor, Carpetas } from './almacen.js?v=202611042002';
-import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611042002';
-import { esArbolHecho } from './menciones.js?v=202611042002';
-import { entender, comoSeEntiende } from './consulta.js?v=202611042002';
-import { lugares as listaDeLugares } from './investigar.js?v=202611042002';
+import { Servidor, Carpetas } from './almacen.js?v=202611042026';
+import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611042026';
+import { esArbolHecho } from './menciones.js?v=202611042026';
+import { aGedcom } from './fechas.js?v=202611042026';
+import { entender, comoSeEntiende } from './consulta.js?v=202611042026';
+import { lugares as listaDeLugares } from './investigar.js?v=202611042026';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -48,7 +49,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611042002')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611042026')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);
@@ -134,6 +135,16 @@ async function main() {
   ok(conTipo({ tipo: 'Bautismo o nacimiento' })?._g === 3, 'Con tipo «Bautismo», el entierro queda fuera de lo pedido');
   ok(conTipo({ archivo: 'ARCHV Valladolid' })?._g === 3, 'Con archivo «ARCHV Valladolid», el entierro queda fuera de lo pedido');
   ok(base.archivos().includes('Diocesano Mondoñedo'), `El desplegable de archivos tiene ${base.archivos().length} archivos`);
+  // Fechas: cualquier forma razonable
+  for (const [txt, g] of [['antes 1734', 'BEF 1734'], ['antes de 1734', 'BEF 1734'], ['ant. 1734', 'BEF 1734'], ['ant 1734', 'BEF 1734'], ['bef 1734', 'BEF 1734'], ['bef. 1734', 'BEF 1734'], ['BEF 1734', 'BEF 1734'], ['before 1734', 'BEF 1734'], ['a.1800', 'BEF 1800'], ['a. 1800', 'BEF 1800'], ['<1734', 'BEF 1734'],
+    ['después 1734', 'AFT 1734'], ['despues de 1734', 'AFT 1734'], ['desp. 1734', 'AFT 1734'], ['aft 1734', 'AFT 1734'], ['after 1734', 'AFT 1734'], ['tras 1734', 'AFT 1734'], ['d. 1734', 'AFT 1734'],
+    ['hacia 1750', 'ABT 1750'], ['h. 1750', 'ABT 1750'], ['h1750', 'ABT 1750'], ['c. 1750', 'ABT 1750'], ['ca 1750', 'ABT 1750'], ['ca. 1750', 'ABT 1750'], ['circa 1750', 'ABT 1750'], ['sobre 1750', 'ABT 1750'], ['abt 1750', 'ABT 1750'], ['about 1750', 'ABT 1750'], ['aprox. 1750', 'ABT 1750'], ['alrededor de 1750', 'ABT 1750'], ['1750?', 'ABT 1750'],
+    ['entre 1700 y 1710', 'BET 1700 AND 1710'], ['de 1700 a 1710', 'BET 1700 AND 1710'], ['desde 1700 hasta 1710', 'BET 1700 AND 1710'], ['between 1700 and 1710', 'BET 1700 AND 1710'], ['BET 1700 AND 1710', 'BET 1700 AND 1710'], ['1700-1710', 'BET 1700 AND 1710'], ['1797/1800', 'BET 1797 AND 1800'], ['s. XVIII', 'BET 1701 AND 1800'],
+    ['4 jul 1734', '4 JUL 1734'], ['4 de julio de 1734', '4 JUL 1734'], ['4/7/1734', '4 JUL 1734'], ['4-7-1734', '4 JUL 1734'], ['4.7.1734', '4 JUL 1734'], ['4-VII-1734', '4 JUL 1734'], ['1734-07-04', '4 JUL 1734'], ['4 JUL 1734', '4 JUL 1734'], ['july 4 1734', '4 JUL 1734'], ['4 xullo 1734', '4 JUL 1734'],
+    ['julio 1734', 'JUL 1734'], ['julio de 1734', 'JUL 1734'], ['VII-1734', 'JUL 1734'], ['antes de julio de 1734', 'BEF JUL 1734'], ['hacia 4 jul 1734', 'ABT 4 JUL 1734'], ['antes del 4 de julio de 1734', 'BEF 4 JUL 1734'], ['1734', '1734']]) {
+    const r = aGedcom(txt); ok(r.ged === g, `Fecha «${txt}» → ${r.ged || r.error}`);
+  }
+  ok(aGedcom('patata').error, 'Lo que no es fecha se dice: «patata»');
   // Cuadro de arriba: cada palabra a su sitio
   const ent = (t, esperado) => { const c = entender(t, arbol, () => listaDeLugares(arbol).todos); ok(Object.entries(esperado).every(([k, v]) => c[k] === v), `«${t}» → ${comoSeEntiende(c)}`); };
   ent('maria fernandez jubia 1731-1735', { nombre: 'maria', apellidos: 'fernandez', lugar: 'jubia', desde: 1731, hasta: 1735 });

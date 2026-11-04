@@ -1,6 +1,6 @@
 // Cambios en el GEDCOM: personas, familias y enlaces. Cada cambio es una «operación» que se puede deshacer.
 // Solo se tocan las líneas necesarias: el resto de cada registro se conserva tal cual (con sus etiquetas propias).
-import { Registro, hijo, hijos } from './gedcom.js?v=202611042002';
+import { Registro, hijo, hijos } from './gedcom.js?v=202611042026';
 
 const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'do', 'das', 'dos', 'van', 'von', 'der', 'den', 'di']);
 

@@ -1,6 +1,7 @@
 // Pantallas de la base de nombres y lugares: menciones de una persona y buscadores «¿dónde aparece…?» y «¿quién hay en…?».
-import { esc } from './md.js?v=202611042002';
-import { fiabilidad, aniosEnTexto } from './nombresdb.js?v=202611042002';
+import { tarjeta } from './vistas.js?v=202611042026';
+import { esc } from './md.js?v=202611042026';
+import { fiabilidad, aniosEnTexto } from './nombresdb.js?v=202611042026';
 
 const TEXTO = /\.(md|txt|csv|html?)$/i, IMAGEN = /\.(jpe?g|png|gif|tiff?|bmp|webp)$/i;
 const ORIGEN = { registro: 'registro', transcripcion: 'transcripción', pdf_texto: 'texto de PDF', copia_ligera: 'copia ligera', ficha: 'ficha',
@@ -224,20 +225,18 @@ export function pintarDonde(caja, { personas, menciones, lugares = [], filtros =
 
   const queda = [pedido.lugar?.trim() && `lugar «${pedido.lugar.trim()}»`,
     pedido.desde != null || pedido.hasta != null ? (pedido.desde === pedido.hasta ? `año ${pedido.desde}` : `años ${pedido.desde ?? '…'}–${pedido.hasta ?? '…'}`) : '',
-    pedido.tipo && `tipo «${pedido.tipo}»`, pedido.archivo && `archivo «${pedido.archivo}»`].filter(Boolean).join(', ');
-  caja.insertAdjacentHTML('beforeend', `<p class="resumen-busqueda">${filtros
+    pedido.tipo && `tipo «${pedido.tipo}»`, pedido.archivo && `archivo «${pedido.archivo}»`, pedido.papel && `papel «${pedido.papel}»`, pedido.ancestros && 'solo esa línea',
+    pedido.conFoto && 'con foto', pedido.transcrito && 'transcrito', pedido.enlazado && 'enlazado al árbol'].filter(Boolean).join(', ');
+  caja.insertAdjacentHTML('beforeend', `<h3>En documentos</h3><p class="resumen-busqueda">${filtros
     ? `Con ${esc(queda)}: <b>${plural(grupos[0].length, 'documento cumple', 'documentos cumplen')}</b>${grupos[1].length ? `, ${plural(grupos[1].length, 'cumple en parte', 'cumplen en parte')}` : ''}${grupos[2].length ? `, ${plural(grupos[2].length, 'no tiene ese dato', 'no tienen ese dato')}` : ''}${grupos[3].length ? `; ${plural(grupos[3].length, 'queda fuera', 'quedan fuera')}` : ''}.`
-    : `<b>${plural(grupos[0].length, 'documento', 'documentos')}</b>${hechos.length ? `, y ${plural(hechos.length, 'mención', 'menciones')} en árboles ya hechos` : ''}.`}
-    <a href="#" data-ir="personas">En el árbol: ${plural(personas.length, 'persona', 'personas')}${filtros ? ` (${miles(pg[0].length)} cumplen)` : ''}</a></p>
+    : `<b>${plural(grupos[0].length, 'documento', 'documentos')}</b>${hechos.length ? `, y ${plural(hechos.length, 'mención', 'menciones')} en árboles ya hechos` : ''}.`}</p>
     ${pedido.lugar?.trim() ? (lugares.length ? `<details class="peq"><summary>${plural(lugares.length, 'lugar coincide', 'lugares coinciden')} con «${esc(pedido.lugar.trim())}»</summary>${lugares.map(l => esc(l.forma)).join('; ')}</details>`
       : `<p class="peq">«${esc(pedido.lugar.trim())}» no es ningún lugar de la base: solo se busca esa palabra junto a los nombres.</p>`) : ''}`);
-  caja.querySelector('[data-ir]').onclick = ev => { ev.preventDefault(); const h = caja.querySelector('#en-arbol'); if (h?.nextElementSibling?.tagName === 'DETAILS') h.nextElementSibling.open = true; h?.scrollIntoView(); };
 
   // --- Documentos
-  caja.insertAdjacentHTML('beforeend', '<h3>En documentos</h3>');
   if (filtros && !grupos[0].length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ningún documento cumple todo lo pedido. Mira abajo los que no tienen el dato.</p>');
   if (!filtros && !grupos[0].length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguna fuera de los árboles ya hechos.</p>');
-  bloqueMenciones(caja, grupos[0], acciones, { titulo: filtros ? `Cumplen lo pedido (${miles(grupos[0].length)})` : '' });
+  bloqueMenciones(caja, grupos[0], acciones, { titulo: '' });   // el resumen ya dice cuántos cumplen
   bloqueMenciones(caja, grupos[1], acciones, { plegado: grupos[0].length > 0, titulo: `Cumplen en parte (${miles(grupos[1].length)}): coincide un dato y del otro no consta nada`,
     ayuda: 'Cada una dice qué dato le falta: pueden ser o no.' });
   bloqueMenciones(caja, grupos[2], acciones, { plegado: true, titulo: `Sin ese dato (${miles(grupos[2].length)}): mismo nombre, sin nada que comprobar`,
@@ -246,14 +245,21 @@ export function pintarDonde(caja, { personas, menciones, lugares = [], filtros =
   const a = agrupar(porDocumento(hechos.filter(m => m._g !== 3)));
   bloqueMenciones(caja, a, acciones, { plegado: true, titulo: `Árboles ya hechos (${miles(a.length)}): no son fuentes` });
 
-  // --- Árbol
-  caja.insertAdjacentHTML('beforeend', `<h3 id="en-arbol">En el árbol: ${plural(personas.length, 'persona', 'personas')}</h3>`);
-  if (!personas.length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguna.</p>');
-  if (filtros && !pg[0].length && personas.length) caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguna cumple todo lo pedido.</p>');
-  bloquePersonas(caja, pg[0], { plegado: filtros && grupos[0].length > 0, titulo: filtros ? `Cumplen lo pedido (${miles(pg[0].length)})` : '' });
-  bloquePersonas(caja, pg[1], { plegado: filtros && grupos[0].length > 0, titulo: `Cumplen en parte (${miles(pg[1].length)})` });
-  bloquePersonas(caja, pg[2], { plegado: true, titulo: `Sin fechas ni lugares en el árbol (${miles(pg[2].length)})` });
-  bloquePersonas(caja, pg[3], { plegado: true, titulo: `Fuera de lo pedido (${miles(pg[3].length)}): sus años o sus lugares son otros` });
+}
+
+// Personas del árbol, del GEDCOM abierto: arriba, con pocas tarjetas para no empujar los documentos.
+export function pintarArbol(caja, arbol, { lista, filtros }) {
+  caja.innerHTML = '';
+  if (!lista.length) { caja.innerHTML = '<h3>En el árbol</h3><p class="nada">Nadie con esos datos.</p>'; return; }
+  const de = g => lista.filter(x => x._g === g);
+  const tarjetas = (l, paso) => { const c = document.createElement('div'); c.className = 'lista'; listaPorTrozos(c, l, tr => tr.map(x => tarjeta(arbol, x.p.id) + (x.notas.length ? `<span class="falta-dato">${esc(x.notas.join(', '))}</span>` : '')).join(''), null, paso); return c; };
+  caja.insertAdjacentHTML('beforeend', `<h3>En el árbol: ${filtros ? `${plural(de(0).length, 'persona cumple', 'personas cumplen')}, de ${miles(lista.length)}` : plural(lista.length, 'persona', 'personas')}</h3>`);
+  if (de(0).length) caja.append(tarjetas(de(0), 6));
+  [[1, 'Cumplen en parte'], [2, 'Sin fechas ni lugares en el árbol'], [3, 'Fuera de lo pedido']].forEach(([g, tit]) => {
+    if (!de(g).length) return;
+    const d = document.createElement('details'); d.className = 'arboles-hechos';
+    d.innerHTML = `<summary>${tit} (${miles(de(g).length)})</summary>`; d.append(tarjetas(de(g), 30)); caja.append(d);
+  });
 }
 
 // Resultados de «¿Quién hay en el lugar…?»
@@ -263,10 +269,9 @@ export function pintarLugar(caja, { lugares, eventos, menciones, filtros = false
   caja.innerHTML = `<p class="peq">Lugares que coinciden: ${lugares.slice(0, 15).map(l => esc(l.forma + (l.municipio ? ` (${l.municipio})` : ''))).join('; ') || 'ninguno'}${lugares.length > 15 ? ` y ${lugares.length - 15} más` : ''}</p>`;
   caja._excel = datosExcel(menciones);
   const ev = [0, 2, 3].map(g => eventos.filter(e => e._g === g));
-  caja.insertAdjacentHTML('beforeend', `<h3>Hechos del árbol en ese lugar: ${miles(ev[0].length)}</h3>`);
   const pintaEv = (lista, padre) => { const c = document.createElement('div'); c.className = 'eventos'; listaPorTrozos(c, lista, t => t.map(fila).join('')); padre.append(c); };
-  if (ev[0].length) pintaEv(ev[0], caja); else caja.insertAdjacentHTML('beforeend', '<p class="nada">Ninguno.</p>');
   const pleg = (lista, titulo) => { if (!lista.length) return; const d = document.createElement('details'); d.className = 'arboles-hechos'; d.innerHTML = `<summary>${titulo}</summary>`; pintaEv(lista, d); caja.append(d); };
+  pleg(ev[0], `Hechos del árbol en ese lugar (${miles(ev[0].length)})`);
   pleg(ev[1], `Sin fecha en el árbol (${miles(ev[1].length)})`);
   pleg(ev[2], `De otros años (${miles(ev[2].length)})`);
   const m = [0, 1, 2, 3].map(g => porDocumento(menciones.filter(x => x._g === g)));

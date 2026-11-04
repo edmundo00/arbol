@@ -1,6 +1,6 @@
 // Copias del GEDCOM: diferencias con el archivo actual y exportación para compartir (sin personas vivas ni notas privadas).
-import { Gedcom, codificar, hijos, valor } from './gedcom.js?v=202611042002';
-import { anios } from './modelo.js?v=202611042002';
+import { Gedcom, codificar, hijos, valor } from './gedcom.js?v=202611042026';
+import { anios } from './modelo.js?v=202611042026';
 
 // Diferencias por registro entre el archivo actual y otro (una copia): personas y familias añadidas, quitadas y cambiadas.
 export function diferencias(actual, otro) {
