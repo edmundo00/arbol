@@ -87,6 +87,10 @@ En el buscador, pestaña **Revisar el árbol**:
 - **Incoherencias**: muere antes de nacer, madre o padre demasiado jóvenes o mayores, hijos nacidos tras morir la madre o el padre, bodas con menos de 14 años… Primero la línea directa. Son las reglas de `auditar_gedcom.py` y salen las mismas cifras.
 - **Posibles duplicados**: mismo nombre y nacidos con 2 años o menos de diferencia, con sus padres para comparar. En modo edición, **⇆ Fusionar** abre la comparación.
 
+## Editar sin pasos previos (desde el 4-XI-2026)
+
+En Chrome o Edge de ordenador, los botones de editar («+ Añadir padre»…) están siempre a la vista. Al pulsar uno, la aplicación se conecta sola con el archivo: la primera vez pide la carpeta `1 Árbol/Árbol de trabajo` y la recuerda; después, como mucho, el navegador pide permiso con un clic (elegir «Permitir en cada visita»). Da igual haber abierto una copia: si en la carpeta hay una versión más nueva, se usa esa. Las copias de seguridad, el candado y las comprobaciones son las de siempre. En el móvil no se edita.
+
 ## Base de nombres y lugares
 
 La base `9 Sistema/Control/nombres_lugares.db` (la hace `9 Sistema/Control/scripts/nombres_lugares.py`) dice en qué documentos sale cada persona y quién hay en cada lugar.

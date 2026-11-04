@@ -1,29 +1,29 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611041901';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611041901';
-import { buscar, prepararVariantes } from './buscar.js?v=202611041901';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611041901';
-import { BaseNombres, TIPOS } from './nombresdb.js?v=202611041901';
-import { entender, comoSeEntiende } from './consulta.js?v=202611041901';
-import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611041901';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611041901';
-import { revisarSalud, repararSalud } from './salud.js?v=202611041901';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611041901';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611041901';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611041901';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611041901';
-import { md, esc } from './md.js?v=202611041901';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611041901';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611041901';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611041901';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611041901';
-import { Guardado } from './guardar.js?v=202611041901';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611041901';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611041901';
-import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611041901';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611041901';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611041901';
-import { pintarEstadisticas } from './estadisticas.js?v=202611041901';
+import { Gedcom } from './gedcom.js?v=202611041944';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611041944';
+import { buscar, prepararVariantes } from './buscar.js?v=202611041944';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611041944';
+import { BaseNombres, TIPOS } from './nombresdb.js?v=202611041944';
+import { entender, comoSeEntiende } from './consulta.js?v=202611041944';
+import { pintarMenciones, pintarDonde, pintarLugar } from './menciones.js?v=202611041944';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611041944';
+import { revisarSalud, repararSalud } from './salud.js?v=202611041944';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611041944';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611041944';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611041944';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611041944';
+import { md, esc } from './md.js?v=202611041944';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611041944';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611041944';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611041944';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611041944';
+import { Guardado } from './guardar.js?v=202611041944';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita } from './formularios.js?v=202611041944';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611041944';
+import { Registro, GRADOS, QUAY, paginas, leerCsv, bases, xrefSour, registrosDocumento, rango, numero } from './registro.js?v=202611041944';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611041944';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611041944';
+import { pintarEstadisticas } from './estadisticas.js?v=202611041944';
 
 const $ = s => document.querySelector(s);
 const main = $('#main');
@@ -151,13 +151,23 @@ function abrir(datos) {
   pantalla(`<div class="caja"><p class="cargando">Leyendo personas y familias…</p></div>`);
   setTimeout(async () => {
     try {
+      // Abierto como copia, pero con la carpeta recordada y permiso ya dado: se lee el archivo de verdad, que puede ser más nuevo.
+      let deCarpeta = false;
+      if (fuente?.esCopia && !pruebas()) try {
+        const dir = await bdLeer('carpetaGedcom:' + datos.nombre);
+        if (dir && await dir.queryPermission({ mode: 'readwrite' }) === 'granted') {
+          const f = await (await dir.getFileHandle(datos.nombre)).getFile();
+          datos = { ...datos, bytes: new Uint8Array(await f.arrayBuffer()), fecha: f.lastModified };
+          fuente.datos = datos; deCarpeta = true;
+        }
+      } catch {}
       const ged = Gedcom.desdeBytes(datos.bytes);
       arbol = new Arbol(ged);
       if (!arbol.personas.size) throw new Error(`«${datos.nombre}» no parece un GEDCOM: no tiene personas.`);
       bytesAbiertos = datos.bytes;
-      info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia, cuando: datos.cuando };
+      info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611041901')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611041944')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -297,17 +307,17 @@ function verPersona(id, pestana) {
   const antes = main.dataset.persona === id;
   const y = window.scrollY;
   const raiz = esRaiz(id);
-  main.innerHTML = `<div class="persona">${familia(arbol, id, !!editor)}
+  main.innerHTML = `<div class="persona">${familia(arbol, id, !!editor || puedeEditar())}
     ${parentescoRaices(id)}
     <p class="acciones"><button id="parentesco" title="¿Qué parentesco tiene con otra persona?">⚯ ¿Parentesco con…?</button> <button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Persona de referencia' : '☆ Marcar como persona de referencia'}</button>
       <label class="rotulo" title="Lo que sale debajo del nombre en los murales; vacío = su título u oficio del GEDCOM">Rótulo en murales<input id="rotulo" value="${esc(rotulosPropios()[id] || '')}" placeholder="${esc(rotuloGedcom(arbol, id) || 'p. ej. Comandante de Marina')}"></label></p>
-    <section class="detalle">${detalle(arbol, id, pestana, !!editor)}</section></div>`;
+    <section class="detalle">${detalle(arbol, id, pestana, !!editor || puedeEditar())}</section></div>`;
   main.dataset.persona = id;
   if (antes) window.scrollTo(0, y); else window.scrollTo(0, 0);
   $('#raiz').onclick = () => { alternarRaiz(id); verPersona(id, pestana); };
   $('#parentesco').onclick = () => elegirParentesco(id);
   $('#rotulo').onchange = ev => guardarRotulo(id, ev.target.value);
-  main.querySelectorAll('[data-accion]').forEach(b => b.onclick = () => accion(b.dataset.accion, id, b.dataset.fam || null, b.dataset));
+  main.querySelectorAll('[data-accion]').forEach(b => b.onclick = async () => { if (await entrarEdicion()) accion(b.dataset.accion, id, b.dataset.fam || null, b.dataset); });
   recordar(id);
   const { docs, sueltas } = citas(arbol, id);
   main.querySelectorAll('[data-fotos]').forEach(b => b.onclick = () => {
@@ -323,7 +333,8 @@ function verPersona(id, pestana) {
 // ---------- Edición (fase 2): cada cambio se guarda al momento, con copias y comprobaciones ----------
 
 const pruebas = () => esLocal && LS.get('modo') === 'servidor';   // servidor de pruebas: se edita una copia dentro del navegador
-function puedeEditar() { return hayDisco && (pruebas() || (fuente && !fuente.esCopia)); }
+// Se edita en cualquier navegador con acceso al disco, aunque se haya abierto una copia: al guardar se trabaja con el archivo de la carpeta.
+function puedeEditar() { return hayDisco; }
 
 // Copia del GEDCOM en el disco privado del navegador, para probar la edición sin tocar el archivo de verdad.
 async function guardadoDePrueba() {
@@ -344,34 +355,58 @@ function estadoEdicion() {
   d.title = ult ? 'Deshacer: ' + ult.desc : '';
 }
 
-// Aviso antes de editar, en una ventana propia: el botón abre directamente el cuadro de elegir carpeta
-// (Chrome solo lo deja abrir justo después de un clic; un confirm() en medio lo impide).
-function activarEdicion() {
-  if (editor) return terminarEdicion();
+// Conecta con el archivo de la carpeta. Si en el disco hay otra versión de la que se ve (una copia antigua), se pasa a la del disco.
+async function conectarEdicion(avisar = m => alert(m)) {
+  try {
+    guardado = pruebas() ? await guardadoDePrueba() : await Guardado.preparar(info.nombre, bytesAbiertos);
+    await guardado.comprobarCandado();   // solo se mira: el candado se pone cuando se escribe
+    if (!igualesBytes(guardado.base, bytesAbiertos)) {
+      const ged = Gedcom.desdeBytes(guardado.base);
+      arbol = new Arbol(ged); window.arbol = arbol;
+      arbol.ponerRaices(raicesGuardadas());
+      bytesAbiertos = guardado.base; listaLugares = null;
+    }
+    if (!pruebas()) {
+      const f = await (await guardado.dir.getFileHandle(info.nombre)).getFile();
+      info.fecha = f.lastModified; info.tam = f.size; info.copia = false;
+      if (fuente) fuente.datos = { ...fuente.datos, bytes: guardado.base, fecha: f.lastModified };
+    }
+    editor = new Editor(arbol.ged, arbol);
+    cabecera(); ir();
+    return true;
+  } catch (e) {
+    guardado = null;
+    if (e.name !== 'AbortError') avisar(e.message);
+    return false;
+  }
+}
+
+// Se llama desde un clic en cualquier botón de edición: no hay que «activar» nada. La carpeta se elige una sola vez y queda recordada
+// (Chrome solo deja abrir el cuadro de elegir carpeta justo después de un clic; por eso la explicación lleva su propio botón).
+async function entrarEdicion() {
+  if (editor) return true;
+  if (pruebas() || await bdLeer('carpetaGedcom:' + info.nombre)) return conectarEdicion();
+  return new Promise(listo => activarEdicion(listo));
+}
+
+function activarEdicion(listo = () => {}) {
+  if (typeof listo !== 'function') listo = () => {};   // pulsado desde el botón de la barra
+  if (editor) { listo(true); return terminarEdicion(); }
   const capa = $('#dialogo');
   capa.hidden = false; document.body.classList.add('con-visor');
-  capa.innerHTML = `<div class="caja dialogo"><h2>Editar «${esc(info.nombre)}»</h2>
+  capa.innerHTML = `<div class="caja dialogo"><h2>Guardar en «${esc(info.nombre)}»: solo esta vez</h2>
     ${pruebas() ? '<p><b>Modo de pruebas:</b> los cambios se guardan en una copia dentro del navegador, no en el archivo de verdad.</p>' : `
     <ul><li>Cada cambio se guarda al momento en el archivo, con <b>copia de seguridad</b> en la carpeta «copias».</li>
       <li>Mientras editas, los scripts no pueden escribirlo (candado).</li>
       <li>No lo edites a la vez con Family Historian.</li></ul>
-    <p>Pulsa el botón y elige la <b>carpeta donde está el archivo</b>.</p>`}
+    <p>Pulsa el botón y elige la <b>carpeta donde está el archivo</b> (<code>1 Árbol/Árbol de trabajo</code>). Se queda recordada: no hay que volver a hacerlo.
+      Si el navegador pregunta por el permiso, elige <b>«Permitir en cada visita»</b>.</p>`}
     <p class="aviso" id="e-error"></p>
     <p class="botones"><button id="e-ok" class="principal">${pruebas() ? 'Empezar' : 'Elegir la carpeta y empezar'}</button> <button id="e-no">Cancelar</button></p></div>`;
   const cerrar = () => { capa.hidden = true; capa.innerHTML = ''; document.body.classList.remove('con-visor'); };
-  capa.querySelector('#e-no').onclick = cerrar;
+  capa.querySelector('#e-no').onclick = () => { cerrar(); listo(false); };
   capa.querySelector('#e-ok').onclick = async () => {
-    try {
-      guardado = pruebas() ? await guardadoDePrueba() : await Guardado.preparar(info.nombre, bytesAbiertos);
-      await guardado.comprobarCandado();   // solo se mira: el candado se pone cuando se escribe
-      editor = new Editor(arbol.ged, arbol);
-      cerrar();
-      flotante('Edición activada. Los botones «+ Añadir…» están en la vista de familia.');
-      estadoEdicion(); ir();
-    } catch (e) {
-      guardado = null;
-      if (e.name !== 'AbortError') capa.querySelector('#e-error').textContent = e.message;
-    }
+    if (await conectarEdicion(m => { capa.querySelector('#e-error').textContent = m; })) { cerrar(); listo(true); }
   };
 }
 async function terminarEdicion() {
@@ -432,6 +467,8 @@ async function guardarAhora(desc = '', xrefs = []) {
     bytesAbiertos = guardado.base;   // lo que hay ahora en el disco
     try { const f = await archivoEnDisco(); if (f) { info.fecha = f.lastModified; info.tam = f.size; } } catch {}
     if (fuente) { fuente.datos.bytes = guardado.base; info.tam = guardado.base.length; }
+    // Si se abrió como copia, la copia del navegador se queda al día
+    if (fuente?.esCopia && !pruebas()) bdGuardar('copia', { ...fuente.datos, fecha: info.fecha, cuando: Date.now() }).catch(() => {});
     return r;
   }
   finally { guardando = false; }
@@ -828,7 +865,7 @@ async function accion(tipo, id, famId, ds = {}) {
   }
 }
 
-$('#b-editar').onclick = activarEdicion;
+$('#b-editar').onclick = () => editor ? terminarEdicion() : entrarEdicion();
 $('#b-deshacer').onclick = deshacer;
 window.addEventListener('beforeunload', ev => { if (guardando) { ev.preventDefault(); ev.returnValue = ''; } });
 // Al cerrar o salir de la pestaña, se quita el candado si es nuestro (no se deja bloqueado el GEDCOM)

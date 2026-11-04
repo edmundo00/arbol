@@ -5,9 +5,9 @@
 // - cada persona va a media altura entre sus padres;
 // - las columnas se meten unas encima de otras cuando sus cajas no chocan en vertical;
 // - el detalle (3 renglones, 2 o 1) se elige solo, de fuera hacia dentro, hasta que la letra tenga el tamaño mínimo.
-import { anios } from './modelo.js?v=202611041901';
-import { valor } from './gedcom.js?v=202611041901';
-import { esc } from './md.js?v=202611041901';
+import { anios } from './modelo.js?v=202611041944';
+import { valor } from './gedcom.js?v=202611041944';
+import { esc } from './md.js?v=202611041944';
 
 const LETRA = "Georgia, 'Times New Roman', serif";
 const TINTA = '#2a2420', GRIS = '#6f655c', LINEA = '#7a6a5a';

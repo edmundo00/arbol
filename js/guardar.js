@@ -5,8 +5,8 @@
 //   3. el archivo nuevo se lee otra vez y se comprueba: mismas personas más las añadidas, enlaces que apuntan a algo;
 //   4. copias en copias/: la de la sesión (una vez) y la anterior a cada guardado, comprobadas tras escribirlas.
 // La escritura la hace el navegador en un archivo aparte que solo al cerrar sustituye al bueno; después se relee y compara.
-import { Gedcom } from './gedcom.js?v=202611041901';
-import { bdLeer, bdGuardar } from './almacen.js?v=202611041901';
+import { Gedcom } from './gedcom.js?v=202611041944';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611041944';
 
 const iguales = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
 const sello = () => { const d = new Date(), p = x => String(x).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
@@ -55,7 +55,7 @@ export class Guardado {
       throw new Error(`En la carpeta «${dir.name}» no está «${nombre}». Elige la carpeta donde está el archivo abierto.`);
     }
     const disco = new Uint8Array(await (await fh.getFile()).arrayBuffer());
-    if (!iguales(disco, bytesAbiertos)) throw new Error(`El «${nombre}» de esa carpeta no es igual al que tienes abierto (puede haber cambiado). Vuelve a abrir el archivo y luego activa la edición.`);
+    // Si en el disco hay otra versión (se abrió una copia antigua, o cambió fuera), manda la del disco: quien llama vuelve a leer el árbol con guardado.base.
     await bdGuardar('carpetaGedcom:' + nombre, dir);
     return new Guardado(dir, nombre, disco);
   }

@@ -1,13 +1,13 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611041901';
-import { Arbol } from './modelo.js?v=202611041901';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611041901';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611041944';
+import { Arbol } from './modelo.js?v=202611041944';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611041944';
 const RUTAS = { gedcom: '/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged' };
-import { Servidor, Carpetas } from './almacen.js?v=202611041901';
-import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611041901';
-import { esArbolHecho } from './menciones.js?v=202611041901';
-import { entender, comoSeEntiende } from './consulta.js?v=202611041901';
-import { lugares as listaDeLugares } from './investigar.js?v=202611041901';
+import { Servidor, Carpetas } from './almacen.js?v=202611041944';
+import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611041944';
+import { esArbolHecho } from './menciones.js?v=202611041944';
+import { entender, comoSeEntiende } from './consulta.js?v=202611041944';
+import { lugares as listaDeLugares } from './investigar.js?v=202611041944';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -48,7 +48,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611041901')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611041944')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);
