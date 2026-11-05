@@ -141,7 +141,9 @@ Se lee del disco con **sql.js**, que va dentro del programa (`vendor/sqljs`, lic
 - el archivo nuevo se comprueba antes de escribirlo (personas y enlaces);
 - **copias** en `copias/`: `edmundo_app_AAAAMMDD-HHMMSS.ged` (el archivo tal como estaba al empezar la sesión) y `edmundo_app_anterior.ged` (la versión anterior a cada guardado); se releen para comprobarlas;
 - el navegador escribe en un archivo aparte y solo al final lo cambia por el bueno; después se relee y compara byte a byte;
-- **candado** `edmundo.ged.lock` mientras editas; si lo tiene puesto un script, no deja guardar;
+- **candado** `edmundo.ged.lock` mientras editas; si lo tiene puesto un script, espera unos 30 segundos antes de dejar de intentarlo, y si había texto tecleado lo enseña para copiarlo;
+- **de uno en uno:** los cambios se guardan en cola, aunque se hagan muy seguidos;
+- **si el árbol cambia fuera mientras tienes un formulario abierto:** al guardar se relee y lo tecleado se aplica sobre la versión nueva, sin volver a escribirlo. Si cambió esa misma nota, lo tuyo queda como nota nueva. Las acciones sin formulario (quitar, borrar, fusionar) avisan y hay que repetirlas;
 - además, Dropbox guarda 30 días de versiones de cada archivo.
 
 En el móvil no se puede editar (el navegador no puede escribir en tus archivos). **No edites el mismo GEDCOM con Family Historian a la vez.**

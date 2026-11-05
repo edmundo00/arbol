@@ -1,29 +1,29 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611050832';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611050832';
-import { buscar, prepararVariantes } from './buscar.js?v=202611050832';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611050832';
-import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611050832';
-import { entender, personasDelArbol } from './consulta.js?v=202611050832';
-import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611050832';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611050832';
-import { revisarSalud, repararSalud } from './salud.js?v=202611050832';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611050832';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611050832';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611050832';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611050832';
-import { md, esc } from './md.js?v=202611050832';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611050832';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611050832';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611050832';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611050832';
-import { Guardado } from './guardar.js?v=202611050832';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611050832';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611050832';
-import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo } from './registro.js?v=202611050832';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611050832';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611050832';
-import { pintarEstadisticas } from './estadisticas.js?v=202611050832';
+import { Gedcom } from './gedcom.js?v=202611051114';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611051114';
+import { buscar, prepararVariantes } from './buscar.js?v=202611051114';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611051114';
+import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611051114';
+import { entender, personasDelArbol } from './consulta.js?v=202611051114';
+import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611051114';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611051114';
+import { revisarSalud, repararSalud } from './salud.js?v=202611051114';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611051114';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611051114';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611051114';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611051114';
+import { md, esc } from './md.js?v=202611051114';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611051114';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611051114';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611051114';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611051114';
+import { Guardado } from './guardar.js?v=202611051114';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611051114';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611051114';
+import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo } from './registro.js?v=202611051114';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611051114';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611051114';
+import { pintarEstadisticas } from './estadisticas.js?v=202611051114';
 
 const $ = s => document.querySelector(s);
 // La versión publicada (la pone publicar.py en la dirección de este archivo): 202611041952 → «4/11 19:52»
@@ -190,7 +190,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611050832')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611051114')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -542,10 +542,22 @@ async function comprobarDisco() {
 setInterval(() => { if (document.visibilityState === 'visible' && $('#dialogo').hidden) actualizarSiCambio(); }, 20000);
 window.addEventListener('focus', () => { if ($('#dialogo').hidden) actualizarSiCambio(); });
 
+// Un programa suele tener el candado un segundo: se le espera un poco antes de dar el cambio por perdido.
+async function esperandoCandado(f) {
+  for (let i = 0; ; i++) {
+    try { return await f(); }
+    catch (e) {
+      if (!e.enUso || i >= 10) throw e;
+      flotante('Otro programa está escribiendo el árbol. Espero a que termine…');
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+}
+
 async function guardarAhora(desc = '', xrefs = []) {
   guardando = true;
   try {
-    const r = await guardado.guardar(arbol.ged.bytes(), arbol.personas.size);
+    const r = await esperandoCandado(() => guardado.guardar(arbol.ged.bytes(), arbol.personas.size));
     guardado.apuntar(desc || 'Cambio', xrefs);
     bytesAbiertos = guardado.base;   // lo que hay ahora en el disco
     try { const f = await archivoEnDisco(); if (f) { info.fecha = f.lastModified; info.tam = f.size; } } catch {}
@@ -557,24 +569,49 @@ async function guardarAhora(desc = '', xrefs = []) {
   finally { guardando = false; }
 }
 
+// Los cambios se guardan de uno en uno: dos escrituras a la vez podrían pisarse o deshacer la que no toca.
+let cola = Promise.resolve();
+function enCola(f) {
+  const p = cola.then(f, f);
+  cola = p.catch(() => {});
+  return p;
+}
+
+// Si no se ha podido guardar y hay un texto tecleado, se enseña para copiarlo: lo escrito no se pierde.
+function rescatar(motivo, texto) {
+  const capa = $('#dialogo');
+  capa.hidden = false; document.body.classList.add('con-visor');
+  capa.innerHTML = `<div class="caja dialogo"><h2>No se ha guardado</h2><p>${esc(motivo)}</p>
+    <p>Esto es lo que habías escrito. Cópialo antes de cerrar:</p><textarea rows="10" style="width:100%">${esc(texto)}</textarea>
+    <p class="botones"><button class="boton" id="res-ok">Cerrar</button></p></div>`;
+  $('#res-ok').onclick = () => { capa.hidden = true; capa.innerHTML = ''; document.body.classList.remove('con-visor'); };
+}
+
 // Hace un cambio y lo guarda. Si algo falla, el cambio se deshace en memoria y el archivo no se toca.
-async function operar(desc, fn) {
-  if (await actualizarSiCambio()) { alert('El árbol acababa de cambiar fuera de la aplicación y se ha actualizado. Repite el cambio sobre la versión nueva.'); return; }
+// repetible: el cambio solo usa códigos y datos del formulario, así que si el árbol cambia fuera se aplica sobre la versión nueva y no hay que volver a teclearlo.
+// rescate: el texto tecleado, para enseñarlo si al final no se puede guardar.
+function operar(desc, fn, { repetible = false, rescate = '' } = {}) { return enCola(() => operarYa(desc, fn, repetible, rescate)); }
+async function operarYa(desc, fn, repetible, rescate, intento = 0) {
+  const fallo = motivo => rescate ? rescatar(motivo, rescate) : alert(motivo);
+  if (await actualizarSiCambio() && !repetible) { alert('El árbol acababa de cambiar fuera de la aplicación y se ha actualizado. Repite el cambio sobre la versión nueva.'); return; }
   editor.empezar(desc);
-  try { fn(); } catch (e) { editor.cancelar(); alert(e.message); return; }
+  try { fn(); } catch (e) { editor.cancelar(); fallo(e.message); return; }
   const txHecho = editor.terminar();
   try {
     const r = await guardarAhora(desc, [...txHecho.antes.keys()]);
     flotante('Guardado: ' + desc + (r.copiaSesion ? ` · copia en ${r.copiaSesion}` : ''));
   } catch (e) {
     editor.deshacer();
-    alert('No se ha guardado nada.\n\n' + e.message);
+    // Cambió justo entre la comprobación y la escritura: se relee y se aplica una vez más sobre la versión nueva
+    if (e.cambiadoFuera && repetible && !intento) { await actualizarSiCambio(); return operarYa(desc, fn, repetible, rescate, 1); }
+    fallo('No se ha guardado nada.\n\n' + e.message);
     if (e.cambiadoFuera) await terminarEdicion();
   }
   estadoEdicion(); ir();
 }
 
-async function deshacer() {
+function deshacer() { return enCola(deshacerYa); }
+async function deshacerYa() {
   if (await actualizarSiCambio()) { alert('El árbol acababa de cambiar fuera de la aplicación y se ha actualizado. Ya no hay nada que deshacer aquí: si hace falta, corrígelo a mano.'); return; }
   const tx = editor?.deshacer();
   if (!tx) return;
@@ -621,7 +658,7 @@ function escribirCita(id, prep, docId, d) {
 
 async function citar(id, doc, d) {
   let hecha = true;
-  await operar(`Citar «${doc.titulo}» en ${nombreCompleto(arbol.p(id))}`, () => { hecha = escribirCita(id, prepararCita(doc.id, d.imagenes), doc.id, d); });
+  await operar(`Citar «${doc.titulo}» en ${nombreCompleto(arbol.p(id))}`, () => { hecha = escribirCita(id, prepararCita(doc.id, d.imagenes), doc.id, d); }, { repetible: true });
   if (!hecha) flotante('Esa cita ya estaba.');
 }
 
@@ -647,7 +684,7 @@ async function confirmarMencion(id, m) {
   await operar(`Confirmar mención en «${(m.titulo || '').trim()}» de ${nombreCompleto(arbol.p(id))}`, () => {
     for (const t of nuevos) editor.crearTexto(t);
     escribirCita(id, prepararCita(docId, d.imagenes), docId, d);
-  });
+  }, { repetible: true });
 }
 
 // ---------- Añadir un documento a partir de sus fotos: sin programas ni pasos intermedios ----------
@@ -733,7 +770,7 @@ async function anadirDocumento(id = null) {
     await operar(`Añadir documento «${r.titulo}»`, () => {
       for (const t of nuevos.textos) editor.crearTexto(t);
       if (id) escribirCita(id, prepararCita(docId, ''), docId, r);
-    });
+    }, { repetible: true });
   } catch (e) { if (e.name !== 'AbortError') alert('No se ha añadido nada.\n\n' + e.message); }
 }
 
@@ -802,14 +839,22 @@ function aplicarPartida(r) {
   return ids;
 }
 
-async function altaPartida(id) { try { return await altaPartidaDentro(id); } finally { await guardado?.quitarCandado().catch(() => {}); } }
+async function altaPartida(id) {
+  try { return await altaPartidaDentro(id); }
+  catch (e) { alert('No se ha guardado nada.\n\n' + e.message); }
+  finally { await guardado?.quitarCandado().catch(() => {}); }
+}
 async function altaPartidaDentro(id) {
   if (!editor) return;
   const docs = documentosCitables();
   const r = await formularioPartida({ arbol, variantes, docs, lugares: lugares(), persona: id, mostrarDoc });
   if (!r) return;
-  if (await actualizarSiCambio()) { alert('El árbol acababa de cambiar fuera de la aplicación y se ha actualizado. Repite el alta.'); return; }
-  await guardado.ponerCandado();
+  return enCola(() => guardarPartida(r));
+}
+// Solo usa códigos y datos del formulario: si el árbol ha cambiado fuera, se aplica sobre la versión nueva sin volver a teclearla.
+async function guardarPartida(r, intento = 0) {
+  await actualizarSiCambio();
+  await esperandoCandado(() => guardado.ponerCandado());
   const principal = r.personas[{ bautismo: 'bautizado', matrimonio: 'novio', defuncion: 'difunto' }[r.tipo]] || r.personas.novia;
   const nombreP = principal.xref ? nombreCompleto(arbol.p(principal.xref)) : `${principal.nueva.nombre} ${principal.nueva.apellidos}`.trim();
   const desc = `Alta de ${PARTIDAS[r.tipo].nombre.toLowerCase()} de ${nombreP}${r.fecha ? ' (' + r.fecha + ')' : ''}`;
@@ -827,7 +872,11 @@ async function altaPartidaDentro(id) {
   const tx = editor.terminar();
   guardando = false;
   try { await guardarAhora(desc, [...tx.antes.keys()]); flotante(`Guardado: ${desc}. ${Object.keys(ids).length} personas${r.doc ? ', con su cita' : ''}.`); }
-  catch (e) { editor.deshacer(); alert('No se ha guardado nada.\n\n' + e.message); if (e.cambiadoFuera) await terminarEdicion(); return; }
+  catch (e) {
+    editor.deshacer();
+    if (e.cambiadoFuera && !intento) { await actualizarSiCambio(); return guardarPartida(r, 1); }
+    alert('No se ha guardado nada.\n\n' + e.message); if (e.cambiadoFuera) await terminarEdicion(); return;
+  }
   estadoEdicion();
   const pr = Object.entries(ids).find(([rol]) => ['bautizado', 'novio', 'difunto', 'novia'].includes(rol))?.[1];
   if (pr && location.hash !== '#/p/' + pr.slice(1, -1)) location.hash = '#/p/' + pr.slice(1, -1); else ir();
@@ -853,7 +902,7 @@ async function accion(tipo, id, famId, ds = {}) {
   if (tipo === 'editar') {
     const r = await formularioPersona({ ...base, titulo: 'Editar a ' + nom, datos: datosDe(id),
       contexto: { padres: arbol.padres(id).flatMap(f => [f.marido, f.mujer]).filter(Boolean).map(x => arbol.p(x)), hijos: p.fams.flatMap(f => arbol.f(f)?.hijos || []).map(x => arbol.p(x)) } });
-    if (r?.nueva) await operar('Editar a ' + nom, () => editor.datosPersona(id, r.nueva));
+    if (r?.nueva) await operar('Editar a ' + nom, () => editor.datosPersona(id, r.nueva), { repetible: true });
     return;
   }
   if (tipo === 'hijo') {
@@ -864,7 +913,7 @@ async function accion(tipo, id, famId, ds = {}) {
     const r = await formularioPersona({ ...base, titulo: 'Añadir hijo de ' + quien, existente: true, propuesta: ap,
       datos: { apellidos: ap }, contexto: { padres: [padre, madre].filter(Boolean) }, excluir: new Set([padre?.id, madre?.id].filter(Boolean)) });
     if (!r) return;
-    await operar('Añadir hijo de ' + quien, () => { const h = r.nueva ? editor.nuevaPersona(r.nueva) : r.existente; editor.hijo(id, famId, h); });
+    await operar('Añadir hijo de ' + quien, () => { const h = r.nueva ? editor.nuevaPersona(r.nueva) : r.existente; editor.hijo(id, famId, h); }, { repetible: true });
     return;
   }
   if (tipo === 'padre' || tipo === 'madre') {
@@ -872,7 +921,7 @@ async function accion(tipo, id, famId, ds = {}) {
     const r = await formularioPersona({ ...base, titulo: `Añadir ${tipo} de ${nom}`, existente: true, propuesta: ap,
       datos: { apellidos: ap, sexo: tipo === 'padre' ? 'M' : 'F' }, contexto: { hijos: [p] } });
     if (!r) return;
-    await operar(`Añadir ${tipo} de ${nom}`, () => { const x = r.nueva ? editor.nuevaPersona(r.nueva) : r.existente; editor.progenitor(id, tipo === 'padre' ? 'HUSB' : 'WIFE', x); });
+    await operar(`Añadir ${tipo} de ${nom}`, () => { const x = r.nueva ? editor.nuevaPersona(r.nueva) : r.existente; editor.progenitor(id, tipo === 'padre' ? 'HUSB' : 'WIFE', x); }, { repetible: true });
     return;
   }
   // ---------- Quitar enlaces y borrar ----------
@@ -911,6 +960,7 @@ async function accion(tipo, id, famId, ds = {}) {
     const deFamilia = !!famId;
     const dueño = deFamilia ? famId : id;
     let ev = null;
+    const arbol0 = arbol;
     if (tipo === 'boda') ev = arbol.f(famId).eventos.find(e => e.tag === 'MARR') || null;
     else if (ds.fev != null && ds.fev !== '') ev = arbol.f(famId).eventos[+ds.fev];
     else if (ds.ev != null && ds.ev !== '') ev = p.eventos[+ds.ev];
@@ -920,7 +970,16 @@ async function accion(tipo, id, famId, ds = {}) {
       tipos: deFamilia ? TIPOS_FAMILIA : TIPOS_PERSONA, lugares: lugares(),
       datos: ev ? { tag: ev.tag, tipo: ev.tipo, fecha: ev.fecha, lugar: ev.lugar, valor: ev.valor, nota: notaDe(ev) } : { tag: tipo === 'boda' ? 'MARR' : 'CHR' } });
     if (!d) return;
-    return operar(`${ev ? 'Cambiar' : 'Añadir'} ${(TIPOS_PERSONA.concat(TIPOS_FAMILIA).find(([t]) => t === d.tag)?.[1] || d.tag).toLowerCase()} de ${quien}`, () => editor.hecho(dueño, ev?.nodo || null, d));
+    return operar(`${ev ? 'Cambiar' : 'Añadir'} ${(TIPOS_PERSONA.concat(TIPOS_FAMILIA).find(([t]) => t === d.tag)?.[1] || d.tag).toLowerCase()} de ${quien}`, () => {
+      // Si el árbol se ha releído mientras tanto, se busca el mismo hecho en la versión nueva
+      let nodo = ev?.nodo || null;
+      if (ev && arbol !== arbol0) {
+        const igual = (deFamilia ? arbol.f(famId).eventos : arbol.p(id).eventos).find(e => e.tag === ev.tag && e.fecha === ev.fecha && e.lugar === ev.lugar && e.valor === ev.valor);
+        if (!igual) throw new Error('Ese hecho ha cambiado fuera de la aplicación mientras lo editabas. Míralo y repite el cambio.');
+        nodo = igual.nodo;
+      }
+      editor.hecho(dueño, nodo, d);
+    }, { repetible: true });
   }
   if (tipo === 'borrar-hecho') {
     const ev = famId ? arbol.f(famId).eventos[+ds.fev] : p.eventos[+ds.ev];
@@ -933,7 +992,7 @@ async function accion(tipo, id, famId, ds = {}) {
     const t = await formularioNota('Tarea pendiente de ' + nom, 'PENDIENTE: ');
     if (t == null) return;
     const texto = /^\s*(PENDIENTE|TAREA)\s*:/i.test(t) ? t : 'PENDIENTE: ' + t;
-    return operar('Añadir tarea a ' + nom, () => editor.nota(id, null, texto));
+    return operar('Añadir tarea a ' + nom, () => editor.nota(id, null, texto), { repetible: true, rescate: texto });
   }
   if (tipo === 'tarea-hecha') {
     const n = hijos(arbol.registro(id).arbol, 'NOTE')[+ds.nota]; if (!n) return;
@@ -946,9 +1005,18 @@ async function accion(tipo, id, famId, ds = {}) {
       if (!n || !confirm(`¿Quitar esta nota de ${nom}? Se puede deshacer.`)) return;
       return operar(`Quitar una nota de ${nom}`, () => editor.borrarNota(id, n));
     }
-    const t = await formularioNota((n ? 'Cambiar nota de ' : 'Nota nueva de ') + nom, n ? arbol.notaTexto(n) : '');
+    const arbol0 = arbol, original = n ? arbol.notaTexto(n) : '';
+    const t = await formularioNota((n ? 'Cambiar nota de ' : 'Nota nueva de ') + nom, original);
     if (t == null) return;
-    return operar(`${n ? 'Cambiar' : 'Añadir'} nota de ${nom}`, () => editor.nota(id, n, t));
+    let comoNueva = false;
+    await operar(`${n ? 'Cambiar' : 'Añadir'} nota de ${nom}`, () => {
+      // Si el árbol se ha releído mientras tanto, se busca la misma nota; si ya no está igual, lo escrito se guarda como nota nueva
+      const nodo = !n || arbol === arbol0 ? n : hijos(arbol.registro(id).arbol, 'NOTE').find(x => arbol.notaTexto(x) === original) || null;
+      comoNueva = !!n && !nodo;
+      editor.nota(id, nodo, t);
+    }, { repetible: true, rescate: t });
+    if (comoNueva) alert('Esa nota cambió fuera de la aplicación mientras la editabas. Tu texto se ha guardado como una nota nueva, sin tocar la otra.');
+    return;
   }
   if (tipo === 'documento') return anadirDocumento(id);
   if (tipo === 'citar') {
@@ -960,7 +1028,7 @@ async function accion(tipo, id, famId, ds = {}) {
     const r = await formularioPersona({ ...base, titulo: 'Añadir cónyuge de ' + nom, existente: true, boda: true,
       datos: { sexo: p.sexo === 'M' ? 'F' : p.sexo === 'F' ? 'M' : 'U' } });
     if (!r) return;
-    await operar('Añadir cónyuge de ' + nom, () => { const x = r.nueva ? editor.nuevaPersona(r.nueva) : r.existente; editor.conyuge(id, x, r.nueva?.boda); });
+    await operar('Añadir cónyuge de ' + nom, () => { const x = r.nueva ? editor.nuevaPersona(r.nueva) : r.existente; editor.conyuge(id, x, r.nueva?.boda); }, { repetible: true });
   }
 }
 

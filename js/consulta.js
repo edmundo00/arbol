@@ -1,7 +1,7 @@
 // Entiende lo escrito en el cuadro de arriba: «maria fernandez jubia 1731-1735 defunción» → nombre, apellidos, lugar, años y tipo.
 // Lo que dude se ve después en los campos de la pestaña «En los documentos», donde se puede corregir.
-import { buscar, clave } from './buscar.js?v=202611050832';
-import { clavePalabra, plano, PARTICULAS, grupo } from './nombresdb.js?v=202611050832';
+import { buscar, clave } from './buscar.js?v=202611051114';
+import { clavePalabra, plano, PARTICULAS, grupo } from './nombresdb.js?v=202611051114';
 
 const TIPO_PALABRA = {
   bautismo: 'Bautismo o nacimiento', bautizo: 'Bautismo o nacimiento', nacimiento: 'Bautismo o nacimiento', bautismos: 'Bautismo o nacimiento',

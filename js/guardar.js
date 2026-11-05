@@ -5,8 +5,8 @@
 //   3. el archivo nuevo se lee otra vez y se comprueba: mismas personas más las añadidas, enlaces que apuntan a algo;
 //   4. copias en copias/: la de la sesión (una vez) y la anterior a cada guardado, comprobadas tras escribirlas.
 // La escritura la hace el navegador en un archivo aparte que solo al cerrar sustituye al bueno; después se relee y compara.
-import { Gedcom } from './gedcom.js?v=202611050832';
-import { bdLeer, bdGuardar } from './almacen.js?v=202611050832';
+import { Gedcom } from './gedcom.js?v=202611051114';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611051114';
 
 const iguales = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
 const sello = () => { const d = new Date(), p = x => String(x).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
@@ -76,8 +76,10 @@ export class Guardado {
   // Sin poner nada: falla si otro lo tiene puesto
   async comprobarCandado() {
     const c = await this.leerCandado();
-    if (c && c.quien !== QUIEN && Date.parse(c.hasta) > Date.now())
-      throw new Error(`El archivo lo está usando «${c.quien}»${c.aparato ? ' en ' + c.aparato : ''} hasta las ${new Date(c.hasta).toLocaleTimeString('es')}. Espera a que termine.`);
+    if (c && c.quien !== QUIEN && Date.parse(c.hasta) > Date.now()) {
+      const e = new Error(`El archivo lo está usando «${c.quien}»${c.aparato ? ' en ' + c.aparato : ''} hasta las ${new Date(c.hasta).toLocaleTimeString('es')}. Espera a que termine.`);
+      e.enUso = true; throw e;
+    }
   }
   async ponerCandado() {
     await this.comprobarCandado();
