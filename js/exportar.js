@@ -1,8 +1,8 @@
 // Exportar: listas a Excel (CSV con «;», como el registro) e informe de ascendientes (para imprimir en PDF o abrir en Word).
-import { hijos, valor } from './gedcom.js?v=202611050044';
-import { nombreCompleto, fechaES, miles } from './modelo.js?v=202611050044';
-import { antepasados } from './arboles.js?v=202611050044';
-import { esc } from './md.js?v=202611050044';
+import { hijos, valor } from './gedcom.js?v=202611050832';
+import { nombreCompleto, fechaES, miles } from './modelo.js?v=202611050832';
+import { antepasados } from './arboles.js?v=202611050832';
+import { esc } from './md.js?v=202611050832';
 
 // ---------- CSV para Excel ----------
 const celda = v => { const t = String(v ?? ''); return /[;"\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };

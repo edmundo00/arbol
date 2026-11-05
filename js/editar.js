@@ -1,6 +1,6 @@
 // Cambios en el GEDCOM: personas, familias y enlaces. Cada cambio es una «operación» que se puede deshacer.
 // Solo se tocan las líneas necesarias: el resto de cada registro se conserva tal cual (con sus etiquetas propias).
-import { Registro, hijo, hijos } from './gedcom.js?v=202611050044';
+import { Registro, hijo, hijos } from './gedcom.js?v=202611050832';
 
 const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'do', 'das', 'dos', 'van', 'von', 'der', 'den', 'di']);
 
@@ -34,13 +34,15 @@ export function partirLargas(texto, maximo = 240) {
     if (l.length <= 255) { out.push(l); continue; }
     const m = /^(\d+) (@[^@]+@ )?(\w+) ?/.exec(l);
     const nivel = +m[1], cab = l.slice(0, m[0].length);
+    // El CONC de una línea CONT va a su mismo nivel: los dos son hijos de la misma nota.
+    const nivelConc = (m[3] === 'CONT' || m[3] === 'CONC') ? nivel : nivel + 1;
     let resto = l.slice(m[0].length), primero = true;
     while (resto) {
       let corte = Math.min(maximo, resto.length);
       while (corte > 0 && corte < resto.length && (resto[corte - 1] === ' ' || resto[corte] === ' ')) corte--;
       if (corte === 0) corte = Math.min(maximo, resto.length);
       const trozo = resto.slice(0, corte); resto = resto.slice(corte);
-      out.push(primero ? cab + trozo : `${nivel + 1} CONC ${trozo}`); primero = false;
+      out.push(primero ? cab + trozo : `${nivelConc} CONC ${trozo}`); primero = false;
     }
   }
   return out.join('\r\n');

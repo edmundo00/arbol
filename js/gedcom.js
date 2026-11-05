@@ -111,12 +111,13 @@ export class Gedcom {
   bytes() { return codificar(this.texto(), this.cod, this.restoByte); }
 }
 
-// Texto de una nota o de un valor con CONT/CONC debajo.
+// Texto de una nota o de un valor con CONT/CONC debajo. Un CONC colgado un nivel más abajo
+// (1 CONT / 2 CONC, como escriben algunos programas) también se lee: no se oculta ni una letra.
 export function textoLargo(nodo) {
   let s = nodo.valor || '';
   for (const h of nodo.hijos) {
-    if (h.tag === 'CONT') s += '\n' + h.valor;
-    else if (h.tag === 'CONC') s += h.valor;
+    if (h.tag === 'CONT') s += '\n' + textoLargo(h);
+    else if (h.tag === 'CONC') s += textoLargo(h);
   }
   return s;
 }

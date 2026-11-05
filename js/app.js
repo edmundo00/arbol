@@ -1,29 +1,29 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611050044';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611050044';
-import { buscar, prepararVariantes } from './buscar.js?v=202611050044';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611050044';
-import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611050044';
-import { entender, personasDelArbol } from './consulta.js?v=202611050044';
-import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611050044';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611050044';
-import { revisarSalud, repararSalud } from './salud.js?v=202611050044';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611050044';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611050044';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611050044';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611050044';
-import { md, esc } from './md.js?v=202611050044';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611050044';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611050044';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611050044';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611050044';
-import { Guardado } from './guardar.js?v=202611050044';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611050044';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611050044';
-import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo } from './registro.js?v=202611050044';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611050044';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611050044';
-import { pintarEstadisticas } from './estadisticas.js?v=202611050044';
+import { Gedcom } from './gedcom.js?v=202611050832';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611050832';
+import { buscar, prepararVariantes } from './buscar.js?v=202611050832';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611050832';
+import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611050832';
+import { entender, personasDelArbol } from './consulta.js?v=202611050832';
+import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611050832';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611050832';
+import { revisarSalud, repararSalud } from './salud.js?v=202611050832';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611050832';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611050832';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611050832';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611050832';
+import { md, esc } from './md.js?v=202611050832';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611050832';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611050832';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611050832';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611050832';
+import { Guardado } from './guardar.js?v=202611050832';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611050832';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611050832';
+import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo } from './registro.js?v=202611050832';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611050832';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611050832';
+import { pintarEstadisticas } from './estadisticas.js?v=202611050832';
 
 const $ = s => document.querySelector(s);
 // La versión publicada (la pone publicar.py en la dirección de este archivo): 202611041952 → «4/11 19:52»
@@ -190,7 +190,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611050044')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611050832')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -501,7 +501,7 @@ function flotante(texto, malo = false) {
 
 // ---------- Si el GEDCOM cambia en el disco (un programa, otra sesión, otro ordenador), la aplicación se actualiza sola ----------
 const igualesBytes = (a, b) => { if (!a || !b || a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
-let comprobando = false;
+let comprobando = null;   // la comprobación del disco en marcha (una promesa), si la hay
 async function archivoEnDisco() {
   try {
     if (guardado) return await (await guardado.dir.getFileHandle(info.nombre)).getFile();
@@ -509,14 +509,20 @@ async function archivoEnDisco() {
   } catch {}
   return null;
 }
-// Devuelve true si se ha vuelto a leer el árbol.
-async function actualizarSiCambio() {
-  if (comprobando || guardando || !arbol) return false;
-  comprobando = true;
+// Devuelve true si se ha vuelto a leer el árbol. Si ya hay una comprobación en marcha, espera a esa
+// y da su resultado: así un cambio nunca se guarda sobre una lectura a medias (y nunca pisa lo hecho fuera).
+function actualizarSiCambio() {
+  if (guardando || !arbol) return Promise.resolve(false);
+  if (comprobando) return comprobando;
+  comprobando = comprobarDisco().finally(() => { comprobando = null; });
+  return comprobando;
+}
+async function comprobarDisco() {
   try {
     const f = await archivoEnDisco();
-    if (!f || (f.lastModified === info.fecha && f.size === info.tam)) return false;
+    if (guardando || !f || (f.lastModified === info.fecha && f.size === info.tam)) return false;
     const bytes = new Uint8Array(await f.arrayBuffer());
+    if (guardando) return false;
     info.fecha = f.lastModified; info.tam = f.size;
     if (igualesBytes(bytes, bytesAbiertos)) return false;
     const ged = Gedcom.desdeBytes(bytes);
@@ -532,7 +538,6 @@ async function actualizarSiCambio() {
     estadoEdicion(); ir();
     return true;
   } catch (e) { console.warn('No se pudo comprobar el archivo:', e); return false; }
-  finally { comprobando = false; }
 }
 setInterval(() => { if (document.visibilityState === 'visible' && $('#dialogo').hidden) actualizarSiCambio(); }, 20000);
 window.addEventListener('focus', () => { if ($('#dialogo').hidden) actualizarSiCambio(); });
@@ -570,6 +575,7 @@ async function operar(desc, fn) {
 }
 
 async function deshacer() {
+  if (await actualizarSiCambio()) { alert('El árbol acababa de cambiar fuera de la aplicación y se ha actualizado. Ya no hay nada que deshacer aquí: si hace falta, corrígelo a mano.'); return; }
   const tx = editor?.deshacer();
   if (!tx) return;
   try { if (tx.antes.size || tx.cabecera != null) await guardarAhora('Deshacer: ' + tx.desc, [...tx.antes.keys()]); flotante('Deshecho: ' + tx.desc); }

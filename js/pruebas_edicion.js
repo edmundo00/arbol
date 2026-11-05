@@ -1,10 +1,10 @@
 // Pruebas de la edición sobre una COPIA del GEDCOM en el disco privado del navegador (OPFS): nunca toca el archivo bueno.
-import { Gedcom, decodificar, textoLargo } from './gedcom.js?v=202611050044';
-import { Arbol } from './modelo.js?v=202611050044';
-import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611050044';
-import { Guardado, comprobar } from './guardar.js?v=202611050044';
-import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611050044';
-import { clave } from './buscar.js?v=202611050044';
+import { Gedcom, decodificar, textoLargo } from './gedcom.js?v=202611050832';
+import { Arbol } from './modelo.js?v=202611050832';
+import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre, partirLargas } from './editar.js?v=202611050832';
+import { Guardado, comprobar } from './guardar.js?v=202611050832';
+import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611050832';
+import { clave } from './buscar.js?v=202611050832';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -24,6 +24,13 @@ async function main() {
   ok(apellidosPadre({ apellidos: 'Fraga Lopez' }) === 'Fraga' && apellidosMadre({ apellidos: 'Fraga Lopez' }) === 'Lopez', 'Padre → Fraga; madre → López');
   ok(avisos(null, { nac: '1700', padres: [{ nombre: 'M', sexo: 'F', nac: { fecha: '1640' } }] }).length === 1, 'Aviso: madre de 60 años');
   ok(avisos(null, { nac: '1760', padres: [{ nombre: 'P', sexo: 'M', def: { fecha: '1750' } }] }).length === 1, 'Aviso: nacido tras morir el padre');
+
+  // Notas largas: el CONC de una línea CONT va a su mismo nivel, y se lee aunque venga un nivel más abajo
+  const largo = 'palabra '.repeat(60).trim();
+  const partida = partirLargas(`0 @N1@ NOTE inicio\r\n1 CONT ${largo}\r\n1 NOTE ${largo}`).split('\r\n');
+  ok(partida.slice(1).every(l => l.length <= 255) && /^1 CONC /.test(partida[2]) && partida.some(l => /^2 CONC /.test(l)), 'Partir: CONC de un CONT a su nivel; CONC de un NOTE, un nivel más');
+  const notaTorcida = new Gedcom('0 HEAD\r\n0 @N1@ NOTE uno\r\n1 CONT dos\r\n2 CONC  y tres\r\n1 CONT cuatro\r\n0 TRLR\r\n').porXref.get('@N1@').arbol;
+  ok(textoLargo(notaTorcida) === 'uno\ndos y tres\ncuatro', 'Nota con CONC un nivel más abajo: se ve entera');
 
   // Copia del GEDCOM en el disco privado del navegador
   const original = new Uint8Array(await (await fetch(encodeURI('/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged'), { cache: 'no-store' })).arrayBuffer());

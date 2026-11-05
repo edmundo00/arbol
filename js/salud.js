@@ -1,6 +1,6 @@
 // Salud del GEDCOM: enlaces que apuntan a nadie, enlaces sin su vuelta, familias vacías, personas sin nombre,
 // códigos repetidos y líneas demasiado largas. Lo que se puede arreglar sin dudas, se arregla con un clic (con deshacer).
-import { hijos } from './gedcom.js?v=202611050044';
+import { hijos } from './gedcom.js?v=202611050832';
 
 const PUNTERO = /^@[^@#][^@]*@$/;
 
