@@ -1,29 +1,29 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611062128';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611062128';
-import { buscar, prepararVariantes } from './buscar.js?v=202611062128';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611062128';
-import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611062128';
-import { entender, personasDelArbol } from './consulta.js?v=202611062128';
-import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611062128';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611062128';
-import { revisarSalud, repararSalud } from './salud.js?v=202611062128';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611062128';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611062128';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611062128';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611062128';
-import { md, esc } from './md.js?v=202611062128';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611062128';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611062128';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611062128';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611062128';
-import { Guardado } from './guardar.js?v=202611062128';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611062128';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611062128';
-import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo, docsDeFamilia, leerDocumentos, docCitable, vidaEstimada } from './registro.js?v=202611062128';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611062128';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611062128';
-import { pintarEstadisticas } from './estadisticas.js?v=202611062128';
+import { Gedcom } from './gedcom.js?v=202611062159';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611062159';
+import { buscar, prepararVariantes } from './buscar.js?v=202611062159';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611062159';
+import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611062159';
+import { entender, personasDelArbol } from './consulta.js?v=202611062159';
+import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611062159';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611062159';
+import { revisarSalud, repararSalud } from './salud.js?v=202611062159';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611062159';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611062159';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611062159';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611062159';
+import { md, esc } from './md.js?v=202611062159';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611062159';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611062159';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611062159';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611062159';
+import { Guardado } from './guardar.js?v=202611062159';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611062159';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611062159';
+import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo, docsDeFamilia, leerDocumentos, docCitable, vidaEstimada } from './registro.js?v=202611062159';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611062159';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611062159';
+import { pintarEstadisticas } from './estadisticas.js?v=202611062159';
 
 const $ = s => document.querySelector(s);
 // La versión publicada (la pone publicar.py en la dirección de este archivo): 202611041952 → «4/11 19:52»
@@ -190,7 +190,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611062128')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611062159')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -1209,64 +1209,124 @@ async function galeria(caja, lista, fuenteDoc) {
   trabajar(); trabajar(); trabajar();
 }
 
-async function transcripcion(m, fuenteDoc) {
-  if (m.ruta) { try { const t = await carpeta.transcripcion(m.ruta); if (t) return t; } catch (e) { if (!e.noExiste) throw e; } }
-  const d = fuenteDoc?.transcripciones?.[0];
-  if (d) { try { return await carpeta.texto(d); } catch (e) { if (!e.noExiste) throw e; } }
-  return null;
+// El visor de documentos es el mismo que el de «Revisar transcripciones»: js/visordoc.js. Aquí solo se le dice qué abrir.
+let visorDoc = null;
+const enVisor = { lista: [], i: 0, doc: null };
+function elVisor() {
+  if (visorDoc) return visorDoc;
+  visorDoc = VisorDoc.crear($('#visor'), {
+    reparto: 62,
+    activo: () => !$('#visor').hidden,
+    ir: async d => {
+      const k = enVisor.i + d;
+      if (k < 0 || k >= enVisor.lista.length) { visorDoc.toast(d > 0 ? 'Es la última foto de este documento.' : 'Es la primera foto de este documento.', 1800); return; }
+      if (await visorDoc.puedoSalir()) { enVisor.i = k; abrirFoto(); }
+    },
+    irHermana: v => { enVisor.i = +v; abrirFoto(); },
+    haySiguiente: () => enVisor.i < enVisor.lista.length - 1,
+    alEscape: cerrarVisor,
+    alIrPersona: href => { ocultarVisor(); location.hash = href; },
+    avisoNoMd: 'No se encuentra el texto en la carpeta.',
+  });
+  const x = document.createElement('button');
+  x.textContent = '✕'; x.title = 'Cerrar (Esc)'; x.setAttribute('aria-label', 'Cerrar'); x.onclick = cerrarVisor;
+  visorDoc.ranura('izq').append(x);
+  return visorDoc;
+}
+function ocultarVisor() { $('#visor').hidden = true; document.body.classList.remove('con-visor'); }
+async function cerrarVisor() { if (!visorDoc || await visorDoc.puedoSalir()) ocultarVisor(); }
+function mostrarVisor() { const v = elVisor(); $('#visor').hidden = false; document.body.classList.add('con-visor'); return v; }
+
+// Las transcripciones de una foto: las suyas y después las del documento entero.
+async function versionesFoto(m, doc) {
+  if (!carpeta) return [];
+  const out = [];
+  if (m.ruta) { try { out.push(...await carpeta.versiones(m.ruta)); } catch (e) { if (!e.noExiste) throw e; } }
+  const propias = out.length;
+  for (const t of doc?.transcripciones || []) {
+    try { const v = await carpeta.ubicarTexto(t); if (!out.some(o => o.ruta === v.ruta)) out.push(v); } catch (e) { if (!e.noExiste) throw e; }
+  }
+  return { lista: out, propias };
+}
+// Quién cita este documento en el árbol: se llega a su ficha con un clic.
+function gentePorDoc(doc) {
+  if (!doc?.id) return [];
+  const out = [];
+  for (const p of arbol.personas.values()) {
+    if (!arbol.registro(p.id)?.raw?.includes(doc.id)) continue;
+    out.push({ nombre: nombreCompleto(p), titulo: vida(p) || 'Ver su ficha', href: '#/p/' + p.id.slice(1, -1) });
+    if (out.length >= 15) break;
+  }
+  return out;
+}
+// Avisos y fiabilidad medida: los de la lista del revisor (9 Sistema/Herramientas/datos_revisar.js), si está en la carpeta.
+let datosRev = null;
+function datosRevisar() {
+  if (datosRev?.carpeta === carpeta) return datosRev.promesa;
+  const promesa = (async () => {
+    try {
+      const { texto } = await carpeta.texto('9 Sistema/Herramientas/datos_revisar.js');
+      const D = JSON.parse(texto.slice(texto.indexOf('=') + 1).replace(/;\s*$/, '')), idx = new Map();
+      D.filas.forEach((f, i) => idx.set(D.dirs[f[0]] + '/' + f[1], i));
+      return { D, idx };
+    } catch { return null; }
+  })();
+  datosRev = { carpeta, promesa };
+  return promesa;
+}
+async function extrasDeRevisar(m, pagina) {
+  if (!carpeta || !m.ruta) return;
+  const dr = await datosRevisar();
+  if (!dr) return;
+  let rel; try { rel = (await carpeta.buscar(m.ruta)).rel; } catch { return; }
+  const k = rel.findIndex(x => x.toLowerCase() === '2 documentos'), i = k < 0 ? undefined : dr.idx.get(rel.slice(k).join('/'));
+  if (i === undefined || visorDoc.pagina !== pagina) return;
+  const f = dr.D.filas[i];
+  visorDoc.ponExtras({ medida: f[13] ? f[12] : null, avisos: dr.D.avisos[i] || null });
+}
+
+function abrirFoto() {
+  const { lista, i, doc } = enVisor, m = lista[i], v = elVisor();
+  const nombre = (m.ruta || '').split(/[\\/]/).pop();
+  const pagina = {
+    titulo: m.titulo, ruta: (m.ruta || '').replace(/^(\.\.[\\/])+/, ''), nombre, clave: m.ruta || m.titulo, form: m.form,
+    foto: m.ruta ? () => { if (!carpeta) { const e = new Error('Falta la carpeta'); e.noExiste = true; e.sinCarpeta = true; throw e; } return carpeta.enlace(m.ruta); } : null,
+    sinFoto: (caja, e) => { if (e.sinCarpeta) hayCarpeta(caja); else if (e.noExiste) hayCarpeta(caja, e.message); else caja.innerHTML = `<p>${esc(e.message)}</p>`; },
+    hermanas: lista.length > 1 ? lista.map((x, k) => ({ valor: k, etiqueta: `${k + 1} / ${lista.length}` })) : [], actual: i,
+    gente: gentePorDoc(doc),
+    versiones: async () => { const r = await versionesFoto(m, doc); if (!r.lista) return []; pagina.tieneDeLaFoto = r.propias > 0; return r.lista; },
+    nueva: async () => {
+      if (!carpeta || !m.ruta) return null;
+      const n = await carpeta.versionNueva(m.ruta);
+      n.cab = { archivo: doc?.publ || '', personas: pagina.gente.map(g => g.nombre) };
+      return n;
+    },
+    sinTexto: carpeta ? null : caja => hayCarpeta(caja),
+  };
+  v.abrir(pagina);
+  extrasDeRevisar(m, pagina);
 }
 
 function visor(lista, i, fuenteDoc) {
-  const capa = $('#visor');
-  capa.hidden = false; document.body.classList.add('con-visor');
-  let zoom = 1;
-  const mostrar = async () => {
-    const m = lista[i];
-    capa.innerHTML = `<div class="barra"><button data-a="cerrar" aria-label="Cerrar">✕</button>
-        <span class="tit">${i + 1}/${lista.length} · ${esc(m.titulo)}</span>
-        <button data-a="menos" aria-label="Alejar">−</button><button data-a="mas" aria-label="Acercar">+</button>
-        <button data-a="ant" aria-label="Anterior"${i ? '' : ' disabled'}>‹</button><button data-a="sig" aria-label="Siguiente"${i < lista.length - 1 ? '' : ' disabled'}>›</button></div>
-      <div class="lienzo"><p class="cargando">Abriendo la imagen…</p></div>
-      <div class="transc"><p class="peq">Buscando transcripción…</p></div>`;
-    capa.querySelector('.barra').onclick = ev => {
-      const a = ev.target.dataset.a;
-      if (a === 'cerrar') cerrarVisor();
-      else if (a === 'ant' && i > 0) { i--; mostrar(); }
-      else if (a === 'sig' && i < lista.length - 1) { i++; mostrar(); }
-      else if (a === 'mas' || a === 'menos') { zoom = Math.max(0.5, Math.min(6, zoom * (a === 'mas' ? 1.5 : 1 / 1.5))); const im = capa.querySelector('.lienzo img'); if (im) im.style.width = (zoom * 100) + '%'; }
-    };
-    const lienzo = capa.querySelector('.lienzo'), tr = capa.querySelector('.transc');
-    if (!m.ruta) lienzo.innerHTML = `<p class="aviso">La foto no tiene ruta en el GEDCOM.</p>`;
-    else carpeta.enlace(m.ruta).then(u => {
-      if (lista[i] !== m) return;
-      lienzo.innerHTML = IMG.test(m.form) ? `<img src="${esc(u)}" alt="${esc(m.titulo)}" style="width:${zoom * 100}%">`
-        : `<p><a class="boton" href="${esc(u)}" target="_blank" rel="noopener">Abrir ${esc(m.form.toUpperCase())}</a></p>`;
-    }).catch(e => { if (e.noExiste) hayCarpeta(lienzo, e.message); else lienzo.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; });
-    try {
-      const t = await transcripcion(m, fuenteDoc);
-      if (lista[i] !== m) return;
-      tr.innerHTML = t ? `<p class="peq">${esc(t.rel)}</p><div class="md">${md(t.texto)}</div>` : '<p class="peq">Sin transcripción de esta imagen.</p>';
-    } catch (e) { if (lista[i] === m) tr.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
-  };
-  mostrar();
+  mostrarVisor();
+  enVisor.lista = lista; enVisor.i = i; enVisor.doc = fuenteDoc || null;
+  abrirFoto();
 }
-function cerrarVisor() { $('#visor').hidden = true; $('#visor').innerHTML = ''; document.body.classList.remove('con-visor'); }
-document.addEventListener('keydown', e => {
-  if ($('#visor').hidden) return;
-  if (e.key === 'Escape') cerrarVisor();
-  if (e.key === 'ArrowLeft') $('#visor [data-a=ant]')?.click();
-  if (e.key === 'ArrowRight') $('#visor [data-a=sig]')?.click();
-});
 
+// Un texto citado por su ruta. Si tiene foto (al lado o en su encabezado), sale con ella; si no, el texto ocupa todo.
 async function verTexto(ruta, titulo) {
-  const capa = $('#visor');
-  capa.hidden = false; document.body.classList.add('con-visor');
-  capa.innerHTML = `<div class="barra"><button data-a="cerrar">✕</button><span class="tit">${esc(titulo)}</span></div><div class="transc sola"><p class="cargando">Cargando…</p></div>`;
-  capa.querySelector('[data-a=cerrar]').onclick = cerrarVisor;
-  const caja = capa.querySelector('.transc');
-  if (!hayCarpeta(caja)) return;
-  try { const t = await carpeta.texto(ruta); caja.innerHTML = `<p class="peq">${esc(t.rel)}</p><div class="md">${md(t.texto)}</div>`; }
-  catch (e) { if (e.noExiste) hayCarpeta(caja, e.message); else caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
+  const v = mostrarVisor();
+  enVisor.lista = []; enVisor.i = 0; enVisor.doc = null;
+  const base = { titulo, ruta, clave: ruta, gente: [] };
+  if (!carpeta) { v.abrir({ ...base, foto: null, sinTexto: caja => hayCarpeta(caja) }); return; }
+  let ver, foto = null;
+  try { ver = await carpeta.ubicarTexto(ruta); foto = await carpeta.fotoDeTexto(ver, await ver.leer()); }
+  catch (e) {
+    if (e.noExiste) { v.abrir({ ...base, foto: null, sinTexto: caja => hayCarpeta(caja, e.message) }); return; }
+    v.abrir({ ...base, foto: null, sinTexto: caja => { caja.textContent = e.message; } }); return;
+  }
+  v.abrir({ ...base, ruta: ver.ruta, nombre: foto ? foto.split('/').pop() : ver.etiqueta, foto: foto ? () => carpeta.enlace(foto) : null, versiones: [ver], tieneDeLaFoto: true,
+    sinFoto: (caja, e) => { if (e.noExiste) hayCarpeta(caja, e.message); else caja.innerHTML = `<p>${esc(e.message)}</p>`; } });
 }
 
 // ---------- Base de nombres y lugares (9 Sistema/Control/nombres_lugares.db) ----------

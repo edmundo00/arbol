@@ -321,12 +321,6 @@ pre.ged { font-size: 12px; overflow-x: auto; white-space: pre-wrap; overflow-wra
 .barra { display: flex; gap: 6px; align-items: center; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); background: var(--acento); color: #fff; }
 .barra button { background: rgba(255,255,255,.15); color: #fff; border: 0; min-width: 40px; height: 38px; font-size: 1.1em; }
 .barra .tit { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9em; }
-.lienzo { flex: 1 1 55%; overflow: auto; background: #111; text-align: center; -webkit-overflow-scrolling: touch; }
-.lienzo img { display: block; margin: 0 auto; width: 100%; max-width: none; }
-.lienzo p { color: #ddd; padding: 20px; }
-.transc { flex: 1 1 45%; overflow: auto; padding: 10px 16px 40px; background: var(--papel); border-top: 2px solid var(--acento); }
-.transc.sola { flex: 1; border-top: 0; }
-@media (min-width: 1000px) { #visor:has(.lienzo) { display: grid; grid-template-columns: 1.3fr 1fr; grid-template-rows: auto 1fr; } #visor .barra { grid-column: span 2; } .transc { border-top: 0; border-left: 2px solid var(--acento); } }
 .md { max-width: 75ch; overflow-wrap: anywhere; }
 .md blockquote { margin: 8px 0; padding: 4px 12px; border-left: 3px solid var(--linea); color: var(--suave); }
 .md table, table.yaml { border-collapse: collapse; font-size: .88em; margin: 8px 0; }

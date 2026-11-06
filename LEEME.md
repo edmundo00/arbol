@@ -80,6 +80,19 @@ Cada aparato y cada archivo guardan su propia lista.
   - hechos ordenados por fecha, notas y el registro GEDCOM tal cual;
   - **documentos** con lo que prueba cada uno (grado A/B/C), sus fotos y la transcripción al lado.
 
+## Ver y corregir un documento (desde el 6-XI-2026)
+
+Al abrir una foto o un texto se abre el **visor de documentos**, `js/visordoc.js`. Es **el mismo** que usa `9 Sistema/Herramientas/REVISAR TRANSCRIPCIONES.html`: lo que se mejore en uno sale en los dos. El revisor solo añade la lista de lo que queda por revisar. Es un script sin `import` porque el revisor se abre con doble clic y ahí no se pueden cargar módulos.
+
+- **La foto:** zoom con la rueda en el punto que se mira, arrastrar, ancho o página entera, giro y enderezar (se recuerda por foto), brillo, contraste, preajustes («Tinta débil», «Microfilm»…), negativo, nitidez, regla de lectura y minimapa. Los PDF se ven dentro.
+- **El texto:** se corrige directamente, con `[?]`, `[ilegible]` y abreviaturas en color y sus botones; pestaña **Lectura** para verlo presentado y **Encabezado** para los datos. Si hay más de una («(Claude)», o la del documento entero), se elige arriba.
+- **Foto sin transcripción:** **Empezar a transcribir** prepara el `.md` con su encabezado; el archivo se crea al lado de la foto la primera vez que se guarda.
+- **Guardar:** la primera vez el navegador pide permiso para escribir en la carpeta. Antes de cambiar un texto hace copia y apunta el cambio en `9 Sistema/Control/registro/revisiones(.csv)`; en una carpeta sin ese proyecto, en `Copias de transcripciones`. Si el archivo cambió fuera, pregunta. Lo que no se ha guardado queda de borrador. No toca el GEDCOM ni las fotos. Un archivo que no está en UTF-8 o que no es `.md` o `.txt` se abre solo para leer. Con el servidor de pruebas también se abre solo para leer.
+- **Revisar:** **Marcar revisada**, porcentaje de fiabilidad y **⚑ Afecta al árbol**; si `9 Sistema/Herramientas/datos_revisar.js` está en la carpeta, también los posibles errores detectados en esa página.
+- **Personas:** arriba salen las que citan el documento; con un clic se va a su ficha.
+- Atajos: **?** en la barra. **Ctrl+S** guarda; **Alt+←/→** o **Av Pág/Re Pág** cambian de página; **Esc** cierra, avisando si hay algo sin guardar.
+- Pendiente: «Ver el documento» al citar y la columna del documento en «Alta desde una partida» siguen con su vista sencilla.
+
 ## Revisar el árbol
 
 En el buscador, pestaña **Revisar el árbol**:
@@ -201,7 +214,8 @@ GitHub tarda uno o dos minutos en publicarlo. Si aun así se ve la versión viej
 | `js/buscar.js` | Clave fonética y búsqueda con variantes |
 | `js/almacen.js` | Abrir el GEDCOM y la carpeta de fotos; búsqueda de fotos y transcripciones dentro de la carpeta |
 | `js/vistas.js`, `js/app.js` | Pantallas y navegación |
-| `js/md.js` | Muestra las transcripciones y fichas (.md) |
+| `js/md.js` | Muestra las transcripciones y fichas (.md); el código está en `visordoc.js` |
+| `js/visordoc.js` | El visor de documentos: foto, texto y guardar. Lo comparten la aplicación y el revisor |
 | `variantes.json` | Grupos de apellidos que se buscan juntos |
 | `js/nombresdb.js`, `js/menciones.js`, `vendor/sqljs/` | Base de nombres y lugares (sql.js, sin internet) |
 | `servidor_local.py`, `pruebas.html`, `js/pruebas.js` | Pruebas |

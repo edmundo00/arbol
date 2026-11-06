@@ -1,12 +1,14 @@
 // Pruebas de la edición sobre una COPIA del GEDCOM en el disco privado del navegador (OPFS): nunca toca el archivo bueno.
-import { Gedcom, decodificar, textoLargo, hijos } from './gedcom.js?v=202611062128';
-import { docsDeFamilia, leerDocumentos, vidaEstimada } from './registro.js?v=202611062128';
-import { pruebasDe } from './investigar.js?v=202611062128';
-import { Arbol } from './modelo.js?v=202611062128';
-import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre, partirLargas } from './editar.js?v=202611062128';
-import { Guardado, comprobar } from './guardar.js?v=202611062128';
-import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611062128';
-import { clave } from './buscar.js?v=202611062128';
+import { Gedcom, decodificar, textoLargo, hijos } from './gedcom.js?v=202611062159';
+import { docsDeFamilia, leerDocumentos, vidaEstimada } from './registro.js?v=202611062159';
+import { pruebasDe } from './investigar.js?v=202611062159';
+import { Arbol } from './modelo.js?v=202611062159';
+import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre, partirLargas } from './editar.js?v=202611062159';
+import { Guardado, comprobar } from './guardar.js?v=202611062159';
+import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611062159';
+import { clave } from './buscar.js?v=202611062159';
+import { Carpeta, Carpetas } from './almacen.js?v=202611062159';
+import {} from './visordoc.js?v=202611062159';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -190,4 +192,97 @@ async function main() {
   document.title = fallos ? `FALLAN ${fallos}` : 'TODO BIEN';
   out.insertAdjacentHTML('beforeend', `<li><b>${fallos ? fallos + ' pruebas fallan' : 'Todas las pruebas de edición pasan'}</b></li>`);
 }
-main().catch(e => { ok(false, 'Error: ' + e.message + ' ' + (e.stack || '').split('\n')[1]); document.title = 'ERROR'; });
+// El visor de documentos, sobre una carpeta de mentira en el disco privado del navegador.
+async function pruebasVisor(opfs) {
+  const leer = async (raiz, partes) => { let d = raiz; for (const p of partes.slice(0, -1)) d = await d.getDirectoryHandle(p); return new TextDecoder('utf-8', { ignoreBOM: true }).decode(await (await (await d.getFileHandle(partes[partes.length - 1])).getFile()).arrayBuffer()); };
+  const poner = async (raiz, partes, t) => { let d = raiz; for (const p of partes.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true }); const w = await (await d.getFileHandle(partes[partes.length - 1], { create: true })).createWritable(); await w.write(t); await w.close(); };
+  const hay = async (raiz, partes) => { try { await leer(raiz, partes); return true; } catch { return false; } };
+  try { await opfs.removeEntry('visor', { recursive: true }); } catch {}
+  for (const k of ['Genealogia/2 Documentos/Archivo/doc/x.md', 'a.md', 's.md']) VisorDoc.local.quitar('borrador:' + k);
+  const raiz = await opfs.getDirectoryHandle('visor', { create: true });
+  const CARP = ['Genealogia', '2 Documentos', 'Archivo', 'doc'];
+  const textoOriginal = '\uFEFF---\r\nfuente: x.jpg\r\nconfianza: alta\r\nrevisado: false\r\n---\r\nEn diez de Diz[iembr]e [ilegible] Joseph [?]\r\n\r\n## Extracto\r\nJoseph\r\n';
+  await poner(raiz, [...CARP, 'x.md'], textoOriginal);
+  await poner(raiz, [...CARP, 'x (Claude).md'], 'de Claude');
+  await poner(raiz, [...CARP, 'x.jpg'], 'no es una foto');
+  await poner(raiz, [...CARP, 'y.jpg'], 'tampoco');
+  await poner(raiz, ['Genealogia', '9 Sistema', 'Control', 'registro', 'revisiones.csv'], '');
+  const carpeta = new Carpetas([new Carpeta(raiz)]);
+
+  const vs = await carpeta.versiones('D:\\Dropbox\\Genealogia\\2 Documentos\\Archivo\\doc\\x.jpg');
+  ok(vs.length === 2 && vs[0].etiqueta === 'x.md' && vs[1].etiqueta === 'x (Claude).md', 'Visor: encuentra la transcripción y la «(Claude)»');
+  ok((await carpeta.versiones('../../2 Documentos/Archivo/doc/y.jpg')).length === 0, 'Visor: una foto sin transcripción no tiene versiones');
+  const u = await carpeta.ubicarTexto('2 Documentos/Archivo/doc/x.md');
+  ok(u.asa && u.raiz === raiz && await carpeta.fotoDeTexto(u, textoOriginal) === 'Genealogia/2 Documentos/Archivo/doc/x.jpg', 'Visor: de un texto se llega a su foto');
+
+  const caja = document.createElement('div'); caja.style.cssText = 'position:fixed;left:-3000px;top:0;width:1400px;height:800px'; document.body.append(caja);
+  const guardados = []; let siguiente = 0;
+  const v = VisorDoc.crear(caja, { ir: d => { siguiente += d; }, haySiguiente: () => true, alGuardar: (p, x) => guardados.push(x) });
+  await v.abrir({ titulo: 'x', ruta: 'x.jpg', nombre: 'x.jpg', clave: 'x', foto: null, versiones: vs });
+  ok(v.texto().startsWith('En diez') && v.encabezado().includes('confianza: alta'), 'Visor: separa encabezado y texto');
+  ok(!v.hayCambios(), 'Visor: recién abierto no hay cambios');
+  v.fijarTexto(v.texto().replace('Joseph [?]', 'Joseph'));
+  ok(v.hayCambios(), 'Visor: al escribir hay cambios sin guardar');
+  ok(await v.guardar(), 'Visor: guarda');
+  const escrito = await leer(raiz, [...CARP, 'x.md']);
+  ok(escrito.startsWith('\uFEFF---\r\nfuente') && escrito.includes('Joseph\r\n\r\n## Extracto') && !escrito.includes('[?]'), 'Visor: guardado con el cambio, sin perder BOM ni saltos CRLF');
+  const csv = await leer(raiz, ['Genealogia', '9 Sistema', 'Control', 'registro', 'revisiones.csv']);
+  ok(/^\uFEFF?fecha;md;accion/.test(csv) && csv.includes(';2 Documentos/Archivo/doc/x.md;guardada;si;9 Sistema/Control/registro/revisiones/'), 'Visor: apuntado en el registro del proyecto, con ruta desde su raíz');
+  const copia = csv.trim().split('\r\n').pop().split(';')[4];
+  ok(await leer(raiz, ['Genealogia', ...copia.split('/')]) === textoOriginal, 'Visor: la copia guarda el texto de antes, byte a byte');
+  ok(guardados.length === 1 && guardados[0].dudas === 0 && guardados[0].ileg === 1, 'Visor: avisa de lo guardado, con la medida nueva');
+  ok(!v.hayCambios(), 'Visor: tras guardar no quedan cambios');
+
+  // Cambiado fuera mientras estaba abierto: pregunta y, si se cancela, no se machaca
+  await new Promise(r => setTimeout(r, 30));
+  await poner(raiz, [...CARP, 'x.md'], 'cambiado desde el otro ordenador');
+  v.fijarTexto('lo mío');
+  const g = v.guardar();
+  await new Promise(r => setTimeout(r, 60));
+  caja.querySelector('.vd-dialogoBotones button').click();   // Cancelar
+  ok(await g === false && await leer(raiz, [...CARP, 'x.md']) === 'cambiado desde el otro ordenador', 'Visor: si el archivo cambió fuera, pregunta y no lo machaca');
+  v.fijarTexto(v.texto());
+
+  // Foto sin transcripción: se crea al guardar, no antes, con el encabezado de las normas
+  const nueva = await carpeta.versionNueva('../../2 Documentos/Archivo/doc/y.jpg');
+  await v.abrir({ titulo: 'y', ruta: 'y.jpg', nombre: 'y.jpg', clave: 'y', foto: null, versiones: [], nueva: async () => ({ ...nueva, cab: { archivo: 'Archivo de prueba', personas: ['Ana'] } }) });
+  ok(caja.querySelector('.vd-puerta').style.display === 'flex', 'Visor: sin transcripción ofrece empezarla');
+  caja.querySelector('.vd-puertaBtn').click();
+  await new Promise(r => setTimeout(r, 50));
+  ok(!await hay(raiz, [...CARP, 'y.md']), 'Visor: al empezar todavía no crea el archivo');
+  v.fijarTexto(v.texto().replace('## Extracto', 'Texto nuevo\n\n## Extracto'));
+  ok(await v.guardar(), 'Visor: guarda la transcripción nueva');
+  const y = await leer(raiz, [...CARP, 'y.md']);
+  ok(y.includes('fuente: 2 Documentos/Archivo/doc/y.jpg') && y.includes('personas: [Ana]') && y.includes('revisado: false') && y.includes('Texto nuevo'), 'Visor: la nueva lleva su encabezado y su texto');
+
+  // Marcar revisada
+  caja.querySelector('.vd-btnRev').click();
+  await new Promise(r => setTimeout(r, 80));
+  const y2 = await leer(raiz, [...CARP, 'y.md']);
+  ok(/^revisado: true$/m.test(y2) && /^revisado_fecha: \d{4}-\d\d-\d\d$/m.test(y2) && siguiente === 1, 'Visor: «Revisada y siguiente» lo marca y pasa de página');
+
+  // Carpeta sin el proyecto: copia y registro en «Copias de transcripciones», y no se pierde nada
+  const suelta = await opfs.getDirectoryHandle('visor2', { create: true });
+  await poner(suelta, ['a.md'], 'uno');
+  const vs2 = [new Carpeta(suelta).version(['a.md'], await suelta.getFileHandle('a.md'))];
+  await v.abrir({ titulo: 'a', ruta: 'a.jpg', nombre: 'a.jpg', clave: 'a', foto: null, versiones: vs2 });
+  v.fijarTexto('dos');
+  ok(await v.guardar() && await leer(suelta, ['a.md']) === 'dos' && (await leer(suelta, ['Copias de transcripciones', 'revisiones.csv'])).includes(';a.md;guardada;si;Copias de transcripciones/'), 'Visor: en otra carpeta, copia y registro quedan en «Copias de transcripciones»');
+
+  // Texto de solo lectura (un .rtf, o el servidor de pruebas)
+  await v.abrir({ titulo: 's', ruta: 's', nombre: 's', clave: 's', foto: null, versiones: [{ etiqueta: 's.md', ruta: 's.md', partes: ['s.md'], raiz: null, asa: null, leer: async () => 'solo leer' }] });
+  v.fijarTexto('cambio');
+  ok(!v.hayCambios() && caja.querySelector('.vd').classList.contains('vd-soloLectura'), 'Visor: sin carpeta con permiso, solo lectura');
+
+  // Un .txt antiguo, que no está en UTF-8: se lee, pero no se puede estropear guardándolo
+  await poner(suelta, ['nada.txt'], new Uint8Array([0x4d, 0xe1, 0x72, 0xed, 0x61]));
+  await v.abrir({ titulo: 'l', ruta: 'l', nombre: 'l', clave: 'l', foto: null, versiones: [new Carpeta(suelta).version(['nada.txt'], await suelta.getFileHandle('nada.txt'))] });
+  v.fijarTexto('cambio');
+  ok(!v.hayCambios() && caja.querySelector('.vd-estadoGuardar').textContent.includes('UTF-8'), 'Visor: lo que no está en UTF-8 se abre solo para leer');
+
+  for (const k of ['Genealogia/2 Documentos/Archivo/doc/x.md', 'a.md', 's.md', 'nada.txt']) VisorDoc.local.quitar('borrador:' + k);
+  caja.remove();
+  await opfs.removeEntry('visor', { recursive: true }); await opfs.removeEntry('visor2', { recursive: true });
+}
+const fallo = e => { ok(false, 'Error: ' + e.message + ' ' + (e.stack || '').split('\n')[1]); document.title = 'ERROR'; };
+main().catch(fallo).then(async () => { await pruebasVisor(await navigator.storage.getDirectory()); out.insertAdjacentHTML('beforeend', '<li id="fin-visor"><b>Fin de las pruebas del visor</b></li>'); }).catch(fallo);

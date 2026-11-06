@@ -110,6 +110,22 @@ class Raiz {
     return null;
   }
 
+  // Una transcripción lista para abrirla en el visor y guardarla. raiz y asa solo con carpeta del disco; con el servidor de pruebas, solo se lee.
+  version(partes, h) {
+    return { etiqueta: partes[partes.length - 1], ruta: partes.join('/'), partes, c: this, raiz: this.asa || null, asa: typeof h === 'string' ? null : h, leer: async () => (await this.archivo(h)).text() };
+  }
+  // Todas las transcripciones de una foto: la suya, la «(Claude)» y la .txt, al lado; si no hay, la de una carpeta de transcripciones.
+  async versionesDe(rel, aqui) {
+    const dir = rel.slice(0, -1), base = rel[rel.length - 1].replace(/\.[^.]+$/, ''), out = [], vistas = new Set();
+    const probar = async c => { const k = c.join('/').toLowerCase(); if (vistas.has(k)) return; vistas.add(k); const h = await this.exacto(c); if (h) out.push(this.version(c, h)); };
+    if (aqui) for (const n of [base + '.md', base + ' (Claude).md', base + '.txt']) await probar([...dir, n]);
+    if (out.length) return out;
+    const sin = [...dir, base];
+    for (const t of await this.carpetasTranscripcion())
+      for (let j = 0; j < sin.length; j++) await probar([...t, ...sin.slice(j, -1), base + '.md']);
+    return out;
+  }
+
   async texto(ruta) { const r = await this.relativa(ruta); return { texto: await (await this.archivo(r.h)).text(), rel: r.rel.join('/') }; }
   async enlace(ruta) { return this.url((await this.buscar(ruta)).h); }
   async miniatura(ruta) { return this.enlace(ruta); }
@@ -190,6 +206,33 @@ export class Carpetas {
     const propia = await r.c.transcripcionDe(r.rel, true);
     if (propia) return propia;
     for (const c of this.lista) if (c !== r.c) { const t = await c.transcripcionDe(r.rel, false); if (t) return t; }
+    return null;
+  }
+  // Para el visor: las transcripciones de una foto, en la misma carpeta que ella o en otra de las elegidas.
+  async versiones(ruta) {
+    const r = await this.buscar(ruta), l = await r.c.versionesDe(r.rel, true);
+    if (l.length) return l;
+    for (const c of this.lista) if (c !== r.c) { const o = await c.versionesDe(r.rel, false); if (o.length) return o; }
+    return [];
+  }
+  // Para el visor: un texto citado por su ruta, listo para abrirlo y guardarlo.
+  async ubicarTexto(ruta) {
+    for (const c of this.lista) { try { const r = await c.relativa(ruta); return c.version(r.rel, r.h); } catch (e) { if (!e.noExiste) throw e; } }
+    const n = await this.traducir(ruta), r = n && await this.buscarSin(n);
+    if (r) return r.c.version(r.rel, r.h);
+    throw this.noEsta(ruta);
+  }
+  // Dónde se crearía la transcripción de una foto: al lado, con su mismo nombre y .md
+  async versionNueva(ruta) {
+    const r = await this.buscar(ruta), nombre = r.rel[r.rel.length - 1];
+    return { etiqueta: nombre.replace(/\.[^.]+$/, '') + '.md', partes: [...r.rel.slice(0, -1), nombre.replace(/\.[^.]+$/, '') + '.md'], raiz: r.c.asa || null, fotoNombre: nombre };
+  }
+  // La foto de un texto: la que tiene su mismo nombre al lado o, si no, la que dice «fuente:» en su encabezado. Devuelve una ruta o null.
+  async fotoDeTexto(v, texto) {
+    const dir = v.partes.slice(0, -1), base = v.partes[v.partes.length - 1].replace(/\.[^.]+$/, '').replace(/ \(Claude\)$/, '');
+    for (const x of ['jpg', 'jpeg', 'png', 'webp', 'tif', 'tiff']) { const p = [...dir, `${base}.${x}`]; if (await v.c.exacto(p)) return p.join('/'); }
+    const f = /^fuente:[ \t]*"?(.*?)"?[ \t]*$/m.exec(texto.replace(/\r/g, ''))?.[1];
+    if (f && /\.\w{3,4}$/.test(f)) { try { await this.buscar(f); return f; } catch (e) { if (!e.noExiste) throw e; } }
     return null;
   }
 }
