@@ -2,7 +2,7 @@
 //   - la aplicación del árbol (js/app.js), al abrir una foto o un texto;
 //   - 9 Sistema/Herramientas/REVISAR TRANSCRIPCIONES.html, que le añade la lista de lo que queda por revisar.
 // Es un script normal, sin «import» ni «export», porque el revisor se abre con doble clic (file://) y ahí el navegador no
-// deja cargar módulos. Los módulos de la aplicación lo cargan con «import {} from './visordoc.js?v=202611062159'» y lo usan por VisorDoc.
+// deja cargar módulos. Los módulos de la aplicación lo cargan con «import {} from './visordoc.js?v=202611062216'» y lo usan por VisorDoc.
 //
 // Qué guarda: el .md (o .txt) de la transcripción, junto a su foto. Antes de cambiar un texto hace copia y apunta el cambio en un
 // registro: en este proyecto, 9 Sistema/Control/registro/revisiones(.csv); en otra carpeta, «Copias de transcripciones». No toca el GEDCOM ni las fotos.
@@ -99,6 +99,79 @@
     return Math.round(base * (1 - Math.min(.9, (ileg + .5 * dudas) / Math.max(pal, 1))));
   }
 
+  /* ===== Dónde sale un nombre en el texto, con las grafías de la época =====
+     «Luis Ponce de León» encuentra «Luis Ponze de Leon» y «Cathalina F[ernande]z» a «Catalina Fernández», aunque el nombre parta de línea.
+     nivel 1: el nombre (nombre y al menos un apellido); nivel 2: solo los apellidos; nivel 3: solo el nombre de pila; 0: no sale. */
+  function claveNombre(w) {
+    return w.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ch/g, '§').replace(/ph/g, 'f').replace(/h/g, '').replace(/§/g, 'ch')
+      .replace(/[vw]/g, 'b').replace(/ll/g, 'i').replace(/y/g, 'i').replace(/z/g, 's').replace(/c([ei])/g, 's$1').replace(/g([ei])/g, 'j$1').replace(/x/g, 'j')
+      .replace(/(.)\1+/g, '$1').replace(/^josef$/, 'jose');
+  }
+  const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'lo', 'los', 'da', 'do', 'das', 'dos', 'd', 'i', 'e']);
+  const TITULOS = new Set(['frai', 'fr', 'don', 'dona', 'sor', 'lisensiado', 'lisdo', 'bachiler', 'doctor', 'dr']);
+  const CORTAN = new Set(['i', 'e', 'ijo', 'ija', 'con', 'mujer', 'marido', 'padre', 'madre', 'biuda', 'esposo', 'esposa']);
+  function parecidas(a, b) {
+    if (a === b) return true;
+    if (a[0] !== b[0] || Math.min(a.length, b.length) < 6 || Math.abs(a.length - b.length) > 1) return false;
+    let i = 0, j = 0, dif = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) { i++; j++; continue; }
+      if (++dif > 1) return false;
+      if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; }
+    }
+    return dif + (a.length - i) + (b.length - j) <= 1;
+  }
+  function palabrasDe(texto) {
+    const re = /\[[^\]\n]*\?\]|\[ilegible[^\]\n]*\]|((?:\p{L}|\[\p{L}+\])+(?:-\n(?:\p{L}|\[\p{L}+\])+)*)/giu, out = [];
+    let m;
+    while ((m = re.exec(texto))) if (m[1]) out.push({ a: m.index, b: m.index + m[1].length, k: claveNombre(m[1].replace(/[\[\]]|-\n/g, '')) });
+    return out;
+  }
+  function buscarNombre(texto, nombre, pal = palabrasDe(texto)) {
+    const todas = (nombre.match(/\p{L}+/gu) || []).map(claveNombre);
+    const claves = todas.filter(k => !PARTICULAS.has(k) && !TITULOS.has(k));   // «Fray Benito de Escobar» puede salir como «Benito de Escobar»
+    if (!claves.length) return { rangos: [], nivel: 0 };
+    const cortan = k => CORTAN.has(k) && !todas.includes(k);
+    const secuencia = (qs, minimo) => {
+      const out = [];
+      for (let s = 0; s < pal.length; s++) {
+        if (!parecidas(pal[s].k, qs[0])) continue;
+        let q = 1, hallados = 1, fin = s, ajenas = 0;
+        for (let t = s + 1; t < pal.length && q < qs.length && ajenas <= 2; t++) {
+          const k = pal[t].k;
+          if (/\n\s*\n/.test(texto.slice(pal[t - 1].b, pal[t].a))) break;
+          const nq = qs.findIndex((x, n) => n >= q && parecidas(k, x));
+          if (nq >= 0) { q = nq + 1; hallados++; fin = t; ajenas = 0; continue; }
+          if (cortan(k)) break;
+          if (!PARTICULAS.has(k)) ajenas++;
+        }
+        if (hallados >= minimo) { out.push([pal[s].a, pal[fin].b]); s = fin; }
+      }
+      return out;
+    };
+    if (claves.length === 1) { const r = secuencia(claves, 1); return { rangos: r, nivel: r.length ? 1 : 0 }; }
+    let r = secuencia(claves, 2);
+    if (r.length) return { rangos: r, nivel: 1 };
+    const apellidos = claves.slice(1);
+    r = secuencia(apellidos, apellidos.length);
+    if (r.length) return { rangos: r, nivel: 2 };
+    r = secuencia([claves[0]], 1);
+    return { rangos: r, nivel: r.length ? 3 : 0 };
+  }
+  // Marcas en el texto antes de pasarlo a HTML: caracteres privados que luego se cambian por <mark>
+  function conMarcas(t, rangos, actual) {
+    let s = t;
+    for (let k = rangos.length - 1; k >= 0; k--) { const [a, b] = rangos[k]; s = s.slice(0, a) + (k === actual ? '' : '') + s.slice(a, b) + '' + s.slice(b); }
+    return s;
+  }
+  const marcasHtml = h => h.replace(//g, '<mark class="p">').replace(//g, '<mark class="p act">').replace(//g, '</mark>');
+  // Las personas del encabezado: «personas: [a, b]» o una lista debajo con guiones
+  function personasDelEncabezado(h) {
+    const una = yamlLee(h, 'personas').replace(/^\[|\]$/g, '').split(',');
+    const lista = /^personas:[ \t]*\n((?:[ \t]*-[ \t].*\n?)+)/m.exec(h || '');
+    return [...una, ...(lista ? lista[1].split('\n').map(l => l.replace(/^\s*-\s*/, '')) : [])].map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+  }
+
   /* ===== Disco ===== */
   async function dirDe(raiz, partes, crear = false) { let d = raiz; for (const p of partes) d = await d.getDirectoryHandle(p, { create: crear }); return d; }
   async function archivoEn(raiz, partes, crear = false) { return (await dirDe(raiz, partes.slice(0, -1), crear)).getFileHandle(partes[partes.length - 1], { create: crear }); }
@@ -132,10 +205,10 @@
   /* ===== Aspecto ===== */
   const CSS = `
 .vd{--vd-fondo:#efe8da;--vd-papel:#fbf6ea;--vd-papel2:#f4ecdc;--vd-tinta:#2b2118;--vd-suave:#75654f;--vd-linea:#d9cbb1;--vd-acento:#8a2f12;--vd-acento-t:#fff8ee;
-  --vd-ok:#2f6b3f;--vd-aviso:#a86a00;--vd-mal:#b3261e;--vd-marca-i:#f6c8c2;--vd-marca-d:#f7e0a0;--vd-marca-a:#dde6f4;--vd-marg:#6b5a8c;--vd-tit:#8a2f12;
+  --vd-marca-p:#bfe6b4;--vd-marca-pf:#7fce6f;--vd-ok:#2f6b3f;--vd-aviso:#a86a00;--vd-mal:#b3261e;--vd-marca-i:#f6c8c2;--vd-marca-d:#f7e0a0;--vd-marca-a:#dde6f4;--vd-marg:#6b5a8c;--vd-tit:#8a2f12;
   display:grid;grid-template-rows:auto 1fr;height:100%;width:100%;min-height:0;flex:1;background:var(--vd-fondo);color:var(--vd-tinta);font:14px/1.4 system-ui,"Segoe UI",sans-serif;text-align:left}
 @media (prefers-color-scheme: dark){.vd{--vd-fondo:#17130f;--vd-papel:#231d17;--vd-papel2:#2c251d;--vd-tinta:#efe5d3;--vd-suave:#b0a08a;--vd-linea:#463b2f;--vd-acento:#f0a77e;--vd-acento-t:#2b1409;
-  --vd-ok:#7fc48f;--vd-aviso:#e8b95a;--vd-mal:#f0897f;--vd-marca-i:#6b2a24;--vd-marca-d:#5f4a14;--vd-marca-a:#2c3a50;--vd-marg:#b9a6e0;--vd-tit:#f0a77e}}
+  --vd-marca-p:#28552a;--vd-marca-pf:#3d8a40;--vd-ok:#7fc48f;--vd-aviso:#e8b95a;--vd-mal:#f0897f;--vd-marca-i:#6b2a24;--vd-marca-d:#5f4a14;--vd-marca-a:#2c3a50;--vd-marg:#b9a6e0;--vd-tit:#f0a77e}}
 .vd *,.vd *::before{box-sizing:border-box}
 .vd button,.vd select,.vd input{font:inherit;color:inherit;width:auto;margin:0}
 .vd button{cursor:pointer;background:var(--vd-papel2);border:1px solid var(--vd-linea);border-radius:7px;padding:5px 10px;min-height:30px;height:auto;min-width:0;box-shadow:none}
@@ -208,9 +281,20 @@
 .vd-datos{flex:1;min-width:0}
 .vd-datos .t{font:600 14px/1.3 Georgia,serif;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .vd-datos .m{font-size:12px;color:var(--vd-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vd-gente{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;max-height:44px;overflow:hidden}
-.vd-gente span,.vd-gente a{font-size:11px;background:var(--vd-papel2);border:1px solid var(--vd-linea);border-radius:9px;padding:0 7px;white-space:nowrap;color:inherit;text-decoration:none}
-.vd-gente a:hover{border-color:var(--vd-acento);color:var(--vd-acento)}
+.vd-gente{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;max-height:48px;overflow-y:auto;scrollbar-width:thin}
+.vd-chip{display:inline-flex;align-items:center;font-size:11px;background:var(--vd-papel2);border:1px solid var(--vd-linea);border-radius:9px;white-space:nowrap;line-height:16px}
+.vd .vd-chip button{font-size:11px;line-height:16px;min-height:0;background:none;border:0;padding:0 6px;border-radius:9px}
+.vd .vd-chip button:hover{background:none;color:var(--vd-acento)}
+.vd-chip small{font-size:10px;color:var(--vd-suave);margin-left:3px;font-variant-numeric:tabular-nums}
+.vd-chip a{color:var(--vd-suave);text-decoration:none;padding-right:6px}
+.vd-chip a:hover{color:var(--vd-acento)}
+.vd-chip.nada{opacity:.55}
+.vd-chip.activa{background:var(--vd-marca-p);border-color:var(--vd-marca-pf);font-weight:600}
+.vd-chip.activa small{color:inherit}
+.vd .vd-chip .quita{padding:0 6px 0 0}
+.vd mark.p{background:var(--vd-marca-p);color:inherit;border-radius:3px}
+.vd mark.p mark{background:none}
+.vd mark.p.act{background:var(--vd-marca-pf);box-shadow:0 0 0 2px var(--vd-marca-pf)}
 .vd-marcas{display:flex;gap:6px;margin-top:4px;font-size:12px;align-items:center;flex-wrap:wrap}
 .vd-marcas b.i{background:var(--vd-marca-i);border-radius:4px;padding:0 5px;font-weight:600}
 .vd-marcas b.d{background:var(--vd-marca-d);border-radius:4px;padding:0 5px;font-weight:600}
@@ -400,7 +484,7 @@
     const $ = n => { if (!cache.has(n)) cache.set(n, raizDom.querySelector('.vd-' + n)); return cache.get(n); };
     const activo = () => (op.activo ? op.activo() : true);
     const cur = {};
-    let pagina = null, cuenta = 0;
+    let pagina = null, cuenta = 0, chips = [];
 
     let toastT;
     function toast(t, ms = 3200) { const e = $('toast'); if (!t) { e.style.display = 'none'; return; } e.textContent = t; e.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => e.style.display = 'none', ms); }
@@ -562,7 +646,55 @@
         return `<span class="mg">${m}</span>`;
       });
     }
-    function pintarTexto() { fondo.innerHTML = resaltar(ta.value) + '\n'; fondo.scrollTop = ta.scrollTop; }
+    // La persona que se está mirando: { nombre, rangos, i, nivel }. Sus apariciones se recalculan si cambia el texto.
+    let persona = null;
+    function recalcularPersona() {
+      if (!persona) return;
+      const r = buscarNombre(ta.value, persona.nombre);
+      persona.rangos = r.rangos; persona.nivel = r.nivel; persona.i = Math.min(persona.i, Math.max(0, r.rangos.length - 1));
+    }
+    function pintarTexto() {
+      recalcularPersona();
+      fondo.innerHTML = marcasHtml(resaltar(persona ? conMarcas(ta.value, persona.rangos, persona.i) : ta.value)) + '\n';
+      fondo.scrollTop = ta.scrollTop;
+    }
+    function pintarLeer() {
+      if (!cur.cargado) { $('leer').innerHTML = ''; return; }
+      const cuerpo = persona ? conMarcas(cur.body, persona.rangos, persona.i) : cur.body;
+      $('leer').innerHTML = marcasHtml(md((cur.hdr ? `---\n${cur.hdr}\n---\n` : '') + cuerpo));
+    }
+    function verApariencia() {
+      if (pestana === 'cab') ponPestana('texto');
+      if (pestana === 'leer') {
+        pintarLeer();
+        const m = $('leer').querySelector('mark.act'); if (m) $('leer').scrollTop = Math.max(0, m.offsetTop - $('leer').clientHeight / 3);
+        return;
+      }
+      pintarTexto();
+      const m = fondo.querySelector('mark.act');
+      if (m) { ta.scrollTop = Math.max(0, m.offsetTop - ta.clientHeight / 3); fondo.scrollTop = ta.scrollTop; }
+    }
+    function quitarPersona() { if (!persona) return false; persona = null; pintarTexto(); if (pestana === 'leer') pintarLeer(); pintarGente(); return true; }
+    // Pulsar un nombre: resalta todas sus apariciones y va a la primera; volver a pulsarlo, a la siguiente (con Mayús, a la anterior).
+    function pulsarNombre(nombre, atras) {
+      if (!cur.cargado) return;
+      if (persona?.nombre === nombre && persona.rangos.length) {
+        const n = persona.rangos.length; persona.i = (persona.i + (atras ? n - 1 : 1)) % n;
+      } else {
+        const r = buscarNombre(cur.body, nombre);
+        if (!r.rangos.length) { toast(`«${nombre}» no aparece escrito así en este texto. Puede estar con otra grafía o en otra página.`, 4000); return; }
+        persona = { nombre, rangos: r.rangos, nivel: r.nivel, i: 0 };
+        if (r.nivel === 2) toast(`El nombre completo no aparece: se marca solo el apellido. Puede ser otra persona.`, 4000);
+        if (r.nivel === 3) toast(`Los apellidos no aparecen: se marca solo el nombre de pila. Puede ser otra persona.`, 4000);
+      }
+      verApariencia(); pintarGente();
+    }
+    $('gente').addEventListener('click', async e => {
+      const a = e.target.closest('a');
+      if (a) { e.preventDefault(); if (await puedoSalir()) op.alIrPersona ? op.alIrPersona(a.getAttribute('href')) : (location.hash = a.getAttribute('href')); return; }
+      if (e.target.closest('.quita')) { quitarPersona(); return; }
+      const c = e.target.closest('.vd-chip'); if (c) pulsarNombre(chips[+c.dataset.k].nombre, e.shiftKey);
+    });
     ta.addEventListener('scroll', () => { fondo.scrollTop = ta.scrollTop; });
     function actualizarEstado() {
       const s = $('estadoGuardar'), h = hayCambios();
@@ -609,11 +741,10 @@
       $('cabecera').style.display = p === 'cab' ? 'block' : 'none';
       $('leer').style.display = p === 'leer' ? 'block' : 'none';
       $('herrTexto').style.display = p === 'texto' ? '' : 'none';
-      if (p === 'leer') $('leer').innerHTML = cur.cargado ? md(componerSimple()) : '';
+      if (p === 'leer') pintarLeer(); else if (p === 'texto' && persona) pintarTexto();
       local.poner('pestana', p);
     }
     $('tabTexto').onclick = () => ponPestana('texto'); $('tabLeer').onclick = () => ponPestana('leer'); $('tabCab').onclick = () => ponPestana('cab');
-    const componerSimple = () => (cur.hdr ? `---\n${cur.hdr}\n---\n` : '') + cur.body;
     $('confianza').onchange = e => { cur.hdr = yamlPon(cur.hdr, 'confianza', e.target.value); $('cabecera').value = cur.hdr; pintarAnillo(); actualizarEstado(); };
     $('afecta').onclick = () => {
       if (!cur.cargado) return;
@@ -631,7 +762,7 @@
       $('afecta').classList.toggle('activo', afe); $('nota').style.display = afe ? 'block' : 'none'; $('nota').value = yamlLee(h, 'nota_revision');
       const sello = $('selloRev'); sello.style.display = rev ? 'inline' : 'none'; sello.textContent = rev ? '✓ Revisada' + (yamlLee(h, 'revisado_fecha') ? ' el ' + yamlLee(h, 'revisado_fecha') : '') : '';
       pintarBtnRev();
-      if (!pagina?.gente?.length) pintarGente();
+      pintarGente();
       pintarAnillo();
     }
     function pintarBtnRev() {
@@ -641,17 +772,23 @@
       br.disabled = (rev && !hay) || (!cur.cargado);
     }
     function pintarGente() {
-      const g = pagina?.gente || [];
-      if (g.length) { $('gente').innerHTML = g.map(x => x.href ? `<a href="${esc(x.href)}" title="${esc(x.titulo || 'Ver su ficha')}">${esc(x.nombre)}</a>` : `<span title="${esc(x.titulo || '')}">${esc(x.nombre)}</span>`).join(''); return; }
-      // Sin lista de quién es: las personas del encabezado de la transcripción
-      const l = yamlLee(cur.hdr, 'personas').replace(/^\[|\]$/g, '').split(',').map(s => s.trim()).filter(Boolean);
-      $('gente').innerHTML = l.slice(0, 15).map(n => `<span>${esc(n)}</span>`).join('');
+      // Quien dice la página (los que citan el documento) y además las personas del encabezado de la transcripción
+      chips = [];
+      const vistos = new Set();
+      const clave = n => (n.match(/\p{L}+/gu) || []).map(claveNombre).filter(k => !PARTICULAS.has(k)).join(' ');
+      for (const x of [...(pagina?.gente || []), ...personasDelEncabezado(cur.hdr).map(nombre => ({ nombre }))]) {
+        const k = clave(x.nombre); if (!k || vistos.has(k)) continue;
+        vistos.add(k); chips.push(x);
+      }
+      const pal = cur.cargado ? palabrasDe(cur.body) : null;
+      $('gente').innerHTML = chips.map((x, k) => {
+        const activa = persona?.nombre === x.nombre;
+        const veces = pal ? buscarNombre(cur.body, x.nombre, pal) : null, n = veces && veces.nivel === 1 ? veces.rangos.length : 0;
+        const cuenta = activa ? `${persona.i + 1}/${persona.rangos.length}` : n ? String(n) : '';
+        const titulo = (x.titulo ? x.titulo + '. ' : '') + (n || activa ? 'Pulsa para ir a donde sale; otra vez, a la siguiente (con Mayús, a la anterior).' : pal ? 'No aparece así en este texto.' : '');
+        return `<span class="vd-chip${activa ? ' activa' : ''}${pal && !n && !activa ? ' nada' : ''}" data-k="${k}"><button type="button" title="${esc(titulo)}">${esc(x.nombre)}${cuenta ? `<small>${cuenta}</small>` : ''}</button>${activa ? '<button type="button" class="quita" title="Quitar el resaltado (Esc)" aria-label="Quitar el resaltado">✕</button>' : ''}${x.href ? `<a href="${esc(x.href)}" title="Ver su ficha" aria-label="Ver la ficha de ${esc(x.nombre)}">↗</a>` : ''}</span>`;
+      }).join('');
     }
-    $('gente').addEventListener('click', async e => {
-      const a = e.target.closest('a'); if (!a) return;
-      e.preventDefault();
-      if (await puedoSalir()) op.alIrPersona ? op.alIrPersona(a.getAttribute('href')) : (location.hash = a.getAttribute('href'));
-    });
     function pintarAnillo() {
       let p = null, tipo = '', expl = '';
       const f = pagina;
@@ -698,7 +835,7 @@
 
     /* ----- Abrir una transcripción ----- */
     function vaciarTexto() {
-      cur.cargado = false; cur.ver = null; cur.asa = null; cur.nuevo = false; cur.soloLectura = false; cur.hdr = cur.oHdr = ''; cur.body = cur.oBody = '';
+      persona = null; cur.cargado = false; cur.ver = null; cur.asa = null; cur.nuevo = false; cur.soloLectura = false; cur.hdr = cur.oHdr = ''; cur.body = cur.oBody = '';
       ta.value = ''; $('cabecera').value = ''; ta.readOnly = false; $('cabecera').readOnly = false; pintarTexto(); $('leer').innerHTML = '';
       raizDom.classList.remove('vd-soloLectura');
       $('dMeta').textContent = ''; $('nota').style.display = 'none'; $('selloRev').style.display = 'none'; $('afecta').classList.remove('activo');
@@ -706,7 +843,7 @@
     }
     function pintarTextoCargado() {
       ta.value = cur.body; $('cabecera').value = cur.hdr; ta.scrollTop = 0; pintarTexto(); pintarCabeceraDatos(); actualizarEstado();
-      if (pestana === 'leer') $('leer').innerHTML = md(componerSimple());
+      if (pestana === 'leer') pintarLeer();
     }
     async function abrirVersion(ver, turno) {
       $('estadoGuardar').textContent = 'Abriendo…'; $('estadoGuardar').className = 'vd-estadoGuardar';
@@ -874,6 +1011,7 @@
       if (k === 'Escape') {
         if ($('ajustes').classList.contains('abierto')) { $('ajustes').classList.remove('abierto'); $('bAjustes').classList.remove('activo'); return; }
         if ($('barraBuscar').classList.contains('abierta')) { $('barraBuscar').classList.remove('abierta'); return; }
+        if (quitarPersona()) return;
         op.alEscape?.(); return;
       }
       if (enForm) return;
@@ -939,5 +1077,5 @@
     };
   }
 
-  globalThis.VisorDoc = { crear, md, esc, medirTexto, fiabilidad, local, proyecto };
+  globalThis.VisorDoc = { crear, md, esc, medirTexto, fiabilidad, local, proyecto, buscarNombre };
 })();

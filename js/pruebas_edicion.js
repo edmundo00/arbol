@@ -1,14 +1,14 @@
 // Pruebas de la edición sobre una COPIA del GEDCOM en el disco privado del navegador (OPFS): nunca toca el archivo bueno.
-import { Gedcom, decodificar, textoLargo, hijos } from './gedcom.js?v=202611062159';
-import { docsDeFamilia, leerDocumentos, vidaEstimada } from './registro.js?v=202611062159';
-import { pruebasDe } from './investigar.js?v=202611062159';
-import { Arbol } from './modelo.js?v=202611062159';
-import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre, partirLargas } from './editar.js?v=202611062159';
-import { Guardado, comprobar } from './guardar.js?v=202611062159';
-import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611062159';
-import { clave } from './buscar.js?v=202611062159';
-import { Carpeta, Carpetas } from './almacen.js?v=202611062159';
-import {} from './visordoc.js?v=202611062159';
+import { Gedcom, decodificar, textoLargo, hijos } from './gedcom.js?v=202611062216';
+import { docsDeFamilia, leerDocumentos, vidaEstimada } from './registro.js?v=202611062216';
+import { pruebasDe } from './investigar.js?v=202611062216';
+import { Arbol } from './modelo.js?v=202611062216';
+import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre, partirLargas } from './editar.js?v=202611062216';
+import { Guardado, comprobar } from './guardar.js?v=202611062216';
+import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611062216';
+import { clave } from './buscar.js?v=202611062216';
+import { Carpeta, Carpetas } from './almacen.js?v=202611062216';
+import {} from './visordoc.js?v=202611062216';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -194,6 +194,17 @@ async function main() {
 }
 // El visor de documentos, sobre una carpeta de mentira en el disco privado del navegador.
 async function pruebasVisor(opfs) {
+  // Nombres con las grafías de la época
+  const veces = (t, n) => { const r = VisorDoc.buscarNombre(t, n); return r.rangos.map(([a, b]) => t.slice(a, b)); };
+  const PARTIDA = '> Margen: Luis Ponze de Leon con Cathalina F[ernande]z\n\nEn veinte a Luis Ponce de Leon hijo de P[edr]o Ponce de\nLeon y de Maria Fernandez sus padres, con Catalina Fernandez hija de P[edr]o\nDoce difunto y de Marina Fernandez [?] sus padres\n\n### Extracto\nLuis Ponce de León con Catalina Fernández, hija de Pedro Doce.';
+  ok(veces(PARTIDA, 'Luis Ponce de León').length === 3, 'Nombres: Ponze/Ponce y León/Leon, las tres veces');
+  ok(veces(PARTIDA, 'Catalina Fernández').length === 3 && veces(PARTIDA, 'Catalina Fernández')[0] === 'Cathalina F[ernande]z', 'Nombres: «Cathalina F[ernande]z» es Catalina Fernández');
+  ok(veces(PARTIDA, 'Pedro Doce').length === 2, 'Nombres: un nombre partido entre dos líneas');
+  ok(veces(PARTIDA, 'Pedro Ponce de León')[0] === 'P[edr]o Ponce de\nLeon', 'Nombres: con abreviatura y salto de línea');
+  ok(veces(PARTIDA, 'María Fernández').length === 1 && veces(PARTIDA, 'Marina Fernández').length === 1, 'Nombres: María no es Marina');
+  ok(VisorDoc.buscarNombre(PARTIDA, 'Antonio Doce').nivel === 2 && VisorDoc.buscarNombre(PARTIDA, 'Luis Rodríguez').nivel === 3 && VisorDoc.buscarNombre(PARTIDA, 'Isabel Afonso').nivel === 0, 'Nombres: solo apellido, solo nombre de pila o nada, y lo dice');
+  ok(veces('año y lo firmo\nBenito de Escobar', 'Fray Benito de Escobar').length === 1, 'Nombres: el título («Fray») puede no estar escrito');
+  ok(veces('Pedro y Juan Fernandez', 'Pedro Fernandez').length === 0 || VisorDoc.buscarNombre('Pedro y Juan Fernandez', 'Pedro Fernandez').nivel > 1, 'Nombres: «Pedro y Juan Fernández» no es Pedro Fernández');
   const leer = async (raiz, partes) => { let d = raiz; for (const p of partes.slice(0, -1)) d = await d.getDirectoryHandle(p); return new TextDecoder('utf-8', { ignoreBOM: true }).decode(await (await (await d.getFileHandle(partes[partes.length - 1])).getFile()).arrayBuffer()); };
   const poner = async (raiz, partes, t) => { let d = raiz; for (const p of partes.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true }); const w = await (await d.getFileHandle(partes[partes.length - 1], { create: true })).createWritable(); await w.write(t); await w.close(); };
   const hay = async (raiz, partes) => { try { await leer(raiz, partes); return true; } catch { return false; } };
