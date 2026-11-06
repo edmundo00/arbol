@@ -1,10 +1,12 @@
 // Pruebas de la edición sobre una COPIA del GEDCOM en el disco privado del navegador (OPFS): nunca toca el archivo bueno.
-import { Gedcom, decodificar, textoLargo } from './gedcom.js?v=202611051114';
-import { Arbol } from './modelo.js?v=202611051114';
-import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre, partirLargas } from './editar.js?v=202611051114';
-import { Guardado, comprobar } from './guardar.js?v=202611051114';
-import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611051114';
-import { clave } from './buscar.js?v=202611051114';
+import { Gedcom, decodificar, textoLargo, hijos } from './gedcom.js?v=202611062128';
+import { docsDeFamilia, leerDocumentos, vidaEstimada } from './registro.js?v=202611062128';
+import { pruebasDe } from './investigar.js?v=202611062128';
+import { Arbol } from './modelo.js?v=202611062128';
+import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre, partirLargas } from './editar.js?v=202611062128';
+import { Guardado, comprobar } from './guardar.js?v=202611062128';
+import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611062128';
+import { clave } from './buscar.js?v=202611062128';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -159,6 +161,30 @@ async function main() {
     // Deshacer todo
     while (ex.deshacer());
     ok(ax.personas.size === n0 && iguales(gx.bytes(), original), 'Deshacer todo (quitar, borrar, hechos, notas, fusionar): idéntico al original byte a byte');
+  }
+  // Citar: los documentos de la familia salen los primeros y traen lo que dice la cita del pariente; papel y prueba son opcionales
+  {
+    const gc = Gedcom.desdeBytes(original), ac = new Arbol(gc), ec = new Editor(gc, ac), docs = leerDocumentos(gc);
+    const dm = docs.get('exp_fernandez_maria_defuncion');
+    ok(dm.clase === 'Defunción' && dm.anios?.a === 1734 && dm.sitio === 'Xubia', 'Documento: tipo, año y lugar leídos del GEDCOM');
+    const vida = vidaEstimada(ac, '@I13422@');
+    ok(!!vida && vida.desde <= 1690 && vida.hasta >= 1734, `Antón Romeu, sin fechas: su vida se calcula por su familia (${vida?.texto})`);
+    const ot = (t, tp) => pruebasDe(ac, '@I444@').docs[tp].some(x => x.includes(t));
+    ok(!ot('Fernandez Maria', 'muerte'), 'Isidro Romeu, «hijo y cumplidor» en la defunción de su madre: no prueba su muerte');
+    ok(pruebasDe(ac, '@I1@').muerte == null, 'Edmundo, «hijo y heredero» en el testamento de sus padres: su muerte no sale probada');
+    ok(pruebasDe(ac, '@I283@').nac != null, 'Un padrón con «hija: … nacido el…» sigue probando el nacimiento');
+    ok(pruebasDe(ac, '@I13421@').docs.muerte.some(x => x.includes('Fernandez Maria')), 'María Fernández, «difunto»: su defunción sigue probando su muerte');
+    const fam =docsDeFamilia(ac, '@I13422@', docs), mujer = fam.find(x => x.id === 'exp_fernandez_maria_defuncion');
+    ok(fam[0] === mujer && /su mujer/.test(mujer.quien), 'Citar en Antón Romeu: la defunción de su mujer sale la primera');
+    ok(/^Esposo de /.test(mujer.papel) && /^Enterrada en San Mart/.test(mujer.que) && mujer.grado === 'A', 'Trae el papel, lo que prueba (sin «difunto:») y el grado de la cita de ella');
+    ok(!docsDeFamilia(ac, '@I13421@', docs).some(x => x.id === 'exp_fernandez_maria_defuncion'), 'Lo que la persona ya tiene citado no se propone');
+    const d = docs.get('exp_fernandez_maria_defuncion'), cita = (papel, que) => {
+      ec.empezar('x'); ec.citaRegistro('@I13422@', { sr: d.sour, doc: d.id, papel, que, pagina: '', quay: '3', grado: 'A', objs: [] }); ec.terminar();
+      const t = gc.porXref.get('@I13422@').arbol.hijos.find(n => n.tag === 'SOUR' && n.valor === d.sour), nota = hijos(t, 'NOTE').map(n => n.valor);
+      ec.deshacer(); return nota.join('|');
+    };
+    ok(cita('', '') === '' && cita('Esposo', '') === 'Esposo' && cita('', 'Prueba') === 'citado: Prueba' && cita('Esposo', 'Prueba') === 'Esposo: Prueba', 'Cita con papel o prueba vacíos: sin NOTE vacía ni «: » suelto');
+    ok(iguales(gc.bytes(), original), 'Deshacer las citas: idéntico al original');
   }
   await raizOPFS.removeEntry('prueba', { recursive: true });
   document.title = fallos ? `FALLAN ${fallos}` : 'TODO BIEN';

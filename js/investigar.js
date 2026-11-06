@@ -1,9 +1,9 @@
 // Herramientas para investigar: grado de prueba de cada dato, qué falta por probar, parentesco, antepasados repetidos,
 // cronología, tareas pendientes y lugares.
-import { hijos, valor } from './gedcom.js?v=202611051114';
-import { anios, nombreCompleto, vida, fechaES, miles } from './modelo.js?v=202611051114';
-import { clave } from './buscar.js?v=202611051114';
-import { esc } from './md.js?v=202611051114';
+import { hijos, valor } from './gedcom.js?v=202611062128';
+import { anios, nombreCompleto, vida, fechaES, miles } from './modelo.js?v=202611062128';
+import { clave } from './buscar.js?v=202611062128';
+import { esc } from './md.js?v=202611062128';
 
 const enlace = p => `<a href="#/p/${esc(p.id.slice(1, -1))}">${esc(nombreCompleto(p))}</a>`;
 const LETRA = { 3: 'A', 2: 'B', 1: 'C', 0: '?' };
@@ -16,6 +16,15 @@ const ASPECTOS = {
   boda: /matrimon|boda|casad|contray|despos|velaci|esposo|esposa|marido|mujer\b|cónyuge|conyuge/i,
   muerte: /difunt|defunci|entierr|enterr|muert|falleci|sepult|testa|viud/i,
 };
+// El papel dice que la muerte de la que habla el documento es la de otro: «hijo y heredero» en un testamento o el marido en la
+// defunción de su mujer no prueban su propia muerte. «Padre difunto» sí; «madre del difunto», no.
+// Solo se aplica a la muerte: en nacimiento, padres y boda el texto de la cita sí puede hablar de la persona («hija, nacido el 13-10-1934»).
+const PARIENTE = /\b(c[oó]nyuge|consorte|espos[oa]s?|marido|mujer|muger|viud[oa]|hij[oa]s?|padres?|madres?|herman[oa]s?|abuel[oa]s?|niet[oa]s?|suegr[oa]|yerno|nuera|cuñad[oa]|sobrin[oa]s?|t[ií][oa]|prim[oa]|padrin[oa]|madrina|testigos?|cumplidora?|albacea|herederos?|heredera)\b/i;
+function deOtraPersona(nota, aspecto) {
+  if (aspecto !== 'muerte') return false;
+  const papel = /^([^:]{1,60}):/.exec(nota)?.[1] ?? (nota.length <= 60 ? nota : '');
+  return PARIENTE.test(papel) && !/(?<!\bdel |\bde la |\bde los |\bde las )\bdifunt/i.test(papel);
+}
 function citasDe(arbol, nodoRaiz, hecho = null) {
   const out = [];
   for (const h of nodoRaiz.hijos) {
@@ -38,7 +47,7 @@ export function pruebasDe(arbol, id) {
     if (x.hecho === 'BIRT' || x.hecho === 'CHR' || x.hecho === 'BAPM') pon('nac', x);
     else if (x.hecho === 'DEAT' || x.hecho === 'BURI' || x.hecho === 'WILL') pon('muerte', x);
     else if (x.hecho === 'MARR') pon('boda', x);
-    for (const k of Object.keys(ASPECTOS)) if (!x.hecho && ASPECTOS[k].test(x.nota + ' ' + x.titulo)) pon(k, x);
+    for (const k of Object.keys(ASPECTOS)) if (!x.hecho && ASPECTOS[k].test(x.nota + ' ' + x.titulo) && !deOtraPersona(x.nota, k)) pon(k, x);
   }
   return res;
 }

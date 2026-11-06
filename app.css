@@ -132,6 +132,18 @@ button.pest.activa { border-bottom-color: var(--acento); }
 .dialogo .pestanas { margin-bottom: 8px; }
 .elegir { display: grid; gap: 4px; max-height: 40vh; overflow: auto; }
 .elegir button { text-align: left; }
+.elegir .elegir-tit { margin: 4px 0 0; font-weight: 600; }
+.filtros-cita { display: grid; grid-template-columns: 1.4fr .6fr .6fr 1.2fr 1fr; gap: 6px; margin: 6px 0; font-size: .9em; }
+.filtros-cita input, .filtros-cita select { width: 100%; min-width: 0; }
+.check-cita { display: block; margin: 4px 0 6px; font-size: .9em; }
+.check-cita input { width: auto; }
+.doc-cita { max-height: 50vh; overflow: auto; border: 1px solid var(--linea); border-radius: 6px; padding: 8px; margin-bottom: 8px; }
+.doc-cita .tira { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.doc-cita .tira button { padding: 2px 8px; }
+.doc-cita .tira button.activo { background: var(--acento); color: #fff; }
+.doc-cita .foto-doc img { width: 100%; border-radius: 6px; }
+.doc-cita .trans-doc { font-size: .9em; margin-top: 8px; }
+@media (max-width: 600px) { .filtros-cita { grid-template-columns: 1fr 1fr; } }
 .avisos .aviso { margin: 4px 0; }
 .avisos button { font-size: .85em; padding: 3px 8px; margin: 2px; }
 button.mas { font-size: .85em; padding: 6px 10px; border-style: dashed; color: var(--acento2); background: transparent; }

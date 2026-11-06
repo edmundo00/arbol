@@ -1,6 +1,6 @@
 // Cambios en el GEDCOM: personas, familias y enlaces. Cada cambio es una «operación» que se puede deshacer.
 // Solo se tocan las líneas necesarias: el resto de cada registro se conserva tal cual (con sus etiquetas propias).
-import { Registro, hijo, hijos } from './gedcom.js?v=202611051114';
+import { Registro, hijo, hijos } from './gedcom.js?v=202611062128';
 
 const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'do', 'das', 'dos', 'van', 'von', 'der', 'den', 'di']);
 
@@ -449,7 +449,9 @@ export class Editor {
   citaRegistro(xref, { sr, doc, papel, que, pagina, quay, grado = '', objs = [] }) {
     const r = this.tocar(xref), h = r.arbol.hijos;
     if (h.some(n => n.tag === 'SOUR' && n.valor === sr && n.hijos.some(x => x.tag === '_REG' && x.valor === doc))) return false;
-    const lineas = [`1 SOUR ${sr}`, ...(pagina ? [`2 PAGE ${pagina}`] : []), `2 QUAY ${quay}`, `2 NOTE ${papel}: ${que}`, `2 _REG ${doc}`, ...(['C', 'N', 'P'].includes(grado) ? [`2 _GRADO ${grado}`] : [])];
+    // El papel y lo que prueba son opcionales. Se escribe «papel: qué prueba», como documentos_ged.py sabe leerlo.
+    const nota = papel && que ? `${papel}: ${que}` : papel || (que ? `citado: ${que}` : '');
+    const lineas = [`1 SOUR ${sr}`, ...(pagina ? [`2 PAGE ${pagina}`] : []), `2 QUAY ${quay}`, ...(nota ? [`2 NOTE ${nota}`] : []), `2 _REG ${doc}`, ...(['C', 'N', 'P'].includes(grado) ? [`2 _GRADO ${grado}`] : [])];
     const nuevos = new Registro(partirLargas(['0 @X@ INDI', ...lineas].join('\r\n')).replace(/\r\n/g, this.ged.nl) + this.ged.nl, this.ged.nl).arbol.hijos;
     // Detrás de sus otras citas del registro; si no tiene, delante de «1 CHAN» (o al final)
     let i = -1;

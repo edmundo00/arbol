@@ -1,7 +1,131 @@
 // Documentos y citas: están en el GEDCOM (fuentes con «1 REFN reg:<id>», igual que scripts/registro/documentos_ged.py).
+import { hijos, valor } from './gedcom.js?v=202611062128';
+import { nombreCompleto, anios as aniosFecha } from './modelo.js?v=202611062128';
 
 export const GRADOS = [['A', 'A — lo dice el documento'], ['B', 'B — indirecto o resumen'], ['C', 'C — deducido'], ['?', '? — sin leer']];
 export const QUAY = { A: '3', B: '2', C: '1', N: '1', P: '1', '?': '0' };
+const DE_QUAY = { 3: 'A', 2: 'B', 1: 'C', 0: '?' };
+
+// ---------- Documentos: fuentes con «1 REFN reg:<id>», con lo que hace falta para filtrarlos ----------
+const CLASES = [['Bautismo o nacimiento', /bautis|bautiz|nacimiento|nacid/], ['Matrimonio', /matrimon|casados|velaci/], ['Defunción', /defunci|difuntos|entierro/],
+  ['Testamento', /testament/], ['Padrón', /padr[oó]n|censo|vecindario/], ['Catastro', /catastro/], ['Pleito', /pleito|ejecutoria/], ['Hidalguía', /hidalgu|limpieza/],
+  ['Escritura', /escritura|protocolo|notarial|escabin/], ['Prensa', /prensa|esquela|art[ií]culo/], ['Libro', /libro/]];
+const clasePor = t => CLASES.find(([, r]) => r.test(t))?.[0];
+// Primero lo que dice el campo de tipo; si es «sin clasificar», el título
+const claseDoc = (tipo, titulo) => clasePor(String(tipo).toLowerCase()) || clasePor(String(titulo).toLowerCase()) || 'Otro';
+// Años de un texto, sin confundirlos con números de foto como «DSC1700» o «pag1936»
+const ANIO = /(?<![0-9A-Za-z])(1[0-9]{3}|20[0-2][0-9])(?![0-9A-Za-z])/g;
+const rangoAnios = t => { const l = (String(t || '').match(ANIO) || []).map(Number); return l.length ? { a: Math.min(...l), b: Math.max(...l) } : null; };
+
+export function leerDocumentos(ged) {
+  const m = new Map();
+  for (const r of ged.registros) {
+    if (r.tipo !== 'SOUR' || !r.raw.includes('reg:')) continue;
+    for (const n of hijos(r.arbol, 'REFN')) {
+      if (!String(n.valor).startsWith('reg:')) continue;
+      const id = n.valor.slice(4).trim(), fecha = valor(r.arbol, '_FECHA') || '', tipo = valor(r.arbol, '_TIPO') || '';
+      let titulo = valor(r.arbol, 'TITL') || id;
+      if (fecha && titulo.endsWith(` (${fecha})`)) titulo = titulo.slice(0, -fecha.length - 3);
+      const trans = hijos(r.arbol, '_TRANS').map(x => x.valor);
+      const ruta = (/Fotos: \d+, en ([^\r\n]*?)\.?\r?\n/.exec(r.raw)?.[1] || trans[0]?.replace(/\/[^/]*$/, '') || '').trim();
+      const sitio = ruta.split('/')[2] || '';
+      m.set(id, { id, sour: r.xref, titulo, fecha, tipo, transcripcion: trans.join('|'),
+        clase: claseDoc(tipo, titulo), anios: rangoAnios(fecha) || rangoAnios(titulo) || rangoAnios(ruta) || rangoAnios(id),
+        sitio: sitio.startsWith('_') ? '' : sitio, lugar: [ruta, valor(r.arbol, 'PUBL'), titulo].filter(Boolean).join(' ') });
+    }
+  }
+  return m;
+}
+// Lo que necesita el cuadro de citar de cada documento
+export const docCitable = d => ({ id: d.id, titulo: d.titulo + (d.fecha ? ` (${d.fecha})` : ''), clase: d.clase, anios: d.anios, sitio: d.sitio, lugar: d.lugar });
+
+// Años en los que un documento puede hablar de esta persona: su vida y 30 años más (testamentarías, pleitos, «difunto»).
+// Sin fechas propias se calcula por su familia, con márgenes anchos, porque es mejor enseñar de más que esconder lo bueno. null si no hay de dónde sacarlo.
+export function vidaEstimada(arbol, id) {
+  const p = arbol.p(id);
+  if (!p) return null;
+  if (p.ymin != null) {
+    const nac = aniosFecha(p.nac?.fecha)[0] ?? null, def = aniosFecha(p.def?.fecha)[0] ?? null;
+    const desde = nac ?? p.ymin - 90, hasta = def != null ? def + 30 : nac != null ? nac + 110 : p.ymax + 90;
+    return { desde, hasta, texto: nac != null && def != null ? `${nac}–${def}, y 30 años más` : `h. ${desde}–${hasta}, aproximado` };
+  }
+  const tramos = [], pon = (x, f) => { const q = x && arbol.p(x); if (q && q.ymin != null) tramos.push(f(q)); };
+  const fams = p.fams.map(f => arbol.f(f)).filter(Boolean), famc = p.famc.map(f => arbol.f(f)).filter(Boolean);
+  for (const f of fams) {
+    pon(f.marido === id ? f.mujer : f.marido, q => [q.ymin - 70, q.ymax + 70]);
+    for (const h of f.hijos) pon(h, q => [q.ymin - 80, q.ymin + 80]);
+  }
+  for (const f of famc) {
+    for (const x of [f.marido, f.mujer]) pon(x, q => [q.ymin, q.ymax + 110]);
+    for (const h of f.hijos) if (h !== id) pon(h, q => [q.ymin - 50, q.ymin + 110]);
+  }
+  if (!tramos.length) return null;
+  let desde = Math.max(...tramos.map(t => t[0])), hasta = Math.min(...tramos.map(t => t[1]));
+  if (desde > hasta) { desde = Math.min(...tramos.map(t => t[0])); hasta = Math.max(...tramos.map(t => t[1])); }   // la familia no cuadra entre sí
+  return { desde, hasta, texto: `h. ${desde}–${hasta}, calculado por su familia` };
+}
+
+// ---------- Documentos de la familia de una persona, para no tener que buscarlos entre miles ----------
+const palabras = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'da', 'do', 'das', 'dos']);
+
+// Sus parientes cercanos, primero los cónyuges. papel: lo que es la persona respecto a ese pariente.
+function parientes(arbol, id) {
+  const p = arbol.p(id), l = [];
+  const sx = (x, m, f, o) => x.sexo === 'F' ? f : x.sexo === 'M' ? m : o;
+  const pon = (x, rel, papel) => {
+    const q = x && arbol.p(x);
+    if (q && x !== id && !l.some(y => y.x === x)) l.push({ x, q, rel: rel(q), papel: `${papel} de ${nombreCompleto(q)}` });
+  };
+  const fams = p.fams.map(f => arbol.f(f)).filter(Boolean), famc = p.famc.map(f => arbol.f(f)).filter(Boolean);
+  for (const f of fams) pon(f.marido === id ? f.mujer : f.marido, q => sx(q, 'su marido', 'su mujer', 'su cónyuge'), sx(p, 'Esposo', 'Esposa', 'Cónyuge'));
+  for (const f of fams) for (const h of f.hijos) pon(h, q => sx(q, 'su hijo', 'su hija', 'su hijo o hija'), sx(p, 'Padre', 'Madre', 'Padre o madre'));
+  for (const f of famc) {
+    pon(f.marido, () => 'su padre', sx(p, 'Hijo', 'Hija', 'Hijo o hija'));
+    pon(f.mujer, () => 'su madre', sx(p, 'Hijo', 'Hija', 'Hijo o hija'));
+  }
+  for (const f of famc) for (const h of f.hijos) pon(h, q => sx(q, 'su hermano', 'su hermana', 'su hermano o hermana'), sx(p, 'Hermano', 'Hermana', 'Hermano o hermana'));
+  return l;
+}
+
+// Recorre las citas de un registro, también las que están dentro de un hecho (DEAT, MARR…)
+function cadaCita(nodo, f) { for (const h of nodo.hijos) { if (h.tag === 'SOUR') f(h); else cadaCita(h, f); } }
+
+// Lista para el cuadro de citar: primero lo que ya tiene citado su familia (con su papel, lo que prueba y su grado, para no
+// reescribirlo) y después, solo por el nombre del título, lo que parece suyo o de un pariente y aún no está citado en nadie cercano.
+// Lo que la persona ya tiene citado no sale.
+export function docsDeFamilia(arbol, id, docs) {
+  const p = arbol.p(id), r = arbol.registro(id);
+  if (!p || !r) return [];
+  const porSour = new Map([...docs.values()].map(d => [d.sour, d]));
+  const docDe = c => docs.get(valor(c, '_REG').trim()) || porSour.get(c.valor);
+  const suyos = new Set();
+  cadaCita(r.arbol, c => { const d = docDe(c); if (d) suyos.add(d.id); });
+  const vistos = new Set(suyos), lista = [];
+  const anadirCitas = (registro, quien, papel) => cadaCita(registro.arbol, c => {
+    const d = docDe(c);
+    if (!d || vistos.has(d.id)) return;
+    vistos.add(d.id);
+    const nota = hijos(c, 'NOTE').map(n => arbol.notaTexto(n)).join(' ').replace(/\s+/g, ' ').trim();
+    lista.push({ ...docCitable(d), quien, papel, que: nota.replace(/^[^:]{1,60}:\s*/, ''), grado: DE_QUAY[valor(c, 'QUAY')] || '' });
+  });
+  const cercanos = parientes(arbol, id);
+  const conyuges = new Set(p.fams.map(f => arbol.f(f)).filter(Boolean).map(f => f.marido === id ? f.mujer : f.marido));
+  for (const x of cercanos.filter(y => conyuges.has(y.x))) anadirCitas(arbol.registro(x.x), `de ${x.rel}, ${nombreCompleto(x.q)}`, x.papel);
+  for (const f of p.fams) { const rf = arbol.registro(f); if (rf) anadirCitas(rf, 'de su boda', p.sexo === 'F' ? 'Novia' : p.sexo === 'M' ? 'Novio' : 'Contrayente'); }
+  for (const x of cercanos.filter(y => !conyuges.has(y.x))) anadirCitas(arbol.registro(x.x), `de ${x.rel}, ${nombreCompleto(x.q)}`, x.papel);
+  // Por el nombre: «Defunción: Fernandez Maria» → nombre de pila y primer apellido, en cualquier orden
+  const clave = q => [palabras(q.nombre)[0], palabras(q.apellidos).find(w => !PARTICULAS.has(w))];
+  const candidatos = [{ q: p, quien: '¿suyo?, por el nombre', papel: '' }, ...cercanos.map(x => ({ q: x.q, quien: `¿de ${x.rel}, ${nombreCompleto(x.q)}?, por el nombre`, papel: x.papel }))]
+    .map(c => ({ ...c, clave: clave(c.q) })).filter(c => c.clave[0] && c.clave[1]);
+  const titulos = [...docs.values()].filter(d => !vistos.has(d.id)).map(d => ({ d, w: new Set(palabras(d.titulo)) }));
+  for (const c of candidatos) for (const { d, w } of titulos) {
+    if (vistos.has(d.id) || !w.has(c.clave[0]) || !w.has(c.clave[1])) continue;
+    vistos.add(d.id);
+    lista.push({ ...docCitable(d), quien: c.quien, papel: c.papel, que: '', grado: '' });
+  }
+  return lista;
+}
 
 export const limpio = t => String(t ?? '').replace(/[;\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
 const hoy = () => new Date().toISOString().slice(0, 10);
