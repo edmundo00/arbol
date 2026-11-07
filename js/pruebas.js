@@ -1,15 +1,16 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611071004';
-import { Arbol } from './modelo.js?v=202611071004';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611071004';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611072151';
+import { Arbol } from './modelo.js?v=202611072151';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611072151';
 const RUTAS = { gedcom: '/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged' };
-import { Servidor, Carpetas } from './almacen.js?v=202611071004';
-import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611071004';
-import { esArbolHecho } from './menciones.js?v=202611071004';
-import { aGedcom } from './fechas.js?v=202611071004';
-import { entender, comoSeEntiende, personasDelArbol } from './consulta.js?v=202611071004';
-import { lugares as listaDeLugares } from './investigar.js?v=202611071004';
-import { citas as citasDe } from './vistas.js?v=202611071004';
+import { Servidor, Carpetas } from './almacen.js?v=202611072151';
+import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611072151';
+import { esArbolHecho } from './menciones.js?v=202611072151';
+import { aGedcom } from './fechas.js?v=202611072151';
+import { entender, comoSeEntiende, personasDelArbol } from './consulta.js?v=202611072151';
+import { lugares as listaDeLugares } from './investigar.js?v=202611072151';
+import { citas as citasDe } from './vistas.js?v=202611072151';
+import { documentosConCitas } from './registro.js?v=202611072151';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -71,7 +72,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611071004')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611072151')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);
@@ -181,6 +182,14 @@ async function main() {
   ok(na.menciones.length > 0 && na.menciones.every(m => libre.menciones.some(x => x.id === m.id)), `Nombre «Ysabel» + Apellidos «Fraga»: ${na.menciones.length} menciones (de ${libre.menciones.length} en búsqueda libre)`);
   const soloAp = base.donde('', { apellidos: 'Fraga' }), soloN = base.donde('', { nombre: 'Fraga' });
   ok(soloAp.personas.length > soloN.personas.length && soloN.personas.every(p => p.clave.startsWith('fraga')), `Apellidos «Fraga»: ${soloAp.personas.length} personas del árbol; Nombre «Fraga»: ${soloN.personas.length}`);
+  // Lo que está en el GEDCOM y aún no en la base se encuentra igual
+  const ID_L = 'ahn_clero_L3147_testamento_luisa_ponce', docsGed = documentosConCitas(arbol);
+  const luisa = base.donde('', { nombre: 'luisa', apellidos: 'ponze', tipo: 'Testamento', docsGed }).menciones.filter(m => m.reg_id === ID_L);
+  ok(luisa.length > 0 && luisa.every(m => m._g === 0), 'Buscar «luisa ponze» de tipo testamento encuentra el testamento de 1649');
+  const deLuis = base.donde('', { nombre: 'luis', apellidos: 'ponce', docsGed }).menciones.filter(m => m.reg_id === ID_L);
+  const luis = deLuis.find(m => m.xref === '@I13426@');
+  ok(!luis || (/_179\.md$/.test(luis.transcripcion) && /_179\.jpg$/.test(luis.ruta_original)), 'Luis Ponce: su cita lo lleva a la imagen 179, la que cita');
+  ok(deLuis.length === new Set(deLuis.map(m => m.xref)).size, 'Sin repetidos: cada persona citada sale una vez por documento');
   const me = base.menciones('@I1@');
   ok(me.enlazadas.length > 0, `Menciones de Edmundo (I1): ${me.enlazadas.length} enlazadas y ${me.posibles.length} posibles`);
   base.cerrar();

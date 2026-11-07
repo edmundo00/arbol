@@ -1,6 +1,6 @@
 // Documentos y citas: están en el GEDCOM (fuentes con «1 REFN reg:<id>», igual que scripts/registro/documentos_ged.py).
-import { hijos, valor } from './gedcom.js?v=202611071004';
-import { nombreCompleto, anios as aniosFecha } from './modelo.js?v=202611071004';
+import { hijos, valor } from './gedcom.js?v=202611072151';
+import { nombreCompleto, anios as aniosFecha } from './modelo.js?v=202611072151';
 
 export const GRADOS = [['A', 'A — lo dice el documento'], ['B', 'B — indirecto o resumen'], ['C', 'C — deducido'], ['?', '? — sin leer']];
 export const QUAY = { A: '3', B: '2', C: '1', N: '1', P: '1', '?': '0' };
@@ -90,6 +90,30 @@ function parientes(arbol, id) {
 
 // Recorre las citas de un registro, también las que están dentro de un hecho (DEAT, MARR…)
 function cadaCita(nodo, f) { for (const h of nodo.hijos) { if (h.tag === 'SOUR') f(h); else cadaCita(h, f); } }
+
+// Todos los documentos del GEDCOM con quién los cita, para el buscador: lo que aún no ha llegado a la base de nombres se busca aquí.
+export function documentosConCitas(arbol) {
+  const docs = leerDocumentos(arbol.ged), porSour = new Map([...docs.values()].map(d => [d.sour, d]));
+  const lista = new Map([...docs.values()].map(d => [d.id, { ...d, citas: [] }]));
+  const apuntar = (cita, xref, papelBoda) => {
+    const d = docs.get(valor(cita, '_REG').trim()) || porSour.get(cita.valor), p = arbol.p(xref);
+    if (!d || !p) return;
+    const nota = hijos(cita, 'NOTE').map(n => arbol.notaTexto(n)).join(' ').replace(/\s+/g, ' ').trim();
+    const m = /^([^:]{1,60}):\s*(.*)$/.exec(nota);
+    lista.get(d.id).citas.push({ xref, nombre: nombreCompleto(p), papel: m ? m[1] : papelBoda, nota: m ? m[2] : nota, pagina: valor(cita, 'PAGE') || '' });
+  };
+  for (const r of arbol.ged.registros) {
+    if ((r.tipo !== 'INDI' && r.tipo !== 'FAM') || !r.raw.includes(' SOUR @')) continue;
+    if (r.tipo === 'INDI') { cadaCita(r.arbol, c => apuntar(c, r.xref, '')); continue; }
+    const f = arbol.f(r.xref);
+    if (f) cadaCita(r.arbol, c => { for (const x of [f.marido, f.mujer]) if (x) apuntar(c, x, 'contrayente'); });
+  }
+  for (const d of lista.values()) d.fotos = () => {
+    const sour = arbol.registro(d.sour);
+    return sour ? hijos(sour.arbol, 'OBJE').map(o => valor(arbol.registro(o.valor)?.arbol, 'FILE') || '').filter(Boolean).map(f => f.replace(/^(\.\.\/)+/, '')) : [];
+  };
+  return [...lista.values()];
+}
 
 // Lista para el cuadro de citar: primero lo que ya tiene citado su familia (con su papel, lo que prueba y su grado, para no
 // reescribirlo) y después, solo por el nombre del título, lo que parece suyo o de un pariente y aún no está citado en nadie cercano.

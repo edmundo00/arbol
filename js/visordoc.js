@@ -2,7 +2,7 @@
 //   - la aplicación del árbol (js/app.js), al abrir una foto o un texto;
 //   - 9 Sistema/Herramientas/REVISAR TRANSCRIPCIONES.html, que le añade la lista de lo que queda por revisar.
 // Es un script normal, sin «import» ni «export», porque el revisor se abre con doble clic (file://) y ahí el navegador no
-// deja cargar módulos. Los módulos de la aplicación lo cargan con «import {} from './visordoc.js?v=202611071004'» y lo usan por VisorDoc.
+// deja cargar módulos. Los módulos de la aplicación lo cargan con «import {} from './visordoc.js?v=202611072151'» y lo usan por VisorDoc.
 //
 // Qué guarda: el .md (o .txt) de la transcripción, junto a su foto. Antes de cambiar un texto hace copia y apunta el cambio en un
 // registro: en este proyecto, 9 Sistema/Control/registro/revisiones(.csv); en otra carpeta, «Copias de transcripciones». No toca el GEDCOM ni las fotos.

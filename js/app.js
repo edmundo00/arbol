@@ -1,29 +1,29 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611071004';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611071004';
-import { buscar, prepararVariantes } from './buscar.js?v=202611071004';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611071004';
-import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611071004';
-import { entender, personasDelArbol } from './consulta.js?v=202611071004';
-import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611071004';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611071004';
-import { revisarSalud, repararSalud } from './salud.js?v=202611071004';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611071004';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611071004';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611071004';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611071004';
-import { md, esc } from './md.js?v=202611071004';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611071004';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611071004';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611071004';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611071004';
-import { Guardado } from './guardar.js?v=202611071004';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611071004';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611071004';
-import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo, docsDeFamilia, leerDocumentos, docCitable, vidaEstimada } from './registro.js?v=202611071004';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611071004';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611071004';
-import { pintarEstadisticas } from './estadisticas.js?v=202611071004';
+import { Gedcom } from './gedcom.js?v=202611072151';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611072151';
+import { buscar, prepararVariantes } from './buscar.js?v=202611072151';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611072151';
+import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611072151';
+import { entender, personasDelArbol } from './consulta.js?v=202611072151';
+import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611072151';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611072151';
+import { revisarSalud, repararSalud } from './salud.js?v=202611072151';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611072151';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611072151';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611072151';
+import { resultados, familia, detalle, citas } from './vistas.js?v=202611072151';
+import { md, esc } from './md.js?v=202611072151';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611072151';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611072151';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611072151';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611072151';
+import { Guardado } from './guardar.js?v=202611072151';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611072151';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611072151';
+import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo, docsDeFamilia, leerDocumentos, docCitable, vidaEstimada, documentosConCitas } from './registro.js?v=202611072151';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611072151';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611072151';
+import { pintarEstadisticas } from './estadisticas.js?v=202611072151';
 
 const $ = s => document.querySelector(s);
 // La versión publicada (la pone publicar.py en la dirección de este archivo): 202611041952 → «4/11 19:52»
@@ -190,7 +190,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611071004')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611072151')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -331,7 +331,7 @@ async function buscarDocumentos() {
   const eraSinBase = !baseNombres;
   if (!await necesitaBase(caja, buscarDocumentos)) return;
   if (eraSinBase) return verBuscar();   // ya hay base: se rellena el desplegable de archivos
-  const e = estadoBusqueda, op = { ...e, ancestros: e.linea ? arbol.ahnentafel(e.linea) : null };
+  const e = estadoBusqueda, op = { ...e, ancestros: e.linea ? arbol.ahnentafel(e.linea) : null, docsGed: documentosConCitas(arbol) };
   caja.insertAdjacentHTML('afterbegin', '<p class="cargando">Buscando en los documentos…</p>');
   setTimeout(() => {
     try {

@@ -152,7 +152,7 @@ export class BaseNombres {
 
   // ¿Dónde aparece…? Devuelve todas las coincidencias con el nombre, ya clasificadas y ordenadas: nada se corta aquí.
   // Cada resultado lleva _g (ver GRUPO) y _p.notas, que dicen por qué está en ese grupo.
-  donde(texto, { desde = null, hasta = null, lugar = '', nombre = '', apellidos = '', ...otros } = {}) {
+  donde(texto, { desde = null, hasta = null, lugar = '', nombre = '', apellidos = '', docsGed = null, ...otros } = {}) {
     const na = (nombre || apellidos) && !texto;
     const cp = na ? condicionesNA(nombre, apellidos, 'clave') : condiciones(texto, 'clave');
     const cm = na ? condicionesNA(nombre, apellidos, 'm.clave') : condiciones(texto, 'm.clave');
@@ -188,6 +188,7 @@ export class BaseNombres {
     const menciones = this.filas(`SELECT m.*, d.titulo, d.ruta, d.ruta_original, d.origen, d.fecha AS dfecha, d.anio AS danio, d.reg_id, d.transcripcion, d.tipo AS dtipo,
       p.nombre AS enlazado FROM menciones m JOIN documentos d ON d.id = m.doc_id LEFT JOIN personas_gedcom p ON p.xref = m.xref
       WHERE ${cm.sql}`, cm.params);
+    if (docsGed) menciones.push(...this.nuevasPorNombre(docsGed, na ? palabras(nombre) : [], na ? palabras(apellidos) : palabras(texto)));
     for (const m of menciones) {
       const notas = [];
       const f = hayFecha ? estadoFecha(m, desde, hasta, regs) : { e: 'na' };
@@ -201,6 +202,51 @@ export class BaseNombres {
         m.anio ?? m.danio ?? 9999, m.ruta || ''];
     }
     return { personas: personas.sort(porRango), menciones: menciones.sort(porRango), lugares, filtros: hayFecha || hayLugar || hayOtros(otros) };
+  }
+
+  // ---------- Lo que ya está en el GEDCOM y aún no en la base: la base se rehace de vez en cuando; el GEDCOM está siempre al día ----------
+  enBase() {
+    if (!this._enBase) {
+      const docs = new Set(), citas = new Set();
+      for (const r of this.filas("SELECT d.reg_id, m.xref FROM documentos d LEFT JOIN menciones m ON m.doc_id = d.id WHERE IFNULL(d.reg_id, '') != ''")) {
+        docs.add(r.reg_id);
+        if (r.xref) citas.add(r.reg_id + '|' + r.xref);
+      }
+      this._enBase = { docs, citas };
+    }
+    return this._enBase;
+  }
+
+  // Nombre de pila y apellidos como en la base: el nombre, delante; los apellidos, detrás. Con solo «apellidos» y texto libre vale lo mismo.
+  nuevasPorNombre(lista, qNombre, qApellidos) {
+    const { docs, citas } = this.enBase(), todas = [...qNombre, ...qApellidos], out = [];
+    if (!todas.length) return out;
+    const casa = (k, q) => q.pref ? k.startsWith(q.k) : k === q.k;
+    const esLaPersona = ks => qNombre.every((q, i) => i === 0 ? ks.length && casa(ks[0], q) : ks.some(k => casa(k, q)))
+      && qApellidos.every(q => ks.some((k, i) => casa(k, q) && (i > 0 || !qNombre.length)));
+    for (const d of lista) {
+      const nuevo = !docs.has(d.id);
+      let porPersona = false;
+      for (const c of d.citas) {
+        if (citas.has(d.id + '|' + c.xref)) continue;
+        const ks = tokensClave(c.nombre);
+        if (!esLaPersona(ks)) continue;
+        porPersona = true;
+        out.push(filaDelGedcom(d, c, { nombre: c.nombre, clave: ks.join(' '), papel: c.papel || 'texto', contexto: c.nota, xref: c.xref, enlace: 'cita', enlazado: c.nombre }));
+      }
+      if (!nuevo || porPersona) continue;
+      // Sin nadie citado con ese nombre: su título y las notas de sus citas
+      const textos = [d.titulo, ...d.citas.map(c => c.nota)], halladas = new Map();
+      for (const t of textos) for (const w of t.match(/\p{L}+/gu) || []) {
+        if (PARTICULAS.has(plano(w))) continue;
+        const k = clavePalabra(w);
+        if (todas.some(q => casa(k, q)) && !halladas.has(k)) halladas.set(k, w);
+      }
+      if (!todas.every(q => [...halladas.keys()].some(k => casa(k, q)))) continue;
+      const nota = d.citas.find(c => [...halladas.values()].some(w => c.nota.includes(w)));
+      out.push(filaDelGedcom(d, nota, { nombre: [...halladas.values()].join(' '), clave: [...halladas.keys()].join(' '), papel: 'texto', contexto: nota?.nota || '', xref: null, enlace: '', enlazado: null }));
+    }
+    return out;
   }
 
   // Archivos que hay en la base, para el desplegable (carpetas de 2 Documentos, y la Biblioteca).
@@ -217,7 +263,7 @@ export class BaseNombres {
   }
 
   // ¿Quién hay en el lugar…? (sin nombre). Con años, lo que no tiene fecha no se esconde: va en su grupo.
-  enLugar(texto, { desde = null, hasta = null, ...otros } = {}) {
+  enLugar(texto, { desde = null, hasta = null, docsGed = null, ...otros } = {}) {
     const c = condiciones(texto, 'clave');
     if (!c.sql) return { lugares: [], eventos: [], menciones: [] };
     const lugares = this.filas(`SELECT * FROM lugares WHERE ${c.sql} ORDER BY n_eventos + n_documentos DESC`, c.params);
@@ -235,6 +281,14 @@ export class BaseNombres {
     // si el lugar sale en su contexto.
     const claves = lugares.map(l => ' ' + l.clave + ' ');
     const menciones = [];
+    if (docsGed) {   // Documentos que aún no están en la base: el lugar, en su carpeta, su archivo, su título o las notas de sus citas
+      const q = palabrasLugar(texto), { docs } = this.enBase();
+      for (const d of docsGed) {
+        if (docs.has(d.id) || !contieneLugar([d.lugar, ...d.citas.map(c => c.nota)].join(' '), q)) continue;
+        if (d.citas.length) for (const c of d.citas) filas.push(filaDelGedcom(d, c, { nombre: c.nombre, clave: tokensClave(c.nombre).join(' '), papel: c.papel || 'texto', contexto: c.nota, xref: c.xref, enlace: 'cita', enlazado: c.nombre, como: 'documento' }));
+        else filas.push(filaDelGedcom(d, null, { nombre: d.titulo, clave: '', papel: 'texto', contexto: '', xref: null, enlace: '', enlazado: null, como: 'documento' }));
+      }
+    }
     for (const m of filas) {
       if (m.como === 'texto') {
         const ctx = ' ' + tokensClave(m.contexto || '').join(' ') + ' ';
@@ -248,6 +302,16 @@ export class BaseNombres {
     menciones.sort((a, b) => a._g - b._g);   // estable: dentro de cada grupo sigue el orden de la consulta
     return { lugares, eventos, menciones, filtros: hayFecha || hayOtros(otros) };
   }
+}
+
+// Una mención con la misma forma que las de la base, sacada de un documento del GEDCOM.
+// Si la cita dice una imagen («img. 179»), abre esa página y no la primera del documento.
+function filaDelGedcom(d, cita, campos) {
+  const n = /\d+/.exec(cita?.pagina || '')?.[0];
+  const primero = l => (n && l.find(x => new RegExp(`(^|[^0-9])0*${+n}\\.\\w+$`).test(x))) || l[0] || '';
+  const trans = (d.transcripcion || '').split('|').filter(Boolean), a = d.anios;
+  return { doc_id: 'ged:' + d.id, reg_id: d.id, titulo: d.titulo, origen: 'registro', ruta: '', ruta_original: primero(d.fotos()), transcripcion: primero(trans),
+    fecha: !a ? '' : a.a === a.b ? d.fecha || String(a.a) : `${a.a}-${a.b}`, anio: null, danio: a?.a ?? null, dtipo: d.tipo, lugar: null, _lugarDoc: d.lugar, ...campos };
 }
 
 // ---------- Filtros de lugar y año: cómo queda cada resultado ----------
@@ -324,6 +388,7 @@ const contieneLugar = (t, q) => { const ks = tok(t); return q.every(({ k, pref }
 
 // Lugar de una mención: su propio lugar, el contexto, el título o los lugares del documento.
 function estadoLugar(m, q, dl, conLugar) {
+  if (m._lugarDoc && contieneLugar(m._lugarDoc, q)) return { e: 'si', nota: 'lugar del documento' };
   if (m.lugar && contieneLugar(m.lugar, q)) return { e: 'si', nota: `lugar: ${m.lugar.split(';').find(x => contieneLugar(x, q))?.trim() || m.lugar}` };
   if (m.contexto && contieneLugar(m.contexto, q)) return { e: 'si', nota: 'lugar en el texto', fuerte: false };
   const como = dl.get(m.doc_id);
