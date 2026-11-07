@@ -1,10 +1,10 @@
 // Alta rápida desde una partida (bautismo, matrimonio o defunción), con el documento a la izquierda.
 // Cada persona de la partida se crea o se elige entre las que ya existen; los apellidos se proponen a la española.
-import { esc } from './md.js?v=202611070959';
-import { aGedcom } from './fechas.js?v=202611070959';
-import { buscar } from './buscar.js?v=202611070959';
-import { nombreCompleto, vida } from './modelo.js?v=202611070959';
-import { primerApellido, segundoApellido } from './editar.js?v=202611070959';
+import { esc } from './md.js?v=202611071004';
+import { aGedcom } from './fechas.js?v=202611071004';
+import { buscar } from './buscar.js?v=202611071004';
+import { nombreCompleto, vida } from './modelo.js?v=202611071004';
+import { primerApellido, segundoApellido } from './editar.js?v=202611071004';
 
 export const PARTIDAS = {
   bautismo: { nombre: 'Bautismo', roles: [['bautizado', 'Bautizado/a', null], ['padre', 'Padre', 'M'], ['madre', 'Madre', 'F'],

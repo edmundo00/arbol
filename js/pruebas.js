@@ -1,14 +1,15 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611070959';
-import { Arbol } from './modelo.js?v=202611070959';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611070959';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611071004';
+import { Arbol } from './modelo.js?v=202611071004';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611071004';
 const RUTAS = { gedcom: '/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged' };
-import { Servidor, Carpetas } from './almacen.js?v=202611070959';
-import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611070959';
-import { esArbolHecho } from './menciones.js?v=202611070959';
-import { aGedcom } from './fechas.js?v=202611070959';
-import { entender, comoSeEntiende, personasDelArbol } from './consulta.js?v=202611070959';
-import { lugares as listaDeLugares } from './investigar.js?v=202611070959';
+import { Servidor, Carpetas } from './almacen.js?v=202611071004';
+import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611071004';
+import { esArbolHecho } from './menciones.js?v=202611071004';
+import { aGedcom } from './fechas.js?v=202611071004';
+import { entender, comoSeEntiende, personasDelArbol } from './consulta.js?v=202611071004';
+import { lugares as listaDeLugares } from './investigar.js?v=202611071004';
+import { citas as citasDe } from './vistas.js?v=202611071004';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -50,6 +51,15 @@ async function main() {
   ok(soloLugar.includes('@I13424@') && soloLugar.includes('@I444@'), `Solo con el lugar «xubia» salen también los que constan por sus documentos (${soloLugar.length})`);
   const otroSitio = personasDelArbol(arbol, { nombre: 'pedro', apellidos: 'ponce de leon', lugar: 'vigo' }, []).lista.find(x => x.p.id === '@I13424@');
   ok(otroSitio?._g === 2, 'Con otro lugar, Pedro sigue en «sin fechas ni lugares», sin inventarse nada');
+
+  // Un libro entero citado por una página: se ofrece esa página y su transcripción, no las 31.
+  const docPedro = citasDe(arbol, '@I13424@').docs[0];
+  ok(docPedro.parcial && docPedro.fotos.length === 1 && /img\. 015/.test(docPedro.fotos[0].titulo), `Pedro: solo la foto citada de ${docPedro.todas.length}: ${docPedro.fotos[0]?.titulo}`);
+  ok(docPedro.transCitadas.length === 1 && /jubia_matrimonio_15\.md$/.test(docPedro.transCitadas[0]), `Pedro: solo su transcripción: ${docPedro.transCitadas[0]}`);
+  const docLuis = citasDe(arbol, '@I13426@').docs[0];
+  ok(docLuis.fotos.length === 5 && docLuis.transCitadas.length === 5, `Luis: sus 5 páginas citadas, con sus transcripciones (${docLuis.fotos.length} y ${docLuis.transCitadas.length})`);
+  const docIsidro = citasDe(arbol, '@I444@').docs.find(x => /Difuntos de San Mart/.test(x.fuente.titulo));
+  ok(docIsidro?.fotos.length === 1 && /img\. 008/.test(docIsidro.fotos[0].titulo), `Isidro Romeu: su defunción en la página 008: ${docIsidro?.fotos[0]?.titulo}`);
   const etiquetas = ['_FILE', '_REG', '_KEYS', '_ASID'].map(t => [t, (t1.match(new RegExp('\\r\\n\\d+ ' + t + '[ \\r]', 'g')) || []).length]);
   ok(etiquetas.every(([, n]) => n > 0), 'Etiquetas propias presentes y conservadas: ' + etiquetas.map(e => e.join(' ')).join(', '));
 
@@ -61,7 +71,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611070959')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611071004')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);

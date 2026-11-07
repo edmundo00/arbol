@@ -1,8 +1,8 @@
 // Pantallas: resultados de búsqueda, vista de familia, datos, notas y documentos de cada persona.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611070959';
-import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611070959';
-import { esc } from './md.js?v=202611070959';
-import { pruebasDe, resumenPruebas, cronologia, ES_TAREA } from './investigar.js?v=202611070959';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611071004';
+import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611071004';
+import { esc } from './md.js?v=202611071004';
+import { pruebasDe, resumenPruebas, cronologia, ES_TAREA } from './investigar.js?v=202611071004';
 
 export function insignias(arbol, id) {
   return arbol.raices.map(({ id: r, letra, nombre: quien }) => {
@@ -98,6 +98,21 @@ export function fuente(arbol, x) {
            ficha: campo('Ficha'), texto: textoLargo(hijo(a, 'TEXT') || { valor: '', hijos: [] }) };
 }
 
+// «img. 015, 021» o «img. 003–005» → [15, 21] o [3, 4, 5]
+function numerosDeImagen(pagina) {
+  const m = /\bimg\.?\s*([\d\s,–-]+)/i.exec(pagina || ''), out = [];
+  if (!m) return out;
+  for (const t of m[1].split(',')) {
+    const [a, b] = t.split(/[–-]/).map(x => parseInt(x, 10));
+    if (isNaN(a)) continue;
+    if (isNaN(b) || b < a || b - a > 500) out.push(a); else for (let k = a; k <= b; k++) out.push(k);
+  }
+  return out;
+}
+const numeroDeImagen = titulo => numerosDeImagen(/\bimg\.[^—]*$/i.exec(titulo || '')?.[0])[0];
+const baseDeArchivo = r => r.trim().split(/[\\/]/).pop().replace(/\.[^.]+$/, '').replace(/ \(claude\)$/i, '').toLowerCase();
+const etiquetaPagina = m => /\bimg\.[^—]*$/i.exec(m.titulo || '')?.[0].trim() || (m.ruta || m.titulo || '').split(/[\\/]/).pop();
+
 // Todas las citas de una persona (las suyas y las de sus hechos), agrupadas por fuente.
 export function citas(arbol, id) {
   const a = arbol.registro(id).arbol, grupos = new Map();
@@ -119,7 +134,16 @@ export function citas(arbol, id) {
     if (g.fuente.refn) regs.add(g.fuente.refn);
     const mias = objs.filter(o => o.reg && regs.has(o.reg));
     mias.forEach(o => usados.add(o));
-    return { ...g, fotos: mias.length ? mias : g.fuente.objs, todas: g.fuente.objs };
+    // Las páginas citadas: las fotos enlazadas a la persona y las que dice la cita («img. 015, 021»)
+    const nums = new Set(g.citas.flatMap(c => numerosDeImagen(c.pagina)));
+    const rutas = new Set(mias.map(o => o.ruta));
+    const citadas = [...mias, ...g.fuente.objs.filter(o => !rutas.has(o.ruta) && nums.has(numeroDeImagen(o.titulo)))];
+    const fotos = citadas.length ? citadas : g.fuente.objs;
+    // Su transcripción, la que se llama como la foto; sin página citada, no se elige ninguna
+    const parcial = citadas.length > 0 && citadas.length < g.fuente.objs.length;
+    const bases = new Set(citadas.map(o => baseDeArchivo(o.ruta || '')));
+    const transCitadas = parcial ? (g.fuente.transcripciones || []).filter(t => bases.has(baseDeArchivo(t))) : [];
+    return { ...g, fotos, todas: g.fuente.objs, parcial, transCitadas };
   });
   docs.sort((x, y) => (y.citas.some(c => c.reg) - x.citas.some(c => c.reg)) || Math.max(...y.citas.map(c => +c.grado || 0)) - Math.max(...x.citas.map(c => +c.grado || 0)));
   return { docs, sueltas: objs.filter(o => !usados.has(o)) };
@@ -177,16 +201,20 @@ function documentos(docs, sueltas) {
   const bloque = (d, k) => {
     const f = d.fuente;
     const grado = Math.max(...d.citas.map(c => +c.grado).filter(n => !isNaN(n)), -1);
+    const paginas = d.parcial ? d.fotos.map(etiquetaPagina).join(', ') : '';
+    const trans = d.parcial ? d.transCitadas : f.transcripciones;
+    const nombreTrans = t => trans.length === 1 ? (d.parcial ? `Transcripción (${esc(paginas)})` : 'Transcripción') : esc(t.split('/').pop().replace(/\.md$/, ''));
     return `<article class="doc">
       <h4>${grado >= 0 ? `<span class="grado g${GRADO[grado]}" title="Grado de prueba">${GRADO[grado]}</span>` : ''}${esc(f.titulo)}</h4>
       ${f.publ ? `<p class="publ">${esc(f.publ)}</p>` : ''}
       <ul class="citas">${d.citas.map(c => `<li>${c.hecho ? `<i>${esc(ETQ_HECHO[c.hecho] || c.hecho)}:</i> ` : ''}${esc(c.nota || '')}${c.pagina ? ` <span class="pag">${esc(c.pagina)}</span>` : ''}</li>`).join('')}</ul>
       <div class="botones">
-        ${d.fotos.length ? `<button data-fotos="${k}">📷 Fotos (${d.fotos.length}${d.todas.length > d.fotos.length ? ` de ${d.todas.length}` : ''})</button>` : ''}
-        ${d.todas.length > d.fotos.length ? `<button data-fotos="${k}" data-todas="1">Todas (${d.todas.length})</button>` : ''}
-        ${f.transcripciones.slice(0, 12).map(t => `<button data-md="${esc(t)}">📜 ${f.transcripciones.length === 1 ? 'Transcripción' : esc(t.split('/').pop().replace(/\.md$/, ''))}</button>`).join('')}${f.transcripciones.length > 12 ? `<span class="peq"> y ${f.transcripciones.length - 12} transcripciones más</span>` : ''}
+        ${d.fotos.length ? `<button data-fotos="${k}">📷 ${d.parcial ? `${d.fotos.length === 1 ? 'Foto' : 'Fotos'} (${esc(paginas)})` : `Fotos (${d.fotos.length})`}</button>` : ''}
+        ${trans.slice(0, 12).map(t => `<button data-md="${esc(t)}">📜 ${nombreTrans(t)}</button>`).join('')}${trans.length > 12 ? `<span class="peq"> y ${trans.length - 12} transcripciones más</span>` : ''}
+        ${d.parcial ? `<button class="mas" data-fotos="${k}" data-todas="1">Todo el documento (${d.todas.length} fotos)</button>` : ''}
         ${(f.ficha || '').split(/,\s*/).filter(x => /\.md$/.test(x)).map((x, i) => `<button data-md="${esc(x)}">🗂 Ficha${i ? ' ' + (i + 1) : ''}</button>`).join('')}
       </div>
+      ${!d.parcial && d.todas.length > 1 ? `<p class="peq">Esta cita no dice en qué página está: se ve todo el documento.</p>` : ''}
       <div class="galeria" id="gal${k}"></div>
       ${f.nota ? `<details class="ndoc"><summary>Nota de la fuente</summary>${esc(f.nota).replace(/\n/g, '<br>')}</details>` : ''}
     </article>`;
