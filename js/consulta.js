@@ -1,7 +1,7 @@
 // Entiende lo escrito en el cuadro de arriba: «maria fernandez jubia 1731-1735 defunción» → nombre, apellidos, lugar, años y tipo.
 // Lo que dude se ve después en los campos de la pestaña «En los documentos», donde se puede corregir.
-import { buscar, clave } from './buscar.js?v=202611062216';
-import { clavePalabra, plano, PARTICULAS, grupo } from './nombresdb.js?v=202611062216';
+import { buscar, clave } from './buscar.js?v=202611070959';
+import { clavePalabra, plano, PARTICULAS, grupo } from './nombresdb.js?v=202611070959';
 
 const TIPO_PALABRA = {
   bautismo: 'Bautismo o nacimiento', bautizo: 'Bautismo o nacimiento', nacimiento: 'Bautismo o nacimiento', bautismos: 'Bautismo o nacimiento',
@@ -96,9 +96,15 @@ export function personasDelArbol(arbol, e, variantes) {
         f = (e.desde == null || b >= e.desde) && (e.hasta == null || a <= e.hasta) ? 'si' : 'no';
       }
     }
-    if (cL && hayQuien) {
-      if (!p.claveLugar) { l = 'sin'; notas.push('sin lugar'); }
-      else l = p.claveLugar.includes(cL) ? 'si' : 'no';
+    if (cL) {
+      // Primero sus hechos; si no, sus bodas y los documentos que la citan, diciendo de dónde sale
+      const propio = p.claveLugar.includes(cL), otro = propio ? null : arbol.dondeConsta(p.id, cL);
+      if (otro) notas.push(otro);
+      if (hayQuien) {
+        if (propio || otro) l = 'si';
+        else if (!p.claveLugar) { l = 'sin'; notas.push('sin lugar'); }
+        else l = 'no';
+      }
     }
     return { p, _g: grupo(f, l), notas };
   });

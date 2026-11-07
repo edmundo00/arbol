@@ -46,7 +46,7 @@ export function buscar(arbol, texto, { lugar = '', desde = null, hasta = null, l
     if (anc && !anc.has(p.id)) continue;
     if (tN.length) { const w = p.claveN.split(' '); if (!tN.every(t => w.some(x => x.startsWith(t)))) continue; }
     if (tA.length) { const w = p.claveA.split(' '); if (!tA.every(a => a.some(t => w.some(x => x.startsWith(t))))) continue; }
-    if (cLugar && !p.claveLugar.includes(cLugar)) continue;
+    if (cLugar && !p.claveLugar.includes(cLugar) && !arbol.dondeConsta(p.id, cLugar)) continue;
     if (desde != null && (p.ymax == null || p.ymax < desde)) continue;
     if (hasta != null && (p.ymin == null || p.ymin > hasta)) continue;
     let punt = 0, ok = true;

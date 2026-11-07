@@ -1,7 +1,7 @@
 // Pantallas de la base de nombres y lugares: menciones de una persona y buscadores «¿dónde aparece…?» y «¿quién hay en…?».
-import { tarjeta } from './vistas.js?v=202611062216';
-import { esc } from './md.js?v=202611062216';
-import { fiabilidad, aniosEnTexto } from './nombresdb.js?v=202611062216';
+import { tarjeta } from './vistas.js?v=202611070959';
+import { esc } from './md.js?v=202611070959';
+import { fiabilidad, aniosEnTexto } from './nombresdb.js?v=202611070959';
 
 const TEXTO = /\.(md|txt|csv|html?)$/i, IMAGEN = /\.(jpe?g|png|gif|tiff?|bmp|webp)$/i;
 const ORIGEN = { registro: 'registro', transcripcion: 'transcripción', pdf_texto: 'texto de PDF', copia_ligera: 'copia ligera', ficha: 'ficha',

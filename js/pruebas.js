@@ -1,14 +1,14 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611062216';
-import { Arbol } from './modelo.js?v=202611062216';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611062216';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611070959';
+import { Arbol } from './modelo.js?v=202611070959';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611070959';
 const RUTAS = { gedcom: '/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged' };
-import { Servidor, Carpetas } from './almacen.js?v=202611062216';
-import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611062216';
-import { esArbolHecho } from './menciones.js?v=202611062216';
-import { aGedcom } from './fechas.js?v=202611062216';
-import { entender, comoSeEntiende } from './consulta.js?v=202611062216';
-import { lugares as listaDeLugares } from './investigar.js?v=202611062216';
+import { Servidor, Carpetas } from './almacen.js?v=202611070959';
+import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611070959';
+import { esArbolHecho } from './menciones.js?v=202611070959';
+import { aGedcom } from './fechas.js?v=202611070959';
+import { entender, comoSeEntiende, personasDelArbol } from './consulta.js?v=202611070959';
+import { lugares as listaDeLugares } from './investigar.js?v=202611070959';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -38,6 +38,18 @@ async function main() {
 
   const arbol = new Arbol(ged);
   ok(arbol.personas.size > 13000, `${arbol.personas.size} personas, ${arbol.familias.size} familias`);
+
+  // El lugar también se busca en las bodas y en los documentos que citan a la persona, y dice de dónde sale.
+  const conLugar = personasDelArbol(arbol, { nombre: 'pedro', apellidos: 'ponce de leon', lugar: 'xubia' }, []);
+  const pedroJ = conLugar.lista.find(x => x.p.id === '@I13424@');
+  ok(pedroJ?._g === 0 && pedroJ.notas.some(n => n.includes('documento')), `Pedro Ponce de León (sin hechos propios) cumple «xubia» por el documento que le cita: ${pedroJ?.notas.join(', ')}`);
+  ok(conLugar.lista.filter(x => x._g === 0).length === 1, 'Los Pedro Ponce de Ortigueira no se cuelan en «xubia»');
+  const isidroP = personasDelArbol(arbol, { nombre: 'isidro', apellidos: 'ponce', lugar: 'jubia' }, []).lista.find(x => x.p.id === '@I13429@');
+  ok(isidroP?._g === 0 && isidroP.notas.some(n => n.includes('matrimonio')), `Isidro Ponce cumple «jubia» por su boda: ${isidroP?.notas.join(', ')}`);
+  const soloLugar = personasDelArbol(arbol, { lugar: 'xubia' }, []).lista.map(x => x.p.id);
+  ok(soloLugar.includes('@I13424@') && soloLugar.includes('@I444@'), `Solo con el lugar «xubia» salen también los que constan por sus documentos (${soloLugar.length})`);
+  const otroSitio = personasDelArbol(arbol, { nombre: 'pedro', apellidos: 'ponce de leon', lugar: 'vigo' }, []).lista.find(x => x.p.id === '@I13424@');
+  ok(otroSitio?._g === 2, 'Con otro lugar, Pedro sigue en «sin fechas ni lugares», sin inventarse nada');
   const etiquetas = ['_FILE', '_REG', '_KEYS', '_ASID'].map(t => [t, (t1.match(new RegExp('\\r\\n\\d+ ' + t + '[ \\r]', 'g')) || []).length]);
   ok(etiquetas.every(([, n]) => n > 0), 'Etiquetas propias presentes y conservadas: ' + etiquetas.map(e => e.join(' ')).join(', '));
 
@@ -49,7 +61,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611062216')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611070959')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);

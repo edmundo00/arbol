@@ -1,6 +1,6 @@
 // Personas y familias sacadas del GEDCOM, listas para buscar y mostrar.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611062216';
-import { clave } from './buscar.js?v=202611062216';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611070959';
+import { clave } from './buscar.js?v=202611070959';
 
 export const EVENTOS = {
   BIRT: 'Nacimiento', CHR: 'Bautismo', BAPM: 'Bautismo', CONF: 'Confirmación', DEAT: 'Defunción', BURI: 'Entierro',
@@ -104,6 +104,36 @@ export class Arbol {
 
   p(id) { return this.personas.get(id); }
   f(id) { return this.familias.get(id); }
+
+  // Lugar buscado que no está en los hechos propios: ¿consta en sus bodas o en los documentos que la citan (título, archivo y lo que se apuntó en la cita)?
+  // «cL» ya viene pasado por clave(). Devuelve la explicación, o null. Las notas de investigación no cuentan: hablan de mucha otra gente y de muchos otros sitios.
+  dondeConsta(id, cL) {
+    const p = this.p(id);
+    if (!p || !cL) return null;
+    for (const f of p.fams) for (const e of this.f(f)?.eventos || []) if (e.lugar && clave(e.lugar).includes(cL)) return `por su ${e.etiqueta.toLowerCase()}: ${e.lugar}`;
+    const c = this.citasConLugar(p).find(x => x.clave.includes(cL));
+    return c ? `por un documento que le cita: ${c.titulo}` : null;
+  }
+
+  // Se calcula una vez por persona; al editar el árbol, la persona es otra y se vuelve a calcular.
+  citasConLugar(p) {
+    const memo = this._citasLugar ??= new WeakMap();
+    if (memo.has(p)) return memo.get(p);
+    const out = [];
+    const recorrer = nodo => {
+      for (const h of nodo.hijos) {
+        if (h.tag !== 'SOUR') { recorrer(h); continue; }
+        const s = /^@/.test(h.valor) ? this.registro(h.valor)?.arbol : null;
+        const titulo = s ? valor(s, 'TITL') || valor(s, 'ABBR') || h.valor : h.valor;
+        const notas = hijos(h, 'NOTE').map(n => this.notaTexto(n));
+        out.push({ titulo, clave: clave([titulo, s ? valor(s, 'PUBL') : '', ...notas].join(' | ')) });
+      }
+    };
+    const r = this.registro(p.id);
+    if (r) recorrer(r.arbol);
+    memo.set(p, out);
+    return out;
+  }
 
   padres(id) {
     const p = this.p(id); if (!p) return [];
