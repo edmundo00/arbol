@@ -1,8 +1,8 @@
 // Pantallas: resultados de búsqueda, vista de familia, datos, notas y documentos de cada persona.
-import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611072151';
-import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611072151';
-import { esc } from './md.js?v=202611072151';
-import { pruebasDe, resumenPruebas, cronologia, ES_TAREA } from './investigar.js?v=202611072151';
+import { hijo, hijos, valor, textoLargo } from './gedcom.js?v=202611081115';
+import { fechaES, vida, nombreCompleto, anios, miles } from './modelo.js?v=202611081115';
+import { esc } from './md.js?v=202611081115';
+import { pruebasDe, cronologia, ES_TAREA } from './investigar.js?v=202611081115';
 
 export function insignias(arbol, id) {
   return arbol.raices.map(({ id: r, letra, nombre: quien }) => {
@@ -31,36 +31,83 @@ export function resultados(arbol, r) {
 
 const rol = (p, h, m) => p?.sexo === 'F' ? m : p?.sexo === 'M' ? h : `${h}/${m}`;
 
-// Vista de familia, como en FamilySearch: la persona y sus cónyuges con los hijos; los padres y los hermanos.
-export function familia(arbol, id, editando = false) {
+// Una persona en una sola línea: nombre · años · lugar (hijos, hermanos, abuelos).
+export function renglon(arbol, id, rolTxt = '') {
+  const p = arbol.p(id);
+  if (!p) return `<span class="renglon vacio">${esc(rolTxt || 'Desconocido')}</span>`;
+  const lugar = p.nac?.lugar || p.def?.lugar || '';
+  const n = p.nombre ? `${esc(p.nombre)} <b>${esc(p.apellidos)}</b>` : `<b>${esc(p.apellidos || '(sin nombre)')}</b>`;
+  const v = vida(p);
+  return `<a class="renglon s${p.sexo}" href="#/p/${p.id.slice(1, -1)}" title="${esc(nombreCompleto(p))}${v ? ' · ' + esc(v) : ''}${lugar ? ' · ' + esc(lugar) : ''}">
+    ${rolTxt ? `<span class="rol">${esc(rolTxt)}</span>` : ''}<span class="nom">${n}${p.sufijo ? ' ' + esc(p.sufijo) : ''}</span>
+    <span class="vida">${esc(v)}${lugar ? ` · ${esc(lugar)}` : ''}</span><span class="insig">${insignias(arbol, p.id)}</span></a>`;
+}
+
+// Lo esencial debajo del nombre: nacimiento, boda, muerte y oficio, con la mejor prueba de cada uno.
+function resumen(arbol, p) {
+  const pr = pruebasDe(arbol, p.id) || { docs: {} };
+  const g = k => pr[k] == null ? '<span class="grado gN" title="Sin documento">—</span>'
+    : `<span class="grado g${GRADO[pr[k]]}" title="${esc((pr.docs?.[k] || []).slice(0, 3).join(' · ') || 'Mejor prueba')}">${GRADO[pr[k]]}</span>`;
+  const txt = e => e && (e.fecha || e.lugar) ? `${esc(fechaES(e.fecha))}${e.fecha && e.lugar ? ' · ' : ''}${esc(e.lugar || '')}` : '<span class="falta">sin dato</span>';
+  const fila = (et, cuerpo, k) => `<div class="r"><span class="et">${et}</span>${k ? g(k) : '<span></span>'}<span class="v">${cuerpo}</span></div>`;
+  const bodas = p.fams.map(f => arbol.f(f)).filter(Boolean).map(f => {
+    const m = f.eventos.find(e => e.tag === 'MARR'), otro = arbol.p(f.marido === p.id ? f.mujer : f.marido);
+    return m && (m.fecha || m.lugar) ? `${txt(m)}${otro && p.fams.length > 1 ? ` <span class="con">(con ${esc(nombreCompleto(otro))})</span>` : ''}` : '';
+  }).filter(Boolean);
+  const oficios = [...new Set(p.eventos.filter(e => e.tag === 'OCCU' || e.tag === 'TITL').map(e => e.valor).filter(Boolean))];
+  return `<div class="resumen">
+    ${fila(esc(p.nac?.etiqueta || 'Nacimiento'), txt(p.nac), 'nac')}
+    ${fila('Padres', arbol.padres(p.id).length ? 'en el árbol' : '<span class="falta">sin padres</span>', 'fil')}
+    ${p.fams.length || pr.boda != null ? fila('Boda', bodas.length ? bodas.join('<br>') : '<span class="falta">sin dato</span>', 'boda') : ''}
+    ${fila(esc(p.def?.etiqueta || 'Defunción'), txt(p.def), 'muerte')}
+    ${oficios.length ? fila('Oficio', oficios.slice(0, 3).map(esc).join(' · '), '') : ''}
+  </div>`;
+}
+
+// Vista de familia: la persona con lo esencial; padres (con los abuelos), hermanos, y cónyuges con sus hijos.
+// `menu`: botones que van en el menú «⋯» (parentesco, persona de referencia…); `bajoNombre`: html debajo del resumen.
+export function familia(arbol, id, editando = false, { menu = '', bajoNombre = '' } = {}) {
   const p = arbol.p(id);
   const padres = arbol.padres(id);
   const boton = (accion, texto, fam = '') => editando ? `<button class="mas" data-accion="${accion}"${fam ? ` data-fam="${esc(fam)}"` : ''}>${texto}</button>` : '';
   const quitar = (accion, datos, titulo) => editando ? `<button class="quitar" data-accion="${accion}" ${Object.entries(datos).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ')} title="${esc(titulo)}" aria-label="${esc(titulo)}">✕</button>` : '';
   const conQuitar = (html, boton) => editando && boton ? `<div class="con-quitar">${html}${boton}</div>` : html;
-  const hueco = (rolTxt, accion) => editando ? `<div class="tarjeta vacia">${boton(accion, '+ Añadir ' + rolTxt)}</div>` : tarjeta(arbol, null, { rol: rolTxt[0].toUpperCase() + rolTxt.slice(1) + (rolTxt === 'madre' ? ' desconocida' : ' desconocido') });
+  const hueco = (rolTxt, accion) => editando ? `<div class="tarjeta vacia compacta">${boton(accion, '+ Añadir ' + rolTxt)}</div>` : tarjeta(arbol, null, { rol: rolTxt[0].toUpperCase() + rolTxt.slice(1) + (rolTxt === 'madre' ? ' desconocida' : ' desconocido') }).replace('tarjeta vacia', 'tarjeta vacia compacta');
+  const abuelos = x => {
+    const f = arbol.padres(x)[0];
+    return f && (f.marido || f.mujer) ? `<div class="abuelos">${f.marido ? renglon(arbol, f.marido) : ''}${f.mujer ? renglon(arbol, f.mujer) : ''}</div>` : '';
+  };
+  const progenitor = (x, rolTxt) => x ? `<div>${tarjeta(arbol, x, { rol: rolTxt }).replace('class="tarjeta', 'class="tarjeta compacta')}${abuelos(x)}</div>` : hueco(rolTxt.toLowerCase(), rolTxt.toLowerCase());
   const bloquePadres = padres.length ? padres.map(f => `
-      <div class="pareja">${f.marido ? tarjeta(arbol, f.marido, { rol: 'Padre' }) : hueco('padre', 'padre')}${f.mujer ? tarjeta(arbol, f.mujer, { rol: 'Madre' }) : hueco('madre', 'madre')}</div>
+      <div class="pareja">${progenitor(f.marido, 'Padre')}${progenitor(f.mujer, 'Madre')}</div>
       ${matrimonio(f)}${editando ? `<p class="botones">${quitar('quitar-padres', { fam: f.id }, 'No son sus padres: quitarla de esta familia').replace('>✕<', '>✕ No son sus padres<')}</p>` : ''}`).join('')
     : `<div class="pareja">${hueco('padre', 'padre')}${hueco('madre', 'madre')}</div>`;
   const hermanos = arbol.hermanos(id).sort(porNacimiento(arbol));
-  const conyuges = p.fams.map(fid => arbol.f(fid)).filter(Boolean).map(f => {
+  const fams = p.fams.map(fid => arbol.f(fid)).filter(Boolean);
+  const uniones = fams.map((f, i) => {
     const otro = f.marido === id ? f.mujer : f.marido;
     const ch = [...f.hijos].sort(porNacimiento(arbol));
-    return `<div class="union">
-      ${conQuitar(tarjeta(arbol, otro, { rol: otro ? rol(arbol.p(otro), 'Marido', 'Mujer') : 'Cónyuge desconocido' }), otro && quitar('quitar-conyuge', { fam: f.id, otro }, 'Quitar este matrimonio'))}
+    return `<div class="union"${i ? ' hidden' : ''}>
+      ${conQuitar(tarjeta(arbol, otro, { rol: otro ? rol(arbol.p(otro), 'Marido', 'Mujer') : 'Cónyuge desconocido' }).replace('class="tarjeta', 'class="tarjeta compacta'), otro && quitar('quitar-conyuge', { fam: f.id, otro }, 'Quitar este matrimonio'))}
       ${matrimonio(f)}${editando ? boton('boda', '✎ Boda', f.id) : ''}
-      ${ch.length ? `<div class="hijos"><h4>Hijos (${ch.length})</h4>${ch.map(c => conQuitar(tarjeta(arbol, c), quitar('quitar-hijo', { fam: f.id, hijo: c }, 'No es hijo de esta pareja'))).join('')}</div>` : '<p class="nada">Sin hijos registrados</p>'}
+      ${ch.length ? `<div class="hijos"><h4>Hijos (${ch.length})</h4>${ch.map(c => conQuitar(renglon(arbol, c), quitar('quitar-hijo', { fam: f.id, hijo: c }, 'No es hijo de esta pareja'))).join('')}</div>` : '<p class="nada">Sin hijos registrados</p>'}
       ${boton('hijo', '+ Añadir hijo', f.id)}
     </div>`;
   }).join('');
+  const pestUniones = fams.length > 1 ? `<nav class="tabs-union">${fams.map((f, i) => {
+    const otro = arbol.p(f.marido === id ? f.mujer : f.marido), m = f.eventos.find(e => e.tag === 'MARR'), y = m ? anios(m.fecha)[0] : null;
+    return `<button data-union="${i}"${i ? '' : ' class="activa"'}>${i + 1}.º ${esc(otro ? (otro.nombre || '') + ' ' + (otro.apellidos || '').split(' ')[0] : 'desconocido')}${y ? ' · ' + y : ''}</button>`;
+  }).join('')}</nav>` : '';
+  const menuEdicion = editando ? `${boton('editar', '✎ Editar sus datos')}${boton('partida', '📜 Alta desde una partida…')}${boton('fusionar', '⇆ Fusionar con otra ficha…')}${boton('borrar', '🗑 Borrar')}` : '';
+  const menuTodo = menuEdicion + menu;
   return `<div class="familia${editando ? ' editando' : ''}">
-    <section class="col-padres"><h3>Padres</h3>${bloquePadres}
-      ${hermanos.length ? `<details class="hermanos"${hermanos.length <= 6 ? ' open' : ''}><summary>Hermanos (${hermanos.length})</summary>${hermanos.map(h => tarjeta(arbol, h)).join('')}</details>` : ''}
+    <div class="cab-ficha">${tarjeta(arbol, id, { grande: true })}
+      ${menuTodo ? `<details class="menu-ficha"><summary title="Más acciones" aria-label="Más acciones">⋯</summary><div class="menu-cuerpo">${menuTodo}</div></details>` : ''}</div>
+    ${resumen(arbol, p)}${bajoNombre}
+    <section class="sec-padres"><h3>Padres y abuelos</h3>${bloquePadres}
+      ${hermanos.length ? `<details class="hermanos"${hermanos.length <= 3 ? ' open' : ''}><summary>Hermanos (${hermanos.length})</summary>${hermanos.map(h => renglon(arbol, h)).join('')}</details>` : ''}
     </section>
-    <section class="col-centro">${tarjeta(arbol, id, { grande: true })}
-      ${editando ? `<p class="botones">${boton('editar', '✎ Editar sus datos')}${boton('partida', '📜 Alta desde una partida…')}${boton('fusionar', '⇆ Fusionar con otra ficha…')}${boton('borrar', '🗑 Borrar')}</p>` : ''}
-      ${conyuges ? `<h3>Cónyuges e hijos</h3>${conyuges}` : '<p class="nada">Sin cónyuges registrados</p>'}
+    <section class="sec-uniones">${fams.length ? `<h3>${fams.length > 1 ? `Cónyuges (${fams.length}) e hijos` : 'Cónyuge e hijos'}</h3>${pestUniones}${uniones}` : '<p class="nada">Sin cónyuges registrados</p>'}
       ${editando ? `<p class="botones">${boton('conyuge', '+ Añadir cónyuge')}${p.fams.length ? '' : boton('hijo', '+ Añadir hijo (sin cónyuge)')}</p>` : ''}
     </section>
   </div>`;
@@ -153,22 +200,29 @@ const ETQ_HECHO = { BIRT: 'nacimiento', CHR: 'bautismo', BAPM: 'bautismo', DEAT:
 
 export function detalle(arbol, id, pestana, editando = false) {
   const p = arbol.p(id), r = arbol.registro(id);
-  const { docs, sueltas } = citas(arbol, id);
   const nodosNota = hijos(r.arbol, 'NOTE');
   const notas = nodosNota.map(n => arbol.notaTexto(n)).filter(Boolean);
-  const nDocs = docs.length + (sueltas.length ? 1 : 0);
   const pest = (k, t) => `<a class="pest${pestana === k ? ' activa' : ''}" href="#/p/${id.slice(1, -1)}/${k}">${t}</a>`;
   let cuerpo = '';
+  if (pestana === 'docs') pestana = 'datos';   // los documentos van ahora en su propio panel
   if (pestana === 'notas') cuerpo = (nodosNota.length ? nodosNota.map((n, i) => `<div class="nota">${esc(arbol.notaTexto(n)).replace(/\n/g, '<br>')}
       ${ES_TAREA.test(arbol.notaTexto(n)) ? '<span class="tarea">tarea pendiente</span>' : ''}${editando ? `<p class="botones">${ES_TAREA.test(arbol.notaTexto(n)) ? `<button class="mas si" data-accion="tarea-hecha" data-nota="${i}">✓ Hecha</button>` : ''}<button class="mas" data-accion="nota" data-nota="${i}">✎ Cambiar</button><button class="mas" data-accion="borrar-nota" data-nota="${i}">✕ Quitar</button></p>` : ''}</div>`).join('') : '<p class="nada">Sin notas.</p>')
       + (editando ? '<p class="botones"><button class="mas" data-accion="nota">+ Añadir nota</button><button class="mas" data-accion="tarea">+ Añadir tarea pendiente</button></p>' : '');
-  else if (pestana === 'docs') cuerpo = documentos(docs, sueltas) + (editando ? '<p class="botones"><button class="mas" data-accion="documento">+ Añadir documento (foto nueva)</button><button class="mas" data-accion="citar">+ Citar uno que ya está</button></p>' : '');
   else if (pestana === 'ged') cuerpo = `<div id="historial"></div><pre class="ged">${esc(r.texto())}</pre>`;
   else if (pestana === 'crono') cuerpo = cronologia(arbol, id);
   else if (pestana === 'menc') cuerpo = '<div id="menciones"><p class="cargando">Buscando en la base de nombres…</p></div>';
-  else cuerpo = resumenPruebas(arbol, id) + hechos(arbol, p, editando);
-  return `<nav class="pestanas">${pest('datos', 'Datos')}${pest('docs', `Documentos (${nDocs})`)}${pest('notas', `Notas (${notas.length})`)}${pest('menc', 'Menciones')}${pest('crono', 'Cronología')}${pest('ged', 'GEDCOM')}</nav>
+  else cuerpo = hechos(arbol, p, editando);
+  return `<nav class="pestanas">${pest('datos', 'Datos')}${pest('notas', `Notas (${notas.length})`)}${pest('menc', 'Menciones')}${pest('crono', 'Cronología')}${pest('ged', 'GEDCOM')}</nav>
     <div class="cuerpo">${cuerpo}</div>`;
+}
+
+// Panel de documentos, siempre a la vista (a la derecha en pantalla ancha).
+export function panelDocumentos(arbol, id, editando = false) {
+  const { docs, sueltas } = citas(arbol, id);
+  const n = docs.length + (sueltas.length ? 1 : 0);
+  return `<aside class="panel-docs"><div class="cab-docs"><h3>Documentos (${n})</h3>
+      ${editando ? '<span class="botones"><button class="mas" data-accion="documento" title="Añadir documento (foto nueva)">+ Foto nueva</button><button class="mas" data-accion="citar" title="Citar un documento que ya está en el árbol">+ Citar</button></span>' : ''}</div>
+    <div class="cuerpo">${documentos(docs, sueltas)}</div></aside>`;
 }
 
 function hechos(arbol, p, editando) {

@@ -1,29 +1,31 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611072151';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611072151';
-import { buscar, prepararVariantes } from './buscar.js?v=202611072151';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611072151';
-import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611072151';
-import { entender, personasDelArbol } from './consulta.js?v=202611072151';
-import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611072151';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611072151';
-import { revisarSalud, repararSalud } from './salud.js?v=202611072151';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611072151';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611072151';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611072151';
-import { resultados, familia, detalle, citas } from './vistas.js?v=202611072151';
-import { md, esc } from './md.js?v=202611072151';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611072151';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611072151';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611072151';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611072151';
-import { Guardado } from './guardar.js?v=202611072151';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611072151';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611072151';
-import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo, docsDeFamilia, leerDocumentos, docCitable, vidaEstimada, documentosConCitas } from './registro.js?v=202611072151';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611072151';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611072151';
-import { pintarEstadisticas } from './estadisticas.js?v=202611072151';
+import { Gedcom } from './gedcom.js?v=202611081115';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611081115';
+import { buscar, prepararVariantes } from './buscar.js?v=202611081115';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar } from './almacen.js?v=202611081115';
+import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611081115';
+import { entender, personasDelArbol } from './consulta.js?v=202611081115';
+import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611081115';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611081115';
+import { revisarSalud, repararSalud } from './salud.js?v=202611081115';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611081115';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611081115';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611081115';
+import { resultados, familia, detalle, citas, panelDocumentos } from './vistas.js?v=202611081115';
+// El menú «⋯» de la ficha se cierra al pulsar fuera.
+document.addEventListener('click', ev => document.querySelectorAll('details.menu-ficha[open]').forEach(d => { if (!d.contains(ev.target)) d.open = false; }));
+import { md, esc } from './md.js?v=202611081115';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611081115';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611081115';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611081115';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611081115';
+import { Guardado } from './guardar.js?v=202611081115';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611081115';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611081115';
+import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo, docsDeFamilia, leerDocumentos, docCitable, vidaEstimada, documentosConCitas } from './registro.js?v=202611081115';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611081115';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611081115';
+import { pintarEstadisticas } from './estadisticas.js?v=202611081115';
 
 const $ = s => document.querySelector(s);
 // La versión publicada (la pone publicar.py en la dirección de este archivo): 202611041952 → «4/11 19:52»
@@ -190,7 +192,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611072151')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611081115')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -376,12 +378,21 @@ function verPersona(id, pestana) {
   const antes = main.dataset.persona === id;
   const y = window.scrollY;
   const raiz = esRaiz(id);
-  main.innerHTML = `<div class="persona">${familia(arbol, id, !!editor || puedeEditar())}
-    ${parentescoRaices(id)}
-    <p class="acciones"><button id="parentesco" title="¿Qué parentesco tiene con otra persona?">⚯ ¿Parentesco con…?</button> <button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Persona de referencia' : '☆ Marcar como persona de referencia'}</button>
-      <label class="rotulo" title="Lo que sale debajo del nombre en los murales; vacío = su título u oficio del GEDCOM">Rótulo en murales<input id="rotulo" value="${esc(rotulosPropios()[id] || '')}" placeholder="${esc(rotuloGedcom(arbol, id) || 'p. ej. Comandante de Marina')}"></label></p>
-    <section class="detalle">${detalle(arbol, id, pestana, !!editor || puedeEditar())}</section></div>`;
+  const ed = !!editor || puedeEditar();
+  const menu = `<button id="parentesco" title="¿Qué parentesco tiene con otra persona?">⚯ ¿Parentesco con…?</button>
+    <button id="raiz" title="Las personas de referencia salen arriba y numeran a sus antepasados">${raiz ? '★ Es persona de referencia (quitar)' : '☆ Marcar como persona de referencia'}</button>
+    <label class="rotulo" title="Lo que sale debajo del nombre en los murales; vacío = su título u oficio del GEDCOM">Rótulo en murales<input id="rotulo" value="${esc(rotulosPropios()[id] || '')}" placeholder="${esc(rotuloGedcom(arbol, id) || 'p. ej. Comandante de Marina')}"></label>`;
+  main.innerHTML = `<div class="persona">
+    <div class="col-fam">${familia(arbol, id, ed, { menu, bajoNombre: parentescoRaices(id) })}</div>
+    ${panelDocumentos(arbol, id, ed)}
+    <section class="detalle">${detalle(arbol, id, pestana, ed)}</section></div>`;
+  document.documentElement.style.setProperty('--alto-cab', ($('header')?.offsetHeight || 56) + 'px');
   main.dataset.persona = id;
+  main.querySelectorAll('[data-union]').forEach(b => b.onclick = () => {
+    main.querySelectorAll('[data-union]').forEach(x => x.classList.toggle('activa', x === b));
+    main.querySelectorAll('.sec-uniones .union').forEach((u, i) => { u.hidden = String(i) !== b.dataset.union; });
+  });
+  main.querySelectorAll('.menu-cuerpo button').forEach(b => b.addEventListener('click', () => b.closest('details').open = false));
   if (antes) window.scrollTo(0, y); else window.scrollTo(0, 0);
   $('#raiz').onclick = () => { alternarRaiz(id); verPersona(id, pestana); };
   $('#parentesco').onclick = () => elegirParentesco(id);

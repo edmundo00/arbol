@@ -1,6 +1,6 @@
 // Documentos y citas: están en el GEDCOM (fuentes con «1 REFN reg:<id>», igual que scripts/registro/documentos_ged.py).
-import { hijos, valor } from './gedcom.js?v=202611072151';
-import { nombreCompleto, anios as aniosFecha } from './modelo.js?v=202611072151';
+import { hijos, valor } from './gedcom.js?v=202611081115';
+import { nombreCompleto, anios as aniosFecha } from './modelo.js?v=202611081115';
 
 export const GRADOS = [['A', 'A — lo dice el documento'], ['B', 'B — indirecto o resumen'], ['C', 'C — deducido'], ['?', '? — sin leer']];
 export const QUAY = { A: '3', B: '2', C: '1', N: '1', P: '1', '?': '0' };

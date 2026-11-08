@@ -1,14 +1,14 @@
 // Pruebas de la edición sobre una COPIA del GEDCOM en el disco privado del navegador (OPFS): nunca toca el archivo bueno.
-import { Gedcom, decodificar, textoLargo, hijos } from './gedcom.js?v=202611072151';
-import { docsDeFamilia, leerDocumentos, vidaEstimada } from './registro.js?v=202611072151';
-import { pruebasDe } from './investigar.js?v=202611072151';
-import { Arbol } from './modelo.js?v=202611072151';
-import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre, partirLargas } from './editar.js?v=202611072151';
-import { Guardado, comprobar } from './guardar.js?v=202611072151';
-import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611072151';
-import { clave } from './buscar.js?v=202611072151';
-import { Carpeta, Carpetas } from './almacen.js?v=202611072151';
-import {} from './visordoc.js?v=202611072151';
+import { Gedcom, decodificar, textoLargo, hijos } from './gedcom.js?v=202611081115';
+import { docsDeFamilia, leerDocumentos, vidaEstimada } from './registro.js?v=202611081115';
+import { pruebasDe } from './investigar.js?v=202611081115';
+import { Arbol } from './modelo.js?v=202611081115';
+import { Editor, partirApellidos, apellidosHijo, apellidosPadre, apellidosMadre, partirLargas } from './editar.js?v=202611081115';
+import { Guardado, comprobar } from './guardar.js?v=202611081115';
+import { aGedcom, avisos, posiblesDuplicados } from './fechas.js?v=202611081115';
+import { clave } from './buscar.js?v=202611081115';
+import { Carpeta, Carpetas } from './almacen.js?v=202611081115';
+import {} from './visordoc.js?v=202611081115';
 
 const out = document.getElementById('out');
 let fallos = 0;

@@ -1,8 +1,8 @@
 // Buscar una frase o una palabra rara en el texto: notas del GEDCOM, contexto de las menciones (base de nombres)
 // y, si se pide, los archivos de transcripción (.md y .txt) de las carpetas elegidas.
-import { hijos } from './gedcom.js?v=202611072151';
-import { nombreCompleto } from './modelo.js?v=202611072151';
-import { esc } from './md.js?v=202611072151';
+import { hijos } from './gedcom.js?v=202611081115';
+import { nombreCompleto } from './modelo.js?v=202611081115';
+import { esc } from './md.js?v=202611081115';
 
 // Sin tildes ni mayúsculas, manteniendo la misma longitud que el texto (para poder marcar el trozo encontrado)
 export const plano = t => String(t || '').normalize('NFC').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

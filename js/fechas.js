@@ -1,5 +1,5 @@
 // Fechas escritas en español → fecha GEDCOM, y avisos de imposibles (las reglas de 9 Sistema/Control/scripts/auditar_gedcom.py).
-import { anios } from './modelo.js?v=202611072151';
+import { anios } from './modelo.js?v=202611081115';
 
 const MESES = { ene: 'JAN', enero: 'JAN', henero: 'JAN', xan: 'JAN', xaneiro: 'JAN', jan: 'JAN', january: 'JAN',
   feb: 'FEB', febrero: 'FEB', hebrero: 'FEB', febreiro: 'FEB', february: 'FEB', mar: 'MAR', marzo: 'MAR', march: 'MAR',
