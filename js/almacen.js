@@ -48,8 +48,16 @@ export class Fuente {
   get esCopia() { return !this.asa; }
 }
 
+// Chrome a veces se queda sin contestar a queryPermission (visto el 19-XI-2026: «Abriendo…» para siempre).
+// Si no contesta en unos segundos, se da por «sin permiso»: el árbol se abre igual y la carpeta se pide con un clic.
+export const SIN_RESPUESTA = Symbol('sin respuesta');
+export function conLimite(promesa, ms = 4000) {
+  let t; return Promise.race([promesa, new Promise(ok => { t = setTimeout(() => ok(SIN_RESPUESTA), ms); })]).finally(() => clearTimeout(t));
+}
+export const consultarPermiso = async (asa, modo = 'read') => { const p = await conLimite(asa.queryPermission({ mode: modo })); if (p === SIN_RESPUESTA) console.warn('[árbol] queryPermission sin respuesta:', asa.name); return p; };
+
 export async function permiso(asa, pedir, modo = 'read') {
-  let p = await asa.queryPermission({ mode: modo });
+  let p = await consultarPermiso(asa, modo);
   if (p !== 'granted' && pedir) p = await asa.requestPermission({ mode: modo });
   return p === 'granted';
 }

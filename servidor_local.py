@@ -5,7 +5,7 @@
 import functools, http.server, os, sys
 from pathlib import Path
 
-PUERTO = 8765
+PUERTO = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 8765   # otro puerto: servidor_local.py 8767
 RAIZ = Path(__file__).resolve().parents[3]          # D:\Dropbox
 PERMITIDAS = ('/Genealogia/',)
 APP = '/Genealogia/9%20Sistema/Aplicaci%C3%B3n/'
