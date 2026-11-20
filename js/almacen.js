@@ -58,7 +58,8 @@ export const consultarPermiso = async (asa, modo = 'read') => { const p = await 
 
 export async function permiso(asa, pedir, modo = 'read') {
   let p = await consultarPermiso(asa, modo);
-  if (p !== 'granted' && pedir) p = await asa.requestPermission({ mode: modo });
+  // requestPermission tampoco contesta a veces (20-XI-2026); 20 s dan tiempo a pulsar «Permitir» si sale el aviso
+  if (p !== 'granted' && pedir) p = await conLimite(asa.requestPermission({ mode: modo }), 20000);
   return p === 'granted';
 }
 

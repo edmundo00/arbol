@@ -5,8 +5,8 @@
 //   3. el archivo nuevo se lee otra vez y se comprueba: mismas personas más las añadidas, enlaces que apuntan a algo;
 //   4. copias en copias/: la de la sesión (una vez) y la anterior a cada guardado, comprobadas tras escribirlas.
 // La escritura la hace el navegador en un archivo aparte que solo al cerrar sustituye al bueno; después se relee y compara.
-import { Gedcom } from './gedcom.js?v=202611201200';
-import { bdLeer, bdGuardar } from './almacen.js?v=202611201200';
+import { Gedcom } from './gedcom.js?v=202611201205';
+import { bdLeer, bdGuardar } from './almacen.js?v=202611201205';
 
 const iguales = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
 const sello = () => { const d = new Date(), p = x => String(x).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
@@ -39,7 +39,8 @@ export class Guardado {
     let dir = await bdLeer('carpetaGedcom:' + nombre);
     const recordada = !!dir;
     let p = 'granted';
-    try { if (dir) p = await dir.requestPermission({ mode: 'readwrite' }); } catch { p = 'movida'; }
+    // Si Chrome no contesta (20-XI-2026), como si no diera permiso: se olvida la carpeta y al volver a pulsar se elige con el cuadro
+    try { if (dir) p = await Promise.race([dir.requestPermission({ mode: 'readwrite' }), new Promise(ok => setTimeout(() => ok('sin respuesta'), 20000))]); } catch { p = 'movida'; }
     if (dir && p !== 'granted') {
       // Sin permiso (o la carpeta ya no existe): se olvida esa carpeta para que la próxima vez se pueda elegir otra.
       await bdGuardar('carpetaGedcom:' + nombre, null);

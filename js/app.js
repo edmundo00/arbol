@@ -1,31 +1,31 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611201200';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611201200';
-import { buscar, prepararVariantes } from './buscar.js?v=202611201200';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar, conLimite, consultarPermiso, SIN_RESPUESTA } from './almacen.js?v=202611201200';
-import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611201200';
-import { entender, personasDelArbol } from './consulta.js?v=202611201200';
-import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611201200';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611201200';
-import { revisarSalud, repararSalud } from './salud.js?v=202611201200';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611201200';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611201200';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611201200';
-import { resultados, familia, detalle, citas, panelDocumentos } from './vistas.js?v=202611201200';
+import { Gedcom } from './gedcom.js?v=202611201205';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611201205';
+import { buscar, prepararVariantes } from './buscar.js?v=202611201205';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar, conLimite, consultarPermiso, SIN_RESPUESTA } from './almacen.js?v=202611201205';
+import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611201205';
+import { entender, personasDelArbol } from './consulta.js?v=202611201205';
+import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611201205';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611201205';
+import { revisarSalud, repararSalud } from './salud.js?v=202611201205';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611201205';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611201205';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611201205';
+import { resultados, familia, detalle, citas, panelDocumentos } from './vistas.js?v=202611201205';
 // El menú «⋯» de la ficha se cierra al pulsar fuera.
 document.addEventListener('click', ev => document.querySelectorAll('details.menu-ficha[open]').forEach(d => { if (!d.contains(ev.target)) d.open = false; }));
-import { md, esc } from './md.js?v=202611201200';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611201200';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611201200';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611201200';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611201200';
-import { Guardado } from './guardar.js?v=202611201200';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611201200';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611201200';
-import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo, docsDeFamilia, leerDocumentos, docCitable, vidaEstimada, documentosConCitas } from './registro.js?v=202611201200';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611201200';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611201200';
-import { pintarEstadisticas } from './estadisticas.js?v=202611201200';
+import { md, esc } from './md.js?v=202611201205';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611201205';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611201205';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611201205';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611201205';
+import { Guardado } from './guardar.js?v=202611201205';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611201205';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611201205';
+import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo, docsDeFamilia, leerDocumentos, docCitable, vidaEstimada, documentosConCitas } from './registro.js?v=202611201205';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611201205';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611201205';
+import { pintarEstadisticas } from './estadisticas.js?v=202611201205';
 
 const $ = s => document.querySelector(s);
 // La versión publicada (la pone publicar.py en la dirección de este archivo): 202611041952 → «4/11 19:52»
@@ -207,7 +207,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611201200')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611201205')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();

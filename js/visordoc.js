@@ -2,7 +2,7 @@
 //   - la aplicación del árbol (js/app.js), al abrir una foto o un texto;
 //   - 9 Sistema/Herramientas/REVISAR TRANSCRIPCIONES.html, que le añade la lista de lo que queda por revisar.
 // Es un script normal, sin «import» ni «export», porque el revisor se abre con doble clic (file://) y ahí el navegador no
-// deja cargar módulos. Los módulos de la aplicación lo cargan con «import {} from './visordoc.js?v=202611201200'» y lo usan por VisorDoc.
+// deja cargar módulos. Los módulos de la aplicación lo cargan con «import {} from './visordoc.js?v=202611201205'» y lo usan por VisorDoc.
 //
 // Qué guarda: el .md (o .txt) de la transcripción, junto a su foto. Antes de cambiar un texto hace copia y apunta el cambio en un
 // registro: en este proyecto, 9 Sistema/Control/registro/revisiones(.csv); en otra carpeta, «Copias de transcripciones». No toca el GEDCOM ni las fotos.
@@ -198,8 +198,12 @@
     await w.write((f.size ? '' : '﻿fecha;md;accion;texto_cambiado;copia;nota\r\n') + campos.map(csvCampo).join(';') + '\r\n'); await w.close();
   }
   async function pedirEscritura(raiz) {
-    if (await raiz.queryPermission({ mode: 'readwrite' }) === 'granted') return;
-    if (await raiz.requestPermission({ mode: 'readwrite' }) !== 'granted') throw new Error(`El navegador no ha dado permiso para guardar en la carpeta «${raiz.name}». Vuelve a pulsar Guardar y elige «Permitir».`);
+    // Chrome a veces no contesta a los permisos (19 y 20-XI-2026): se espera un tiempo y se avisa, en vez de quedarse colgado
+    const limite = (pr, ms) => Promise.race([pr, new Promise(ok => setTimeout(() => ok('sin respuesta'), ms))]);
+    if (await limite(raiz.queryPermission({ mode: 'readwrite' }), 4000) === 'granted') return;
+    const p = await limite(raiz.requestPermission({ mode: 'readwrite' }), 20000);
+    if (p === 'sin respuesta') throw new Error(`Chrome no contesta al pedirle permiso para guardar en la carpeta «${raiz.name}». No se ha guardado nada. Cierra Chrome del todo, vuelve a abrirlo y elige otra vez la carpeta.`);
+    if (p !== 'granted') throw new Error(`El navegador no ha dado permiso para guardar en la carpeta «${raiz.name}». Vuelve a pulsar Guardar y elige «Permitir».`);
   }
 
   /* ===== Aspecto ===== */
