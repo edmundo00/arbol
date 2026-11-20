@@ -1,31 +1,31 @@
 // Arranque, apertura del GEDCOM y de la carpeta de fotos, y navegación entre pantallas.
-import { Gedcom } from './gedcom.js?v=202611191845';
-import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611191845';
-import { buscar, prepararVariantes } from './buscar.js?v=202611191845';
-import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar, conLimite, consultarPermiso, SIN_RESPUESTA } from './almacen.js?v=202611191845';
-import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611191845';
-import { entender, personasDelArbol } from './consulta.js?v=202611191845';
-import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611191845';
-import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611191845';
-import { revisarSalud, repararSalud } from './salud.js?v=202611191845';
-import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611191845';
-import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611191845';
-import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611191845';
-import { resultados, familia, detalle, citas, panelDocumentos } from './vistas.js?v=202611191845';
+import { Gedcom } from './gedcom.js?v=202611201200';
+import { Arbol, nombreCompleto, vida, miles, anios } from './modelo.js?v=202611201200';
+import { buscar, prepararVariantes } from './buscar.js?v=202611201200';
+import { Fuente, Carpeta, Carpetas, Servidor, LS, hayDisco, permiso, bdLeer, bdGuardar, conLimite, consultarPermiso, SIN_RESPUESTA } from './almacen.js?v=202611201200';
+import { BaseNombres, TIPOS, PAPELES_DOC } from './nombresdb.js?v=202611201200';
+import { entender, personasDelArbol } from './consulta.js?v=202611201200';
+import { pintarMenciones, pintarDonde, pintarLugar, pintarArbol } from './menciones.js?v=202611201200';
+import { pintarFronteras, pintarIncoherencias, pintarDuplicados } from './revisar.js?v=202611201200';
+import { revisarSalud, repararSalud } from './salud.js?v=202611201200';
+import { pintarFaltaProbar, pintarParentesco, parentesco, pintarRepetidos, pintarTareas, lugares as listaDeLugares, ES_TAREA } from './investigar.js?v=202611201200';
+import { enNotas, enMenciones, enTranscripciones, pintarNotas, pintarTranscripciones, resaltar, plano as planoTexto } from './textolibre.js?v=202611201200';
+import { diferencias, lineasDistintas, paraCompartir, personasDe } from './copias.js?v=202611201200';
+import { resultados, familia, detalle, citas, panelDocumentos } from './vistas.js?v=202611201200';
 // El menú «⋯» de la ficha se cierra al pulsar fuera.
 document.addEventListener('click', ev => document.querySelectorAll('details.menu-ficha[open]').forEach(d => { if (!d.contains(ev.target)) d.open = false; }));
-import { md, esc } from './md.js?v=202611191845';
-import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611191845';
-import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611191845';
-import { mural, acortador, rotuloGedcom } from './mural.js?v=202611191845';
-import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611191845';
-import { Guardado } from './guardar.js?v=202611191845';
-import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611191845';
-import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611191845';
-import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo, docsDeFamilia, leerDocumentos, docCitable, vidaEstimada, documentosConCitas } from './registro.js?v=202611191845';
-import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611191845';
-import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611191845';
-import { pintarEstadisticas } from './estadisticas.js?v=202611191845';
+import { md, esc } from './md.js?v=202611201200';
+import { grafico, lista, descendientes, pestanasArbol, graficoDescendientes, antepasados } from './arboles.js?v=202611201200';
+import { cuadro, abanico, PAPELES } from './imprimir.js?v=202611201200';
+import { mural, acortador, rotuloGedcom } from './mural.js?v=202611201200';
+import { Editor, apellidosHijo, apellidosPadre, apellidosMadre } from './editar.js?v=202611201200';
+import { Guardado } from './guardar.js?v=202611201200';
+import { formularioPersona, formularioHecho, formularioNota, formularioFusion, TIPOS_PERSONA, TIPOS_FAMILIA, formularioCita, formularioDocumento } from './formularios.js?v=202611201200';
+import { formularioPartida, PARTIDAS, PAPEL } from './partida.js?v=202611201200';
+import { GRADOS, QUAY, paginas, bases, registrosDocumento, rango, numero, idNuevo, docsDeFamilia, leerDocumentos, docCitable, vidaEstimada, documentosConCitas } from './registro.js?v=202611201200';
+import { hijo as nodoHijo, hijos, valor as valorNodo } from './gedcom.js?v=202611201200';
+import { descargarCSV, botonExcel, CAB_PERSONA, filaPersona, informeAscendientes } from './exportar.js?v=202611201200';
+import { pintarEstadisticas } from './estadisticas.js?v=202611201200';
 
 const $ = s => document.querySelector(s);
 // La versión publicada (la pone publicar.py en la dirección de este archivo): 202611041952 → «4/11 19:52»
@@ -87,17 +87,28 @@ async function recuperarCarpeta() {
 }
 let carpetasMovidas = [];
 // Añade una carpeta de fotos (o vuelve a dar permiso a las guardadas). Tiene que llamarse desde un clic.
+// 20-XI-2026: Chrome tampoco contestaba a requestPermission de las carpetas guardadas, y como aquí se pedía eso ANTES del
+// cuadro de elegir carpeta, ningún botón hacía nada. Ahora: el cuadro va primero (el clic solo vale para abrir una cosa),
+// la carpeta recién elegida sustituye a las pendientes (que son las que no contestan) y se usa sin volver a consultar permisos.
 async function anadirCarpeta(nueva) {
-  const todas = await Carpetas.guardadas();
-  for (const h of carpetaPendiente) await permiso(h, true);
   if (nueva) {
     const h = await Carpetas.elegir();
-    let repetida = false;
-    for (const x of todas) if (await x.isSameEntry(h)) repetida = true;
-    if (!repetida) todas.push(h);
-    await Carpetas.guardar(todas);
+    const buenas = (carpeta?.lista || []).filter(c => c.asa).map(c => c.asa);
+    const quedan = [];
+    for (const x of buenas) if (await conLimite(x.isSameEntry(h), 2000) !== true) quedan.push(x);
+    await Carpetas.guardar([...quedan, h]);
+    carpeta = new Carpetas([...quedan, h].map(a => new Carpeta(a)));
+    carpetaPendiente = [];
+    carpetasMovidas = [];
+    return true;
+  }
+  // «Volver a usar»: pedir permiso, pero sin esperar para siempre si Chrome no contesta
+  for (const h of carpetaPendiente) {
+    const p = await conLimite(h.requestPermission({ mode: 'read' }), 20000);
+    if (p === SIN_RESPUESTA) return false;
   }
   await recuperarCarpeta();
+  return !carpetaPendiente.length;
 }
 
 function inicio(ult, movido = null) {
@@ -196,7 +207,7 @@ function abrir(datos) {
       bytesAbiertos = datos.bytes;
       info = { nombre: datos.nombre, fecha: datos.fecha, tam: datos.bytes.length, cod: ged.cod, copia: fuente?.esCopia && !deCarpeta, cuando: datos.cuando };
       arbol.ponerRaices(raicesGuardadas());
-      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611191845')).json()); } catch { variantes = []; }
+      try { variantes = prepararVariantes(await (await fetch('variantes.json?v=202611201200')).json()); } catch { variantes = []; }
       cabecera();
       window.arbol = arbol;
       ir();
@@ -1194,10 +1205,18 @@ function hayCarpeta(caja, falta) {
        ${carpetaPendiente.length ? `<button data-c="re">Volver a usar ${carpetaPendiente.map(h => '«' + esc(h.name) + '»').join(', ')}</button>` : ''} <button data-c="elegir">${carpeta ? 'Añadir otra carpeta…' : 'Elegir carpeta…'}</button></p>`
     : '<p class="peq">En este aparato no se pueden ver fotos ni transcripciones: solo el árbol. Se ven en el ordenador, con Chrome o Edge.</p>';
   caja.querySelectorAll('[data-c]').forEach(b => b.onclick = async () => {
+    const elegir = b.dataset.c === 'elegir';
+    if (!elegir) b.textContent = 'Pidiendo permiso a Chrome…';
     try {
-      await anadirCarpeta(b.dataset.c === 'elegir');
-      caja.innerHTML = `<p class="peq">Carpetas: ${esc(carpeta?.nombre || 'ninguna')}. Cierra y vuelve a abrirlo.</p>`;
-    } catch (e) { if (e.name !== 'AbortError') caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; }
+      const ok = await anadirCarpeta(elegir);
+      if (ok) caja.innerHTML = `<p class="peq">Carpetas: ${esc(carpeta?.nombre || 'ninguna')}. Cierra y vuelve a abrirlo.</p>`;
+      else {
+        // Las carpetas guardadas no contestan: se deja solo «Elegir carpeta…», que abre el cuadro y no depende de ellas
+        carpetaPendiente = [];
+        hayCarpeta(caja);
+        caja.insertAdjacentHTML('afterbegin', '<p class="aviso">Chrome no contesta al pedirle permiso para esa carpeta. Pulsa «Elegir carpeta…» y elige otra vez la carpeta «Genealogia» (o la de Dropbox).</p>');
+      }
+    } catch (e) { if (e.name !== 'AbortError') caja.innerHTML = `<p class="aviso">${esc(e.message)}</p>`; else if (!elegir) hayCarpeta(caja); }
   });
   return false;
 }

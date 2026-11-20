@@ -1,16 +1,16 @@
 // Pruebas que se pasan en el navegador (pruebas.html), con el GEDCOM real servido por servidor_local.py.
-import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611191845';
-import { Arbol } from './modelo.js?v=202611191845';
-import { clave, buscar, prepararVariantes } from './buscar.js?v=202611191845';
+import { Gedcom, decodificar, codificar } from './gedcom.js?v=202611201200';
+import { Arbol } from './modelo.js?v=202611201200';
+import { clave, buscar, prepararVariantes } from './buscar.js?v=202611201200';
 const RUTAS = { gedcom: '/Genealogia/1 Árbol/Árbol de trabajo/edmundo.ged' };
-import { Servidor, Carpetas } from './almacen.js?v=202611191845';
-import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611191845';
-import { esArbolHecho } from './menciones.js?v=202611191845';
-import { aGedcom } from './fechas.js?v=202611191845';
-import { entender, comoSeEntiende, personasDelArbol } from './consulta.js?v=202611191845';
-import { lugares as listaDeLugares } from './investigar.js?v=202611191845';
-import { citas as citasDe } from './vistas.js?v=202611191845';
-import { documentosConCitas } from './registro.js?v=202611191845';
+import { Servidor, Carpetas } from './almacen.js?v=202611201200';
+import { BaseNombres, tokensClave, TRATAMIENTOS } from './nombresdb.js?v=202611201200';
+import { esArbolHecho } from './menciones.js?v=202611201200';
+import { aGedcom } from './fechas.js?v=202611201200';
+import { entender, comoSeEntiende, personasDelArbol } from './consulta.js?v=202611201200';
+import { lugares as listaDeLugares } from './investigar.js?v=202611201200';
+import { citas as citasDe } from './vistas.js?v=202611201200';
+import { documentosConCitas } from './registro.js?v=202611201200';
 
 const out = document.getElementById('out');
 let fallos = 0;
@@ -72,7 +72,7 @@ async function main() {
   ok(clave('González') === clave('Gonzales'), 'González = Gonzales');
   ok(clave('Sánchez') !== clave('Sanez'), 'ch no se pierde (Sánchez ≠ Sanez)');
 
-  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611191845')).json());
+  const variantes = prepararVariantes(await (await fetch('variantes.json?v=202611201200')).json());
   const b = q => buscar(arbol, q, { variantes }).lista.map(p => p.id);
   ok(b('houwelingen').length >= 5, `«houwelingen»: ${b('houwelingen').length} personas`);
   ok(b('abelinguen').length === b('houwelingen').length, `«abelinguen» encuentra lo mismo que «houwelingen» (${b('abelinguen').length})`);
